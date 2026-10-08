@@ -105,8 +105,8 @@ export function ProvidersView() {
             <Loading />
           ) : (
             // Like the prototype: no matches = the table headings with an empty body (no message).
-            <div className="overflow-x-auto table-scroll" style={{ opacity: list.loading ? 0.6 : 1 }}>
-              <table>
+            <div style={{ opacity: list.loading ? 0.6 : 1 }}>
+              <table className="table-fit">
                 <thead>
                   <tr>
                     <th>
@@ -145,15 +145,15 @@ export function ProvidersView() {
                         </div>
                       </td>
                       <td className="text-ink-light">{p.specialty || "—"}</td>
-                      <td>
+                      <td className="nowrap">
                         <StatusPill status={listStatusKey(p.status)} />
                       </td>
                       <td>
                         <ProgressBar filled={p.documents.approved} total={p.documents.required} />
                       </td>
-                      <td className="text-ink-light text-xs">{p.email || "—"}</td>
-                      <td className="font-mono text-xs text-ink-light">{p.npi || "—"}</td>
-                      <td className="font-mono text-xs text-ink-light">{p.caqhId || "—"}</td>
+                      <td className="text-ink-light text-xs break-any">{p.email || "—"}</td>
+                      <td className="font-mono text-xs text-ink-light nowrap">{p.npi || "—"}</td>
+                      <td className="font-mono text-xs text-ink-light nowrap">{p.caqhId || "—"}</td>
                       <td className="text-ink-light text-xs">{p.locationName || "—"}</td>
                       <td className="text-ink-light text-xs">{p.practiceName || "—"}</td>
                     </tr>

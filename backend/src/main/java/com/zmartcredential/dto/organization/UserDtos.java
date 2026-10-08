@@ -37,7 +37,8 @@ public final class UserDtos {
             @NotBlank(message = "Username is required") @Size(min = 3, max = 150, message = "3-150 characters")
             @Pattern(regexp = "[A-Za-z0-9._@+-]+", message = "Letters, digits and . _ - @ + only") String username,
             @NotBlank(message = "Password is required") @Size(min = 8, max = 100, message = "At least 8 characters") String password,
-            @NotNull(message = "Role is required") Long userRoleId,
+            /* optional: defaults to the Provider user role */
+            Long userRoleId,
             Boolean disabled,
             @NotNull(message = "Provider details are required") @jakarta.validation.Valid
             com.zmartcredential.dto.provider.ProviderDtos.ProviderCreateRequest provider) {

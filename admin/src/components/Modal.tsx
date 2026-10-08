@@ -27,7 +27,7 @@ export function Modal({
     <div className="modal-backdrop slide-up">
       <div className="modal-card" style={{ maxWidth }} role="dialog" aria-modal="true">
         {(title || onClose) && (
-          <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4">
+          <div className="modal-head flex items-start justify-between gap-4 px-6 pt-6 pb-4">
             <div className="flex items-start gap-3">
               {showBack && (
                 <button onClick={onBack} className="btn-ghost p-1 -ml-1 mt-1" aria-label="Back">
@@ -46,7 +46,7 @@ export function Modal({
             )}
           </div>
         )}
-        <div className="px-6 pb-6">{children}</div>
+        <div className="modal-body px-6 pb-6">{children}</div>
       </div>
     </div>
   );

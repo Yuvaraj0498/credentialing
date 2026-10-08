@@ -102,29 +102,25 @@ function SidebarUserCard() {
   const user = useUser();
   const { logout } = useAuth();
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
   const signOut = async () => {
+    setSigningOut(true);
     await logout();
     router.replace("/signin");
   };
   return (
-    <div className="p-3 border-t border-line relative">
-      <button onClick={() => setOpen(!open)} className="w-full flex items-center gap-2 p-2 rounded-lg hover:bg-soft transition-colors">
-        <Avatar name={user.displayName} size={32} />
-        <div className="flex-1 min-w-0 text-left">
-          <div className="text-xs text-ink-light truncate">{user.orgName || "ZmartCredential"}</div>
-          <div className="font-medium text-sm text-ink truncate">{user.displayName}</div>
-          <div className="text-[10px] text-ink-faint capitalize">{SIGNED_IN_ROLE[user.role] || user.role}</div>
+    <div className="px-2 py-1 border-t border-line">
+      <div className="flex items-center gap-2 px-1.5 py-0.5">
+        <Avatar name={user.displayName} size={26} />
+        <div className="flex-1 min-w-0 leading-tight">
+          <div className="text-[10px] text-ink-light truncate">{user.orgName || "ZmartCredential"}</div>
+          <div className="font-medium text-xs text-ink truncate">{user.displayName}</div>
+          <div className="text-[10px] text-ink-faint">{SIGNED_IN_ROLE[user.role] || user.role}</div>
         </div>
-        <Icon name="ChevronUp" size={14} className="text-ink-faint" />
-      </button>
-      {open && (
-        <div className="absolute bottom-full left-3 right-3 mb-2 bg-paper border border-line rounded-lg shadow-lg p-1 slide-up">
-          <button onClick={signOut} className="w-full flex items-center gap-2 px-3 py-2 text-sm text-ink hover:bg-soft rounded">
-            <Icon name="LogOut" size={14} /> Sign out
-          </button>
-        </div>
-      )}
+        <button onClick={signOut} disabled={signingOut} className="btn-ghost p-1.5 rounded-md hover:text-danger" title="Sign out" aria-label="Sign out">
+          <Icon name="LogOut" size={15} />
+        </button>
+      </div>
     </div>
   );
 }

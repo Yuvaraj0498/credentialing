@@ -104,7 +104,10 @@ public final class CaqhLookupDtos {
             /* optional: the provider's CAQH ProView username (shown under Credentials) */
             @Size(max = 100, message = "At most 100 characters") String caqhUsername,
             /* the provider form completed after the CAQH lookup (all fields required); overrides the CAQH profile */
-            @jakarta.validation.Valid com.zmartcredential.dto.provider.ProviderDtos.ProviderCreateRequest details) {
+            @jakarta.validation.Valid com.zmartcredential.dto.provider.ProviderDtos.ProviderCreateRequest details,
+            /* the provider's sign-in to this app */
+            @NotBlank(message = "Username is required") String username,
+            @NotBlank(message = "Password is required") String password) {
     }
 
     public record CaqhImportResponse(Long providerId, String providerName, int documentsImported) {

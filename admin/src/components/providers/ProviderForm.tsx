@@ -58,6 +58,9 @@ export interface ProviderFormPayload {
   clientId: number | null;
   practiceId: number | null;
   locationId: number | null;
+  /** withLogin: the provider's sign-in to this app */
+  username?: string;
+  password?: string;
 }
 
 const idStr = (v: number | null | undefined) => (v == null ? "" : String(v));
@@ -73,6 +76,7 @@ export function ProviderForm({
   initial,
   hasStoredPassword = false,
   providerId,
+  withLogin = false,
   lockCaqhId = false,
   lockPlacement = false,
   submitLabel,
@@ -88,6 +92,8 @@ export function ProviderForm({
   hasStoredPassword?: boolean;
   /** editing: the provider's id (its own email is not a duplicate) */
   providerId?: number;
+  /** adding a provider: also ask for their sign-in username and password */
+  withLogin?: boolean;
   /** CAQH import: the CAQH ID comes from the lookup and can't change */
   lockCaqhId?: boolean;
   /** Organization screen: the client / practice / location are fixed */
@@ -127,6 +133,8 @@ export function ProviderForm({
     clientId: idStr(initialClientId),
     practiceId: idStr(initialPracticeId),
     locationId: idStr(initial.locationId),
+    username: "",
+    password: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -163,6 +171,12 @@ export function ProviderForm({
     const req = (k: string, v: string) => {
       if (!v.trim()) e[k] = "Required";
     };
+    if (withLogin) {
+      if (!form.username.trim()) e.username = "Required";
+      else if (!/^[A-Za-z0-9._@+-]{3,150}$/.test(form.username.trim())) e.username = "3-150 characters: letters, digits and . _ @ + -";
+      if (!form.password) e.password = "Required";
+      else if (form.password.length < 8) e.password = "At least 8 characters";
+    }
     req("firstName", form.firstName);
     req("lastName", form.lastName);
     req("suffix", form.suffix);
@@ -219,10 +233,13 @@ export function ProviderForm({
         clientId: num(form.clientId),
         practiceId: num(form.practiceId),
         locationId: num(form.locationId),
+        ...(withLogin ? { username: form.username.trim(), password: form.password } : {}),
       });
     } catch (err) {
       if (err instanceof ApiError) {
-        const fe = { ...err.fieldErrors };
+        const fe: Record<string, string> = {};
+        // errors of the nested provider ("provider.npi" / "details.npi") belong to the same fields
+        for (const [k, v] of Object.entries(err.fieldErrors)) fe[k.replace(/^(provider|details)\./, "")] = v;
         if (fe.licenseNumber) fe.license = fe.licenseNumber;
         // a 409 without a field (duplicate NPI) is shown under NPI
         if (err.status === 409 && Object.keys(fe).length === 0) fe.npi = err.message;
@@ -243,6 +260,21 @@ export function ProviderForm({
   return (
     <div className="space-y-3">
       {top}
+      {withLogin && (
+        <div className="pb-3 mb-1 border-b border-line">
+          <div className="text-xs font-semibold text-ink mb-2 flex items-center gap-1.5">
+            <Icon name="KeyRound" size={13} /> Sign-in for the provider
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Username *" error={err("username")}>
+              <input value={form.username} onChange={(e) => set("username", e.target.value.replace(/\s/g, ""))} className="input font-mono" autoComplete="off" maxLength={150} placeholder="e.g. jsmith" />
+            </Field>
+            <Field label="Password *" error={err("password")}>
+              <PasswordInput value={form.password} onChange={(e) => set("password", e.target.value)} className="input" autoComplete="new-password" placeholder="At least 8 characters" />
+            </Field>
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Field label="First Name *" error={err("firstName")}>
           <input value={form.firstName} onChange={(e) => set("firstName", e.target.value)} className="input" maxLength={80} />

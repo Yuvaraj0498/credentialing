@@ -198,12 +198,13 @@ function CaqhImportModal({
               locationId: assignment.locationId ? Number(assignment.locationId) : null,
             }}
             lockCaqhId
+            withLogin
             lockPlacement={!!placement}
             submitLabel="Save Provider"
             submitIcon="Check"
             cancelLabel="Back"
             onCancel={() => setCompleting(false)}
-            onSubmit={async (body) => {
+            onSubmit={async ({ username, password, ...body }) => {
               const res = await api.post<CaqhImportResponse>("/caqh/import", {
                 caqhId: caqhId.trim(),
                 clientId: body.clientId,
@@ -212,6 +213,8 @@ function CaqhImportModal({
                 caqhUsername: body.caqhUsername,
                 caqhPassword: body.caqhPassword,
                 details: body,
+                username,
+                password,
               });
               onImported(res);
             }}
@@ -403,11 +406,12 @@ export function ManualAddModal({
           initial={placement ? { clientId: placement.clientId, practiceId: placement.practiceId, locationId: placement.locationId } : {}}
           lockPlacement={!!placement}
           top={placement ? <PlacementNote placement={placement} /> : undefined}
+          withLogin
           submitLabel="Save Provider"
           submitIcon="Check"
           onCancel={onBack || onClose}
-          onSubmit={async (body) => {
-            const p = await api.post<ProviderDetail>("/providers", body);
+          onSubmit={async ({ username, password, ...provider }) => {
+            const p = await api.post<ProviderDetail>("/providers/with-login", { username, password, provider });
             onSaved(p);
           }}
         />

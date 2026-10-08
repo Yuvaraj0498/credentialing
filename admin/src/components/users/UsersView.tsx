@@ -230,9 +230,8 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
   const chosenRole = (userRoles.data || []).find((r) => String(r.id) === form.userRoleId);
   const access: Role | undefined = chosenRole?.accessLevel;
   const providers = useAsync<ProviderLite[]>(access === "provider" ? () => api.get<ProviderLite[]>("/providers/all-lite") : null, [access === "provider"]);
-  // Add User with a provider role: a new provider (all the Add Provider Manually fields) or an existing one
-  const [providerMode, setProviderMode] = useState<"new" | "existing">("new");
-  const newProvider = !user && access === "provider" && providerMode === "new";
+  // Add User with a provider role: the provider is added with every Add Provider Manually field + their sign-in
+  const newProvider = !user && access === "provider";
   const org = useOrgStructure(newProvider);
 
   const emailTaken = useEmailCheck(
@@ -240,17 +239,6 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
     { kind: "user", id: user?.id, providerId: access === "provider" && form.providerId ? Number(form.providerId) : undefined, orgAdmin: access === "org_admin" },
     !newProvider
   );
-
-  const validateLogin = () => {
-    const e: Record<string, string> = {};
-    if (!form.username.trim()) e.username = "Required";
-    else if (!/^[A-Za-z0-9._@+-]{3,150}$/.test(form.username.trim())) e.username = "3-150 characters: letters, digits and . _ @ + -";
-    if (!form.password || form.password.length < 8) e.password = "8+ characters";
-    if (!form.userRoleId) e.userRoleId = "Choose a role";
-    setErrors(e);
-    return Object.keys(e).length === 0;
-  };
-
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -309,17 +297,6 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
       {(userRoles.data || []).filter((r) => r.active !== false || r.id === user?.userRoleId).map((r) => <option key={r.id} value={r.id}>{r.name}{r.active === false ? " (disabled)" : ""}</option>)}
     </select>
   );
-  const providerModeToggle = !user && access === "provider" && (
-    <div className="flex gap-4 text-sm">
-      <label className="flex items-center gap-1.5">
-        <input type="radio" checked={providerMode === "new"} onChange={() => setProviderMode("new")} /> New provider
-      </label>
-      <label className="flex items-center gap-1.5">
-        <input type="radio" checked={providerMode === "existing"} onChange={() => setProviderMode("existing")} /> Login for an existing provider
-      </label>
-    </div>
-  );
-
   if (newProvider) {
     return (
       <Modal title="Add User" subtitle="Provider login — enter the provider's details, every field is required." onClose={onClose} maxWidth={720}>
@@ -331,48 +308,17 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
           <ProviderForm
             org={org.data}
             initial={{ email: form.email }}
+            withLogin
             submitLabel="Create User"
             onCancel={onClose}
             top={
-              <div className="space-y-3 pb-3 mb-1 border-b border-line">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <Field label="Role *" error={errors.userRoleId}>{roleSelect}</Field>
-                  <Field label="Username *" error={errors.username}>
-                    <input value={form.username} onChange={(e) => { setForm({ ...form, username: e.target.value }); setErrors((er) => ({ ...er, username: "" })); }} className="input font-mono" autoComplete="off" />
-                  </Field>
-                  <Field label="Password *" error={errors.password}>
-                    <input type="password" value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); setErrors((er) => ({ ...er, password: "" })); }} className="input" placeholder="At least 8 characters" autoComplete="new-password" />
-                  </Field>
-                </div>
-                {providerModeToggle}
-                <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={form.disabled} onChange={(e) => setForm({ ...form, disabled: e.target.checked })} />
-                  Disabled (user cannot sign in)
-                </label>
+              <div className="pb-3 mb-1 border-b border-line">
+                <Field label="Role *" error={errors.userRoleId}>{roleSelect}</Field>
               </div>
             }
-            onSubmit={async (provider) => {
-              if (!validateLogin()) throw new Error("Fill in the login details (role, username and password)");
-              try {
-                await api.post("/users/with-provider", {
-                  username: form.username.trim(),
-                  password: form.password,
-                  userRoleId: Number(form.userRoleId),
-                  disabled: form.disabled,
-                  provider,
-                });
-              } catch (e) {
-                if (e instanceof ApiError) {
-                  // provider field errors come back as "provider.npi" — show them under the provider fields
-                  const fe = e.fieldErrors as Record<string, string>;
-                  for (const k of Object.keys(fe)) if (k.startsWith("provider.")) { fe[k.slice(9)] = fe[k]; delete fe[k]; }
-                  const login: Record<string, string> = {};
-                  for (const k of ["username", "password", "userRoleId"]) if (fe[k]) login[k] = fe[k];
-                  if (Object.keys(login).length) setErrors(login);
-                }
-                throw e;
-              }
-              toast("Provider and login created");
+            onSubmit={async ({ username, password, ...provider }) => {
+              await api.post("/users/with-provider", { username, password, userRoleId: Number(form.userRoleId), provider });
+              toast("Provider and sign-in created");
               onSaved();
             }}
           />
@@ -401,7 +347,6 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
             {userRoles.error && <div className="field-error">{userRoles.error}</div>}
           </Field>
         </div>
-        {providerModeToggle}
         {access === "provider" && (
           <Field label="Linked Provider *" error={errors.providerId}>
             <select value={form.providerId} onChange={(e) => setForm({ ...form, providerId: e.target.value })} className="input" disabled={providers.loading}>
@@ -425,10 +370,12 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
         <Field label={user ? "New Password" : "Password *"} error={errors.password} hint={user ? "Leave blank to keep the current password" : undefined}>
           <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input" placeholder="At least 8 characters" autoComplete="new-password" />
         </Field>
-        <label className="flex items-center gap-2 text-sm" style={isSelf ? { opacity: 0.6 } : undefined}>
-          <input type="checkbox" checked={form.disabled} disabled={isSelf} onChange={(e) => setForm({ ...form, disabled: e.target.checked })} />
-          Disabled (user cannot sign in)
-        </label>
+        {access !== "provider" && (
+          <label className="flex items-center gap-2 text-sm" style={isSelf ? { opacity: 0.6 } : undefined}>
+            <input type="checkbox" checked={form.disabled} disabled={isSelf} onChange={(e) => setForm({ ...form, disabled: e.target.checked })} />
+            Disabled (user cannot sign in)
+          </label>
+          )}
         {formError && (
           <div className="px-3 py-2 rounded-lg flex items-center gap-2" style={{ background: "var(--danger-soft)", color: "#991b1b", fontSize: 13 }}>
             <Icon name="AlertCircle" size={14} /> {formError}

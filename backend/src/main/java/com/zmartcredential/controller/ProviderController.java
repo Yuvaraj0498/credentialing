@@ -45,6 +45,7 @@ import java.util.List;
 public class ProviderController {
 
     private final ProviderService providerService;
+    private final com.zmartcredential.service.OrgUserService orgUserService;
     private final ProviderImportService importService;
     private final ProviderInviteService inviteService;
 
@@ -103,6 +104,13 @@ public class ProviderController {
     @PutMapping("/{id:\\d+}/assignment")
     public ProviderDetail assign(@PathVariable Long id, @RequestBody ProviderAssignmentRequest req) {
         return providerService.assign(id, req.locationId());
+    }
+
+    @Operation(summary = "Add a provider with their sign-in (username + password)")
+    @PostMapping("/with-login")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ProviderDetail createWithLogin(@Valid @RequestBody com.zmartcredential.dto.organization.UserDtos.UserWithProviderRequest req) {
+        return providerService.get(orgUserService.createWithProvider(req).providerId());
     }
 
     @Operation(summary = "Assign several providers to a location (null = unassign)")

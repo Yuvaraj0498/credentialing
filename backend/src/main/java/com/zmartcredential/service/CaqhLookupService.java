@@ -65,6 +65,7 @@ public class CaqhLookupService {
 
     private final CaqhConfigRepository configRepository;
     private final EmailRegistry emailRegistry;
+    private final OrgUserService orgUserService;
     private final ProviderRepository providerRepository;
     private final ProviderDocumentRepository documentRepository;
     private final ProviderDocumentInitializer documentInitializer;
@@ -130,6 +131,7 @@ public class CaqhLookupService {
         authContext.requireStaff();
         Long orgId = authContext.orgId();
         ProviderService.Hierarchy h = providerService.resolveHierarchy(orgId, req.clientId(), req.practiceId(), req.locationId());
+        orgUserService.checkLogin(req.username(), req.password());
         // re-read the profile server-side: the browser preview is never trusted
         CaqhProfile cp = find(loadConfig(orgId), req.caqhId());
         String first = blankToNull(cp.firstName());
@@ -201,6 +203,7 @@ public class CaqhLookupService {
         emailRegistry.requireFreeForProvider(p.getEmail(), null);
         p = providerRepository.save(p);
         documentInitializer.initialize(p);
+        orgUserService.createProviderLogin(p.getId(), req.username(), req.password(), null);
 
         int applied = 0;
         for (CaqhDocument doc : cp.documents()) {

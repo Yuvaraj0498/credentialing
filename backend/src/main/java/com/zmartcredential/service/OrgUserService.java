@@ -115,22 +115,55 @@ public class OrgUserService {
         return toResponses(List.of(userRepository.save(u))).getFirst();
     }
 
-    /** Creates the provider (every Add Provider Manually rule applies) and their login; nothing is saved if either fails. */
+    /**
+     * Adds a provider together with their sign-in (Providers → Add Provider, Organization → Add Provider,
+     * Users → Add User with the Provider role). Every Add Provider Manually rule applies; nothing is saved if
+     * the provider or the login fails.
+     */
     @Transactional
     public UserResponse createWithProvider(com.zmartcredential.dto.organization.UserDtos.UserWithProviderRequest req) {
         authContext.requireStaff();
-        permissionService.require("user", "create");
-        if (!"provider".equals(accessLevelOf(req.userRoleId()))) throw new BadRequestException("Choose a provider role");
-        String username = req.username().trim().toLowerCase(Locale.ROOT);
+        permissionService.require("provider", "create");
+        if (req.userRoleId() != null && !"provider".equals(accessLevelOf(req.userRoleId()))) {
+            throw new BadRequestException("Choose a provider role");
+        }
+        checkLogin(req.username(), req.password());
+        var provider = providerService.create(req.provider());
+        return createProviderLogin(provider.id(), req.username(), req.password(), req.userRoleId());
+    }
+
+    /** Username / password rules for a new sign-in (checked before anything is saved). */
+    public void checkLogin(String rawUsername, String password) {
+        String username = rawUsername == null ? "" : rawUsername.trim().toLowerCase(Locale.ROOT);
+        if (username.isEmpty()) throw BadRequestException.onField("username", "Username is required");
+        if (!username.matches("[a-z0-9._@+-]{3,150}")) {
+            throw BadRequestException.onField("username", "3-150 characters: letters, digits and . _ - @ + only");
+        }
         if (userRepository.existsByUsername(username) || userRepository.existsByEmail(username)) {
             throw ConflictException.onField("username", "Username is already taken");
         }
-        var p = req.provider();
-        var provider = providerService.create(p);
-        String name = (p.firstName().trim() + " " + p.lastName().trim()).trim();
-        return create(new UserCreateRequest(name, p.firstName().trim(), p.lastName().trim(), username, p.email(),
-                req.password(), "provider", req.userRoleId(), blankToNull(p.suffix()), blankToNull(p.phone()),
-                provider.id(), req.disabled()));
+        if (password == null || password.length() < 8) throw BadRequestException.onField("password", "At least 8 characters");
+        if (password.length() > 100) throw BadRequestException.onField("password", "At most 100 characters");
+    }
+
+    /** The sign-in of a provider that was just added (the caller checked the permissions). */
+    @Transactional
+    public UserResponse createProviderLogin(Long providerId, String rawUsername, String password, Long userRoleId) {
+        checkLogin(rawUsername, password);
+        Provider p = providerRepository.findById(providerId).orElseThrow(() -> NotFoundException.of("Provider", providerId));
+        String email = p.getEmail() == null ? null : p.getEmail().trim().toLowerCase(Locale.ROOT);
+        if (email == null) throw BadRequestException.onField("email", "Email is required");
+        if (userRepository.existsByEmail(email)) throw ConflictException.onField("email", "Email is already used by another account");
+        emailRegistry.requireFreeForUser(email, null, providerId, null);
+        AppUser u = new AppUser();
+        u.setUsername(rawUsername.trim().toLowerCase(Locale.ROOT));
+        u.setPasswordHash(passwordEncoder.encode(password));
+        u.setEmail(email);
+        String name = ((p.getFirstName() == null ? "" : p.getFirstName()) + " " + (p.getLastName() == null ? "" : p.getLastName())).trim();
+        apply(u, p.getOrgId(), Role.PROVIDER.code(), name, p.getFirstName(), p.getLastName(), p.getSuffix(), p.getPhone(), providerId);
+        u.setUserRoleId(userRoleId != null ? requireUserRole(userRoleId) : userRoleRepository.defaultFor(Role.PROVIDER.code()));
+        u.setDisabled(false);
+        return toResponses(List.of(userRepository.save(u))).getFirst();
     }
 
     @Transactional
