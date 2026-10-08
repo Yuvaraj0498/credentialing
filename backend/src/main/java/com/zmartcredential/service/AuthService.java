@@ -290,7 +290,8 @@ public class AuthService {
             List<String> allowed = new ArrayList<>();
             for (String action : PermissionService.ACTIONS) {
                 if (role == Role.PLATFORM_ADMIN
-                        || matrix.getOrDefault(PermissionService.key(entity, action, role.code()), false)) {
+                        || matrix.getOrDefault(PermissionService.key(entity, action,
+                        PermissionService.permissionRole(role.code(), user.getUserRoleId())), false)) {
                     allowed.add(action);
                 }
             }

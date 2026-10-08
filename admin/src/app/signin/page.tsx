@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
+import { FitToScreen } from "@/components/FitToScreen";
 import { PasswordInput } from "@/components/PasswordInput";
 import { ForgotPasswordModal } from "@/components/auth/ForgotPasswordModal";
 import { useRouter } from "next/navigation";
@@ -74,8 +75,8 @@ function SignInScreen() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "linear-gradient(135deg, #fff7ed 0%, #f8f9fb 50%, #eff6ff 100%)" }}>
-      <div className="card" style={{ maxWidth: 980, width: "100%" }}>
+    <FitToScreen style={{ background: "linear-gradient(135deg, #fff7ed 0%, #f8f9fb 50%, #eff6ff 100%)" }}>
+      <div className="card" style={{ width: "min(980px, calc(100vw - 32px))" }}>
         <div className="grid grid-cols-1 md:grid-cols-5" style={{ minHeight: 560 }}>
           {/* LEFT — branding */}
           <div className="md:col-span-2 p-10 flex flex-col justify-between rounded-l-xl" style={{ background: "linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%)" }}>
@@ -177,6 +178,6 @@ function SignInScreen() {
           </div>
         </div>
       </div>
-    </div>
+    </FitToScreen>
   );
 }

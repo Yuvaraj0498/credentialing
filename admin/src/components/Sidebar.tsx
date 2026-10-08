@@ -7,7 +7,6 @@ import { Avatar } from "./Avatar";
 import { Icon } from "./Icon";
 import { Logo } from "./Logo";
 import { useAuth, useUser } from "@/stores/auth";
-import { ROLE_LABEL } from "@/lib/constants";
 import { MAIN_NAV, PROVIDER_NAV, SUPER_NAV, SYSTEM_NAV, isVisible, type NavItem } from "@/lib/nav";
 import { useShell } from "@/stores/shell";
 
@@ -28,6 +27,15 @@ function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void 
     </Link>
   );
 }
+
+/** Role shown under the signed-in user's name. */
+const SIGNED_IN_ROLE: Record<string, string> = {
+  platform_admin: "Super Admin",
+  org_admin: "Admin",
+  clerk: "Clerk",
+  provider: "Provider",
+  auditor: "Auditor",
+};
 
 export function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () => void }) {
   const user = useUser();
@@ -106,7 +114,7 @@ function SidebarUserCard() {
         <div className="flex-1 min-w-0 text-left">
           <div className="text-xs text-ink-light truncate">{user.orgName || "ZmartCredential"}</div>
           <div className="font-medium text-sm text-ink truncate">{user.displayName}</div>
-          <div className="text-[10px] text-ink-faint capitalize">{user.title || ROLE_LABEL[user.role] || user.role}</div>
+          <div className="text-[10px] text-ink-faint capitalize">{SIGNED_IN_ROLE[user.role] || user.role}</div>
         </div>
         <Icon name="ChevronUp" size={14} className="text-ink-faint" />
       </button>

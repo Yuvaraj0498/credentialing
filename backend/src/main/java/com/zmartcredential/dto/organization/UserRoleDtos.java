@@ -16,8 +16,8 @@ public final class UserRoleDtos {
             @Size(min = 2, max = 80, message = "2-80 characters")
             @Pattern(regexp = "^[A-Za-z][A-Za-z0-9 &/().,'-]*$", message = "Start with a letter; letters, digits, spaces and & / ( ) . , ' - only")
             String name,
-            @NotBlank(message = "Access level is required")
-            @Pattern(regexp = "org_admin|clerk|auditor|provider", message = "Choose an access level")
+            /* optional (not shown in the UI): built-in role behind the role; new roles default to staff */
+            @Pattern(regexp = "^$|org_admin|clerk|auditor|provider", message = "Unknown access level")
             String accessLevel) {
     }
 

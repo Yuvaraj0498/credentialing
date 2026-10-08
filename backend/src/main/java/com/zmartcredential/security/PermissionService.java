@@ -25,12 +25,35 @@ public class PermissionService {
 
     private final RolePermissionRepository repository;
     private final AuthContext authContext;
+    private final com.zmartcredential.repository.AppUserRepository userRepository;
+
+    private static final String ROLE_ATTR = "zc.permissionRole";
 
     public boolean can(String entity, String action) {
         AuthPrincipal p = authContext.principal();
         if (p.isPlatformAdmin()) return true;
         Long orgId = p.orgId();
-        return matrix(orgId).getOrDefault(key(entity, action, p.role().code()), false);
+        return matrix(orgId).getOrDefault(key(entity, action, currentPermissionRole(p)), false);
+    }
+
+    /** The permission column of a user: their User Role ("ur:<id>"), or the built-in role when none is set. */
+    public static String permissionRole(String systemRole, Long userRoleId) {
+        return userRoleId != null ? userRoleKey(userRoleId) : systemRole;
+    }
+
+    public static String userRoleKey(Long userRoleId) {
+        return "ur:" + userRoleId;
+    }
+
+    /** Looked up once per request. */
+    private String currentPermissionRole(AuthPrincipal p) {
+        var attrs = org.springframework.web.context.request.RequestContextHolder.getRequestAttributes();
+        Object cached = attrs == null ? null : attrs.getAttribute(ROLE_ATTR, org.springframework.web.context.request.RequestAttributes.SCOPE_REQUEST);
+        if (cached instanceof String s) return s;
+        Long userRoleId = userRepository.findById(p.userId()).map(com.zmartcredential.entity.AppUser::getUserRoleId).orElse(null);
+        String role = permissionRole(p.role().code(), userRoleId);
+        if (attrs != null) attrs.setAttribute(ROLE_ATTR, role, org.springframework.web.context.request.RequestAttributes.SCOPE_REQUEST);
+        return role;
     }
 
     public void require(String entity, String action) {

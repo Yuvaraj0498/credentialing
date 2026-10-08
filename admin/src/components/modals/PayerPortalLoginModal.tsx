@@ -190,9 +190,6 @@ export function PayerPortalLoginModal({
             </div>
           </div>
         </Field>
-        <div className="p-3 rounded-lg text-xs" style={{ background: "var(--info-soft)", color: "#1e40af" }}>
-          <Icon name="Shield" size={11} /> Passwords are encrypted at rest on the server and never returned in lists. Changes are recorded in the audit log.
-        </div>
         {testResult && (
           <div
             className="p-3 rounded-lg text-sm"

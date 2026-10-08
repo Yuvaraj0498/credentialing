@@ -201,10 +201,6 @@ function LoginForm({
         <Field label="Notes (optional)" error={errors.notes}>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="input" rows={2} placeholder="Account manager, security questions, etc." maxLength={1000} />
         </Field>
-        <div className="p-2 rounded text-[10px] text-ink-faint" style={{ background: "var(--bg-soft)" }}>
-          <Icon name="Shield" size={10} className="inline mr-1" />
-          Passwords are encrypted at rest on the server and only revealed to authorized users. Every save and reveal is recorded in the audit log.
-        </div>
         {formError && <AlertBox>{formError}</AlertBox>}
         <div className="flex justify-between gap-2 pt-3 border-t border-line">
           {existing ? (

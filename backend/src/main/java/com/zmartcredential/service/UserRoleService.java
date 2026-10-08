@@ -22,6 +22,7 @@ public class UserRoleService {
     private final UserRoleRepository repository;
     private final AppUserRepository userRepository;
     private final AuthContext authContext;
+    private final com.zmartcredential.repository.RolePermissionRepository rolePermissionRepository;
 
     /** Every signed-in staff user can read the list (the Users form needs it). */
     @Transactional(readOnly = true)
@@ -36,7 +37,7 @@ public class UserRoleService {
         if (repository.existsByNameIgnoreCase(name)) throw new ConflictException("A role named \"" + name + "\" already exists");
         UserRole r = new UserRole();
         r.setName(name);
-        r.setAccessLevel(req.accessLevel());
+        r.setAccessLevel(req.accessLevel() == null || req.accessLevel().isBlank() ? "clerk" : req.accessLevel());
         return toResponse(repository.saveAndFlush(r));
     }
 
@@ -47,7 +48,7 @@ public class UserRoleService {
         String name = clean(req.name());
         if (repository.existsByNameIgnoreCaseAndIdNot(name, id)) throw new ConflictException("A role named \"" + name + "\" already exists");
         r.setName(name);
-        if (!req.accessLevel().equals(r.getAccessLevel())) {
+        if (req.accessLevel() != null && !req.accessLevel().isBlank() && !req.accessLevel().equals(r.getAccessLevel())) {
             r.setAccessLevel(req.accessLevel());
             // users with this role follow the new access level
             userRepository.findAll().stream().filter(u -> id.equals(u.getUserRoleId())).forEach(u -> {
@@ -65,6 +66,7 @@ public class UserRoleService {
         if (used > 0) {
             throw new ConflictException("\"" + r.getName() + "\" is assigned to " + used + " user(s). Change their role first.");
         }
+        rolePermissionRepository.deleteByRole(com.zmartcredential.security.PermissionService.userRoleKey(id));
         repository.delete(r);
     }
 

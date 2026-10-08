@@ -10,7 +10,6 @@ import { useAuth, useUser } from "@/stores/auth";
 import { useAsync } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
 import { ROLE_LABEL } from "@/lib/constants";
-import type { Role } from "@/types";
 import type { Matrix, PermissionMatrix } from "@/types/permissions";
 
 const clone = (m: Matrix): Matrix => JSON.parse(JSON.stringify(m));
@@ -48,7 +47,7 @@ export function PermissionsView() {
   const { roles, entities, actions, canEdit, canEditDefaults, hasOrgOverrides } = perms.data;
   const canEditMatrix = canEdit;
 
-  const toggle = (entity: string, action: string, role: Role) => {
+  const toggle = (entity: string, action: string, role: string) => {
     if (!canEditMatrix || role === "platform_admin") return;
     const next = clone(local);
     next[entity] = next[entity] || {};
@@ -150,7 +149,7 @@ export function PermissionsView() {
             <h3 className="font-semibold text-sm text-ink">Permission Matrix</h3>
             {hasOrgOverrides ? <Pill type="accent">Customized for this organization</Pill> : <Pill type="neutral">Using defaults</Pill>}
           </div>
-          <p className="text-xs text-ink-light mt-1">Click a cell to toggle. Green = allowed, grey = denied. Platform Admin always has full access.</p>
+          <p className="text-xs text-ink-light mt-1">Click a cell to toggle. Green = allowed, grey = denied. Super Admin always has full access. A new role starts with every permission off.</p>
         </div>
         <div style={{ overflowX: "auto" }}>
           <table className="min-w-full">

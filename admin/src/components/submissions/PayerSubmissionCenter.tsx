@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/stores/toast";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState, Loading } from "@/components/AsyncState";
 import { Icon } from "@/components/Icon";
@@ -51,6 +52,7 @@ interface PortalSession {
  */
 export function PayerSubmissionCenter() {
   const { can } = useAuth();
+  const toast = useToast();
   const { publish } = useShell();
   const canSubmit = can("create", "payer_submission");
   const canCreds = can("list", "credential_vault");
@@ -104,7 +106,19 @@ export function PayerSubmissionCenter() {
     }
   };
 
-  const submit = async (payer: Payer) => {
+  // For now "Submit for …" just opens the payer's portal in a new tab; the automated workflow below is kept
+  // for later (see submitAutomated).
+  const submit = (payer: Payer) => {
+    const url = payer.portalUrl;
+    if (!url) {
+      toast("No portal address is set for " + payer.name, "error");
+      return;
+    }
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars -- kept for the automated portal sign-in, pending the workflow decision
+  const submitAutomated = async (payer: Payer) => {
     const login = loginFor(payer.id);
     if (!selectedProvider || !login) return;
     setSubmitting((s) => new Set(s).add(payer.id));

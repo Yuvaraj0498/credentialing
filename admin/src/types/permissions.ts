@@ -1,9 +1,10 @@
-import type { PermAction, PermEntity, Role } from "@/types";
+import type { PermAction, PermEntity } from "@/types";
 
-export type Matrix = Record<string, Record<string, Role[]>>;
+export type Matrix = Record<string, Record<string, string[]>>;
 
 export interface RoleDef {
-  id: Role;
+  /** "platform_admin" (Super Admin) or "ur:<user role id>" */
+  id: string;
   label: string;
   color: string;
   desc: string;

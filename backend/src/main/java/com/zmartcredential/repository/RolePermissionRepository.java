@@ -17,4 +17,8 @@ public interface RolePermissionRepository extends JpaRepository<RolePermission, 
     @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
     @org.springframework.data.jpa.repository.Query("delete from RolePermission r where r.orgId = :orgId")
     int deleteOrgOverrides(@org.springframework.data.repository.query.Param("orgId") Long orgId);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("delete from RolePermission r where r.role = :role")
+    int deleteByRole(@org.springframework.data.repository.query.Param("role") String role);
 }
