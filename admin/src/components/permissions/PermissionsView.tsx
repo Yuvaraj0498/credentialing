@@ -209,19 +209,6 @@ export function PermissionsView() {
           </table>
         </div>
       </div>
-
-      {dirty && (
-        <div className="card card-pad mt-4" style={{ background: "var(--warn-soft)", position: "sticky", bottom: 16 }}>
-          <div className="flex items-center justify-between text-xs">
-            <span>
-              <Icon name="AlertCircle" size={13} className="inline" style={{ color: "#a16207" }} /> Unsaved changes
-            </span>
-            <button onClick={save} className="btn btn-primary" disabled={!!saving}>
-              {saving === "org" ? busyLoader : <Icon name="Save" size={13} />} Save Now
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

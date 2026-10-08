@@ -29,12 +29,14 @@ public class ActiveAccountFilter extends OncePerRequestFilter {
 
     private final AppUserRepository userRepository;
     private final OrganizationRepository organizationRepository;
+    private final com.zmartcredential.repository.UserRoleRepository userRoleRepository;
     private final ErrorWriter errorWriter;
 
     public ActiveAccountFilter(AppUserRepository userRepository, OrganizationRepository organizationRepository,
-                               ErrorWriter errorWriter) {
+                               com.zmartcredential.repository.UserRoleRepository userRoleRepository, ErrorWriter errorWriter) {
         this.userRepository = userRepository;
         this.organizationRepository = organizationRepository;
+        this.userRoleRepository = userRoleRepository;
         this.errorWriter = errorWriter;
     }
 
@@ -57,6 +59,7 @@ public class ActiveAccountFilter extends OncePerRequestFilter {
         AppUser u = userRepository.findById(p.userId()).orElse(null);
         if (u == null) return "Your account no longer exists. Please sign in again.";
         if (Boolean.TRUE.equals(u.getDisabled())) return "Your account has been disabled.";
+        if (userRoleRepository.isDisabled(u.getUserRoleId())) return "Your role has been disabled. Contact your administrator.";
         if (!Role.isValid(u.getRole()) && !"admin".equals(u.getRole())) return "Your session is no longer valid. Please sign in again.";
         if (Role.fromCode(u.getRole()) != p.role() || !Objects.equals(u.getOrgId(), p.orgId())
                 || !Objects.equals(u.getProviderId(), p.providerId())) {

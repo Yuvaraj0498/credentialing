@@ -11,4 +11,9 @@ public interface UserRoleRepository extends JpaRepository<UserRole, Long> {
     boolean existsByNameIgnoreCase(String name);
 
     boolean existsByNameIgnoreCaseAndIdNot(String name, Long id);
+
+    /** True when the role exists and has been disabled. */
+    default boolean isDisabled(Long id) {
+        return id != null && findById(id).map(r -> Boolean.FALSE.equals(r.getActive())).orElse(false);
+    }
 }

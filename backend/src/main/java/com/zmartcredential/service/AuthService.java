@@ -79,6 +79,9 @@ public class AuthService {
         if (Boolean.TRUE.equals(user.getDisabled())) {
             throw new ForbiddenException("This account has been disabled. Contact your administrator.");
         }
+        if (userRoleRepository.isDisabled(user.getUserRoleId())) {
+            throw new ForbiddenException("Your role has been disabled. Contact your administrator.");
+        }
         if (user.getOrgId() != null && organizationRepository.findById(user.getOrgId())
                 .map(o -> "suspended".equals(o.getStatus())).orElse(false)) {
             throw new ForbiddenException("Your organization's account is suspended. Contact ZmartCredential support.");
@@ -99,6 +102,7 @@ public class AuthService {
         AppUser user = userRepository.findById(token.getUserId())
                 .orElseThrow(() -> new UnauthorizedException("Account no longer exists"));
         if (Boolean.TRUE.equals(user.getDisabled())) throw new ForbiddenException("This account has been disabled.");
+        if (userRoleRepository.isDisabled(user.getUserRoleId())) throw new ForbiddenException("Your role has been disabled. Contact your administrator.");
         if (user.getOrgId() != null && organizationRepository.findById(user.getOrgId())
                 .map(o -> "suspended".equals(o.getStatus())).orElse(false)) {
             throw new ForbiddenException("Your organization's account is suspended. Contact ZmartCredential support.");

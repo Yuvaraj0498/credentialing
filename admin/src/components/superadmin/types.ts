@@ -27,6 +27,8 @@ export interface UserRoleItem {
   id: number;
   name: string;
   accessLevel: "org_admin" | "clerk" | "auditor" | "provider";
+  /** Users with a disabled role cannot sign in. */
+  active: boolean;
   userCount: number;
   createdAt: string;
   updatedAt: string;

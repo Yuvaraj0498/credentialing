@@ -25,6 +25,9 @@ public class UserRole {
     /** org_admin | clerk | auditor | provider — what users with this role can open */
     private String accessLevel = "clerk";
 
+    /** A disabled role's users cannot sign in. */
+    private Boolean active = true;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

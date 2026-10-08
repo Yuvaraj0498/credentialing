@@ -58,6 +58,15 @@ public class UserRoleService {
         return toResponse(repository.saveAndFlush(r));
     }
 
+    /** Enables or disables a role. Users with a disabled role cannot sign in (and are signed out on their next request). */
+    @Transactional
+    public UserRoleResponse setActive(Long id, boolean active) {
+        authContext.requireRole(Role.PLATFORM_ADMIN);
+        UserRole r = load(id);
+        r.setActive(active);
+        return toResponse(repository.saveAndFlush(r));
+    }
+
     @Transactional
     public void delete(Long id) {
         authContext.requireRole(Role.PLATFORM_ADMIN);
@@ -80,6 +89,7 @@ public class UserRoleService {
     }
 
     private UserRoleResponse toResponse(UserRole r) {
-        return new UserRoleResponse(r.getId(), r.getName(), r.getAccessLevel(), userRepository.countByUserRoleId(r.getId()), r.getCreatedAt(), r.getUpdatedAt());
+        return new UserRoleResponse(r.getId(), r.getName(), r.getAccessLevel(), !Boolean.FALSE.equals(r.getActive()),
+                userRepository.countByUserRoleId(r.getId()), r.getCreatedAt(), r.getUpdatedAt());
     }
 }

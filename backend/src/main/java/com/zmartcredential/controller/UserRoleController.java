@@ -1,5 +1,6 @@
 package com.zmartcredential.controller;
 
+import com.zmartcredential.dto.organization.UserRoleDtos.UserRoleActiveRequest;
 import com.zmartcredential.dto.organization.UserRoleDtos.UserRoleRequest;
 import com.zmartcredential.dto.organization.UserRoleDtos.UserRoleResponse;
 import com.zmartcredential.service.UserRoleService;
@@ -36,6 +37,12 @@ public class UserRoleController {
     @PutMapping("/{id}")
     public UserRoleResponse update(@PathVariable Long id, @Valid @RequestBody UserRoleRequest req) {
         return service.update(id, req);
+    }
+
+    @Operation(summary = "Enable or disable a role — users with a disabled role cannot sign in (super admin)")
+    @PatchMapping("/{id}/active")
+    public UserRoleResponse setActive(@PathVariable Long id, @Valid @RequestBody UserRoleActiveRequest req) {
+        return service.setActive(id, req.active());
     }
 
     @Operation(summary = "Delete a role that no user has (super admin)")

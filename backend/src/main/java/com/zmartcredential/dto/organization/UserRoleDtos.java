@@ -22,6 +22,9 @@ public final class UserRoleDtos {
     }
 
     /** userCount: users that currently have this role (a role in use cannot be deleted). */
-    public record UserRoleResponse(Long id, String name, String accessLevel, long userCount, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public record UserRoleResponse(Long id, String name, String accessLevel, boolean active, long userCount, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    }
+
+    public record UserRoleActiveRequest(@jakarta.validation.constraints.NotNull(message = "active is required") Boolean active) {
     }
 }

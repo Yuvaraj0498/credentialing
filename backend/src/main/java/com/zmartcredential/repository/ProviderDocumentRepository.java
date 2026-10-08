@@ -23,4 +23,10 @@ public interface ProviderDocumentRepository extends JpaRepository<ProviderDocume
 
     @Transactional
     void deleteByProviderId(Long providerId);
+
+    /** Marks approved / pending documents whose expiration date has passed as expired. */
+    @Transactional
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("update ProviderDocument d set d.status = 'expired' where d.expiresAt < :today and d.status in ('approved', 'pending_review')")
+    int expirePastDue(@org.springframework.data.repository.query.Param("today") java.time.LocalDate today);
 }

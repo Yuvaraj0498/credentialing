@@ -217,7 +217,7 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
   // role names managed by the super admin (User Roles)
-  const userRoles = useAsync<{ id: number; name: string; accessLevel: Role }[]>(() => api.get<{ id: number; name: string; accessLevel: Role }[]>("/user-roles"), []);
+  const userRoles = useAsync<{ id: number; name: string; accessLevel: Role; active: boolean }[]>(() => api.get<{ id: number; name: string; accessLevel: Role; active: boolean }[]>("/user-roles"), []);
   // the chosen role decides the access level (set per role by the super admin)
   const chosenRole = (userRoles.data || []).find((r) => String(r.id) === form.userRoleId);
   const access: Role | undefined = chosenRole?.accessLevel;
@@ -292,7 +292,7 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
           <Field label="Role *" error={errors.userRoleId}>
             <select value={form.userRoleId} onChange={(e) => { setForm({ ...form, userRoleId: e.target.value }); setErrors((er) => ({ ...er, userRoleId: "" })); }} className="input" disabled={userRoles.loading || isSelf} title={isSelf ? "You cannot change your own role" : undefined}>
               <option value="">{userRoles.loading ? "Loading roles…" : "— Select role —"}</option>
-              {(userRoles.data || []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              {(userRoles.data || []).filter((r) => r.active !== false || r.id === user?.userRoleId).map((r) => <option key={r.id} value={r.id}>{r.name}{r.active === false ? " (disabled)" : ""}</option>)}
             </select>
             {userRoles.error && <div className="field-error">{userRoles.error}</div>}
           </Field>

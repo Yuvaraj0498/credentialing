@@ -1,6 +1,6 @@
 -- ============================================================
 -- ZmartCredential — full schema + required reference data
--- Generated from backend/src/main/resources/db/migration (V1, V2, V102, V103, V104, V105, V106, V107, V108, V109).
+-- Generated from backend/src/main/resources/db/migration (V1, V2, V102, V103, V104, V105, V106, V107, V108, V109, V110).
 -- Normally Flyway applies these automatically when Spring Boot starts;
 -- use this file only to create the database manually (e.g. phpMyAdmin).
 -- ============================================================
@@ -1297,3 +1297,11 @@ WHERE NOT EXISTS (
   SELECT 1 FROM role_permission x
   WHERE x.org_id <=> rp.org_id AND x.entity = rp.entity AND x.action = rp.action AND x.role = CONCAT('ur:', ur.id)
 );
+
+-- V110__user_role_active.sql
+-- User Roles: the super admin can disable a role; users with a disabled role cannot sign in.
+ALTER TABLE user_role ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1 AFTER access_level;
+
+-- Documents whose expiration date has passed are shown as expired.
+UPDATE provider_document SET status = 'expired'
+ WHERE expires_at IS NOT NULL AND expires_at < CURDATE() AND status IN ('approved', 'pending_review');

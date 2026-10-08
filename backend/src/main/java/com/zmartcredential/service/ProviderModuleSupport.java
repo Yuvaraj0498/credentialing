@@ -91,6 +91,15 @@ public class ProviderModuleSupport {
         return rows;
     }
 
+    /** approved / pending documents whose expiration date has passed are expired (the nightly job also saves it). */
+    public static String effectiveStatus(ProviderDocument d) {
+        if (d.getExpiresAt() != null && d.getExpiresAt().isBefore(LocalDate.now())
+                && ("approved".equals(d.getStatus()) || "pending_review".equals(d.getStatus()))) {
+            return "expired";
+        }
+        return d.getStatus();
+    }
+
     public ProviderDocumentRow toRow(ProviderDocument d, DocumentType t) {
         Long days = d.getExpiresAt() == null ? null : ChronoUnit.DAYS.between(LocalDate.now(), d.getExpiresAt());
         return new ProviderDocumentRow(d.getId(), d.getProviderId(), d.getDocType(),
@@ -98,7 +107,7 @@ public class ProviderModuleSupport {
                 t != null && Boolean.TRUE.equals(t.getCritical()),
                 t != null && Boolean.TRUE.equals(t.getExpires()),
                 t == null ? null : t.getSortOrder(),
-                d.getStatus(), d.getFileName(), d.getMimeType(), d.getSizeBytes(), d.getOriginalRelativePath(),
+                effectiveStatus(d), d.getFileName(), d.getMimeType(), d.getSizeBytes(), d.getOriginalRelativePath(),
                 d.getExpiresAt(), days, d.getUploadedAt(), d.getStorageKey() != null);
     }
 

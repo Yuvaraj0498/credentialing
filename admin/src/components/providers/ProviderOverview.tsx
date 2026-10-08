@@ -85,7 +85,7 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
                         </div>
                       </td>
                       <td className={"text-xs " + expClass} style={expDays !== null && expDays < 0 ? { color: "var(--danger)" } : undefined}>
-                        {doc.expiresAt ? fmtDateShort(doc.expiresAt) : ""}
+                        {doc.expiresAt ? fmtDateShort(doc.expiresAt) : <span className="text-ink-faint">No expiration</span>}
                       </td>
                       <td>
                         <DocStatusBadge status={doc.status} />

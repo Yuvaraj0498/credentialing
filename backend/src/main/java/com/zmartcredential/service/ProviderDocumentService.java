@@ -101,7 +101,17 @@ public class ProviderDocumentService {
             }
             resolved.add(code);
             classification.add(how);
-            expiries.add(parseDate(expiresAts != null && i < expiresAts.size() ? expiresAts.get(i) : null));
+            LocalDate exp = parseDate(expiresAts != null && i < expiresAts.size() ? expiresAts.get(i) : null);
+            DocumentType t = code == null ? null : types.get(code);
+            boolean typeExpires = t != null && Boolean.TRUE.equals(t.getExpires());
+            if (!typeExpires) exp = null; // e.g. certificates: no expiration date
+            if (exp != null && exp.isBefore(LocalDate.now())) {
+                throw new BadRequestException("Expiration date of " + f.getOriginalFilename() + " cannot be in the past");
+            }
+            if (typeExpires && exp == null && !authContext.principal().isProvider()) {
+                throw new BadRequestException("Enter the expiration date of " + f.getOriginalFilename());
+            }
+            expiries.add(exp);
             String st = statuses != null && i < statuses.size() ? blankToNull(statuses.get(i)) : null;
             if (st != null && !UPLOAD_STATUSES.contains(st)) throw new BadRequestException("Unknown document status '" + st + "'");
         }

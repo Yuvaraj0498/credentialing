@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
 import { Pill } from "@/components/Pill";
@@ -43,14 +44,28 @@ export function VerifyClassificationModal({
   const [idx, setIdx] = useState(0);
   const [items, setItems] = useState<ClassifiedItem[]>(classified);
   const [error, setError] = useState<string | null>(null);
+  // items the user tried to confirm — their missing fields show a warning
+  const [tried, setTried] = useState<Set<number>>(() => new Set());
   const cur = items[idx];
   const total = items.length;
   const confirmed = items.filter((c) => c.confirmed).length;
   const today = todayISO();
-  const isExpired = (c: ClassifiedItem) => !!c.expiresAt && c.expiresAt < today;
-  const expired = items.filter(isExpired).length;
   const typeOf = (code: string) => docTypes.find((d) => d.docType === code);
   const curType = typeOf(cur.docType);
+
+  /** Missing / invalid fields of an item: the document type, and the expiration date for types that expire. */
+  const problems = (c: ClassifiedItem) => {
+    const p: { docType?: string; expiresAt?: string } = {};
+    if (!c.docType) p.docType = "Document type is required";
+    else if (typeOf(c.docType)?.expires) {
+      if (!c.expiresAt) p.expiresAt = "Expiration date is required";
+      else if (c.expiresAt < today) p.expiresAt = "Expiration date cannot be in the past";
+    }
+    return p;
+  };
+  const isValid = (c: ClassifiedItem) => Object.keys(problems(c)).length === 0;
+  const curProblems = tried.has(idx) ? problems(cur) : {};
+  const ready = confirmed === total && items.every(isValid);
 
   // Real preview for images and PDFs (object URL), mock card otherwise.
   const previewUrl = useMemo(() => (cur.file.type.startsWith("image/") || cur.file.type === "application/pdf" ? URL.createObjectURL(cur.file) : null), [cur.file]);
@@ -64,8 +79,8 @@ export function VerifyClassificationModal({
   };
 
   const confirm = () => {
-    if (!cur.docType) {
-      setError("Choose a document type first");
+    if (!isValid(cur)) {
+      setTried((t) => new Set(t).add(idx));
       return;
     }
     updateCur({ confirmed: true });
@@ -73,10 +88,10 @@ export function VerifyClassificationModal({
   };
 
   const submitAll = () => {
-    const missingType = items.findIndex((c) => !c.docType);
-    if (missingType >= 0) {
-      setIdx(missingType);
-      setError("Choose a document type for " + items[missingType].file.name);
+    const invalid = items.findIndex((c) => !isValid(c));
+    if (invalid >= 0) {
+      setIdx(invalid);
+      setTried((t) => new Set(t).add(invalid));
       return;
     }
     const seen = new Map<string, string>();
@@ -93,12 +108,12 @@ export function VerifyClassificationModal({
       setError("Confirm every document before submitting (" + confirmed + "/" + total + " confirmed).");
       return;
     }
-    onComplete(items.map((c) => ({ ...c, status: staffUpload ? c.status || autoStatus(c) : undefined })));
+    onComplete(items.map((c) => ({ ...c, status: staffUpload ? autoStatus(c) : undefined })));
   };
 
-  // Automatic status: past expiration = expired; staff uploads approved; provider uploads await review.
-  const autoStatus = (c: ClassifiedItem): DocStatusChoice => (isExpired(c) ? "expired" : staffUpload ? "approved" : "pending_review");
-  const statusValue: DocStatusChoice = staffUpload ? cur.status || autoStatus(cur) : "pending_review";
+  // Manual (staff) uploads are approved by default; provider uploads await review.
+  const autoStatus = (c: ClassifiedItem): DocStatusChoice => (c.status ? c.status : staffUpload ? "approved" : "pending_review");
+  const statusValue: DocStatusChoice = staffUpload ? autoStatus(cur) : "pending_review";
 
   return (
     <Modal title="Verify Document Classification" subtitle="Review and confirm the AI-classified document information" onClose={busy ? undefined : onClose} maxWidth={1100}>
@@ -106,7 +121,6 @@ export function VerifyClassificationModal({
         <Pill type="success">
           {confirmed}/{total} confirmed
         </Pill>
-        {expired > 0 && <Pill type="danger">{expired} expired</Pill>}
         <span className="text-xs text-ink-light">
           {idx + 1} of {total}
         </span>
@@ -152,9 +166,17 @@ export function VerifyClassificationModal({
 
         {/* Classification fields */}
         <div className="space-y-4">
-          <div>
-            <label className="label">Document Type</label>
-            <select value={cur.docType} onChange={(e) => updateCur({ docType: e.target.value, confirmed: false, detected: false })} className={"input " + (!cur.docType && error ? "input-error" : "")} disabled={busy}>
+          <Field label="Document Type" required error={curProblems.docType}>
+            <select
+              value={cur.docType}
+              onChange={(e) => {
+                const next = typeOf(e.target.value);
+                // types without an expiration date (e.g. certificates) do not keep one
+                updateCur({ docType: e.target.value, confirmed: false, detected: false, expiresAt: next?.expires ? cur.expiresAt : "" });
+              }}
+              className={"input " + (curProblems.docType ? "input-error" : "")}
+              disabled={busy}
+            >
               <option value="">— Select document type —</option>
               {docTypes.map((d) => (
                 <option key={d.docType} value={d.docType}>
@@ -162,8 +184,22 @@ export function VerifyClassificationModal({
                 </option>
               ))}
             </select>
-            <div className="text-[10px] text-ink-faint mt-1">{cur.detected ? "Auto-detected from filename — change it if it's wrong." : "Pick the checklist item this file belongs to."}</div>
-          </div>
+            {!curProblems.docType && (
+              <div className="text-[10px] text-ink-faint mt-1">{cur.detected ? "Auto-detected from filename — change it if it's wrong." : "Pick the checklist item this file belongs to."}</div>
+            )}
+          </Field>
+          {curType?.expires && (
+            <Field label="Expiration Date" required error={curProblems.expiresAt}>
+              <input
+                type="date"
+                value={cur.expiresAt}
+                min={today}
+                onChange={(e) => updateCur({ expiresAt: e.target.value, confirmed: false })}
+                className={"input " + (curProblems.expiresAt ? "input-error" : "")}
+                disabled={busy}
+              />
+            </Field>
+          )}
           <div>
             <label className="label">Document Status</label>
             <select value={statusValue} onChange={(e) => updateCur({ status: e.target.value as DocStatusChoice })} className="input" disabled={busy || !staffUpload}>
@@ -202,7 +238,12 @@ export function VerifyClassificationModal({
           <button onClick={confirm} className="btn btn-secondary" disabled={cur.confirmed || busy}>
             <Icon name="Check" size={13} /> {cur.confirmed ? "Confirmed" : "Confirm"}
           </button>
-          <button onClick={submitAll} className="btn btn-primary" disabled={busy}>
+          <button
+            onClick={submitAll}
+            className="btn btn-primary"
+            disabled={busy || !ready}
+            title={!ready ? "Fill in the required fields and confirm every document first" : undefined}
+          >
             {busy ? <span className="loader" /> : <Icon name="Check" size={13} />} Submit All ({confirmed}/{total})
           </button>
         </div>

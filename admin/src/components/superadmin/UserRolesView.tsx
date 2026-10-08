@@ -9,7 +9,6 @@ import { ConfirmDialog, Modal } from "@/components/Modal";
 import { PageHeader } from "@/components/PageHeader";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { useAsync } from "@/lib/hooks";
-import { fmtDate } from "@/lib/utils";
 import { useToast } from "@/stores/toast";
 import type { UserRoleItem } from "./types";
 
@@ -24,7 +23,21 @@ export function UserRolesView() {
   const [editing, setEditing] = useState<UserRoleItem | "new" | null>(null);
   const [deleting, setDeleting] = useState<UserRoleItem | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [toggling, setToggling] = useState<number | null>(null);
   const list = roles.data || [];
+
+  const toggleActive = async (r: UserRoleItem) => {
+    setToggling(r.id);
+    try {
+      await api.patch("/user-roles/" + r.id + "/active", { active: !r.active });
+      toast(r.active ? r.name + " disabled — its users can no longer sign in" : r.name + " enabled");
+      roles.reload();
+    } catch (e) {
+      toast(errorMessage(e), "error");
+    } finally {
+      setToggling(null);
+    }
+  };
 
   const doDelete = async () => {
     if (!deleting) return;
@@ -63,9 +76,8 @@ export function UserRolesView() {
                   <tr>
                     <th>Role Name</th>
                     <th className="text-right">Users</th>
-                    <th>Created</th>
-                    <th>Updated</th>
-                    <th className="text-right">Actions</th>
+                    <th className="text-center">Status</th>
+                    <th className="text-center">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -73,9 +85,47 @@ export function UserRolesView() {
                     <tr key={r.id}>
                       <td className="font-medium text-ink">{r.name}</td>
                       <td className="text-right font-mono text-xs">{r.userCount}</td>
-                      <td className="text-xs text-ink-light">{fmtDate(r.createdAt)}</td>
-                      <td className="text-xs text-ink-light">{fmtDate(r.updatedAt)}</td>
-                      <td className="text-right whitespace-nowrap">
+                      <td className="text-center">
+                        <div className="inline-flex items-center gap-2">
+                          <button
+                            type="button"
+                            role="switch"
+                            aria-checked={r.active}
+                            aria-label={(r.active ? "Disable " : "Enable ") + r.name}
+                            title={r.active ? "Enabled — click to disable (its users cannot sign in)" : "Disabled — click to enable"}
+                            onClick={() => toggleActive(r)}
+                            disabled={toggling === r.id}
+                            style={{
+                              width: 36,
+                              height: 20,
+                              borderRadius: 999,
+                              position: "relative",
+                              background: r.active ? "var(--success, #059669)" : "var(--line-strong, #cbd5e1)",
+                              transition: "background .15s",
+                              opacity: toggling === r.id ? 0.6 : 1,
+                              cursor: toggling === r.id ? "wait" : "pointer",
+                            }}
+                          >
+                            <span
+                              style={{
+                                position: "absolute",
+                                top: 2,
+                                left: r.active ? 18 : 2,
+                                width: 16,
+                                height: 16,
+                                borderRadius: 999,
+                                background: "white",
+                                boxShadow: "0 1px 2px rgba(0,0,0,.25)",
+                                transition: "left .15s",
+                              }}
+                            />
+                          </button>
+                          <span className="text-xs" style={{ color: r.active ? "var(--success, #059669)" : "var(--ink-faint)", minWidth: 52, textAlign: "left" }}>
+                            {r.active ? "Enabled" : "Disabled"}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="text-center whitespace-nowrap">
                         <button onClick={() => setEditing(r)} className="btn btn-ghost text-xs" aria-label={"Edit " + r.name}>
                           <Icon name="Pencil" size={12} /> Edit
                         </button>

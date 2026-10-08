@@ -38,7 +38,8 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtService jwtService, AppUserRepository userRepository,
-                                                   OrganizationRepository organizationRepository) throws Exception {
+                                                   OrganizationRepository organizationRepository,
+                                                   com.zmartcredential.repository.UserRoleRepository userRoleRepository) throws Exception {
         http
             .csrf(c -> c.disable()) // stateless bearer-token API
             .cors(c -> {})
@@ -57,7 +58,7 @@ public class SecurityConfig {
                 .accessDeniedHandler((req, res, ex) -> writeError(req, res, HttpStatus.FORBIDDEN,
                         "You do not have permission to perform this action")))
             // re-check disabled / deleted / changed users and suspended orgs on every request
-            .addFilterAfter(new ActiveAccountFilter(userRepository, organizationRepository,
+            .addFilterAfter(new ActiveAccountFilter(userRepository, organizationRepository, userRoleRepository,
                     (req, res, msg) -> writeError(req, res, HttpStatus.UNAUTHORIZED, msg)), BearerTokenAuthenticationFilter.class)
             .exceptionHandling(e -> e
                 .authenticationEntryPoint((req, res, ex) -> writeError(req, res, HttpStatus.UNAUTHORIZED,
