@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { todayISO } from "@/lib/utils";
 import Link from "next/link";
 import { ConfirmDialog } from "@/components/Modal";
 import { DeferredNotice } from "@/components/AlertBox";
@@ -244,6 +245,11 @@ function DocumentDetails({ doc, onClose, onChanged }: { doc: DocumentRow; onClos
   const canRemove = staff && can("delete", "document");
 
   const patch = async (key: string, body: { status?: DocStatus; expiresAt?: string; clearExpiresAt?: boolean }, msg: string) => {
+    // expiration dates can't be in the past
+    if (body.expiresAt && body.expiresAt < todayISO()) {
+      toast("Choose today or a later expiration date", "error");
+      return false;
+    }
     setBusy(key);
     try {
       await api.patch<DocumentRow>("/documents/" + doc.id, body);
@@ -303,7 +309,7 @@ function DocumentDetails({ doc, onClose, onChanged }: { doc: DocumentRow; onClos
       {canReview && doc.expires && editExpiry && (
         <div className="mt-3 flex items-end gap-2">
           <Field label="Expiration Date" className="flex-1">
-            <input type="date" value={expiry} onChange={(e) => setExpiry(e.target.value)} className="input input-sm" />
+            <input type="date" min={todayISO()} value={expiry} onChange={(e) => setExpiry(e.target.value)} className="input input-sm" />
           </Field>
           <button
             className="btn btn-primary"

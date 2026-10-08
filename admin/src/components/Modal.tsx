@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { Icon } from "./Icon";
 
-const modalStack: object[] = [];
 
 export function Modal({
   children,
@@ -22,27 +21,11 @@ export function Modal({
   showBack?: boolean;
   onBack?: () => void;
 }) {
-  // Escape closes only the top-most open modal.
-  const onCloseRef = useRef(onClose);
-  useEffect(() => {
-    onCloseRef.current = onClose;
-  }, [onClose]);
-  useEffect(() => {
-    const token = {};
-    modalStack.push(token);
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && modalStack[modalStack.length - 1] === token) onCloseRef.current?.();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      const i = modalStack.indexOf(token);
-      if (i >= 0) modalStack.splice(i, 1);
-    };
-  }, []);
+  // A popup closes only with its ✕ button or Cancel — clicking outside it or pressing Escape does nothing,
+  // so a half-filled form is never lost by accident.
   return (
-    <div className="modal-backdrop slide-up" onClick={onClose}>
-      <div className="modal-card" style={{ maxWidth }} onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
+    <div className="modal-backdrop slide-up">
+      <div className="modal-card" style={{ maxWidth }} role="dialog" aria-modal="true">
         {(title || onClose) && (
           <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-4">
             <div className="flex items-start gap-3">

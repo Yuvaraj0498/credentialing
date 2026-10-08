@@ -152,6 +152,8 @@ export function SecureLinkPortal({ token }: { token: string }) {
     !!profile.licenseNumber.trim() &&
     !!profile.licenseState &&
     !!profile.licenseExpires &&
+    profile.licenseExpires >= todayISO() &&
+    (!profile.deaExpires || profile.deaExpires >= todayISO()) &&
     !!profile.caqhUsername.trim() &&
     !!profile.caqhPassword &&
     !!profile.pecosAccess &&
@@ -442,13 +444,13 @@ function ProfileForm({ profile, errors, onChange }: { profile: Profile; errors: 
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Field label="License Expiration" required error={errors.licenseExpires}>
-          <input type="date" value={profile.licenseExpires} onChange={(e) => set("licenseExpires", e.target.value)} className="input" />
+          <input type="date" min={todayISO()} value={profile.licenseExpires} onChange={(e) => set("licenseExpires", e.target.value)} className="input" />
         </Field>
         <Field label="DEA Number" error={errors.deaNumber}>
           <input value={profile.deaNumber} onChange={(e) => set("deaNumber", e.target.value.toUpperCase())} className="input font-mono" placeholder="(optional for mid-levels)" />
         </Field>
         <Field label="DEA Expiration" error={errors.deaExpires}>
-          <input type="date" value={profile.deaExpires} onChange={(e) => set("deaExpires", e.target.value)} className="input" />
+          <input type="date" min={todayISO()} value={profile.deaExpires} onChange={(e) => set("deaExpires", e.target.value)} className="input" />
         </Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -529,7 +531,7 @@ function DocUploadRow({ doc, uploaded, base, pin, onUploaded }: { doc: PublicMis
         {doc.expires && !uploaded && (
           <div className="flex items-center gap-1">
             <label className="text-[11px] text-ink-light" htmlFor={"exp-" + doc.docType}>Expires</label>
-            <input id={"exp-" + doc.docType} type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="input input-sm" style={{ width: 150 }} disabled={busy} />
+            <input id={"exp-" + doc.docType} type="date" min={todayISO()} value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="input input-sm" style={{ width: 150 }} disabled={busy} />
           </div>
         )}
         <button className="btn btn-secondary flex-shrink-0" onClick={() => ref.current?.click()} disabled={busy}>

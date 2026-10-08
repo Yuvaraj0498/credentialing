@@ -18,6 +18,9 @@ export interface User {
   testData: boolean;
   lastLoginAt: string | null;
   createdAt: string;
+  /** role name from the super admin's User Roles */
+  userRoleId: number | null;
+  userRoleName: string | null;
 }
 
 export interface UserCreate {
@@ -32,6 +35,7 @@ export interface UserCreate {
   phone?: string;
   providerId?: number | null;
   disabled?: boolean;
+  userRoleId: number;
 }
 
 export type UserUpdate = Omit<UserCreate, "username" | "password"> & { password?: string | null };

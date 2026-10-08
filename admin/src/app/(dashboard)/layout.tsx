@@ -7,7 +7,7 @@ import { Loading } from "@/components/AsyncState";
 import { Logo } from "@/components/Logo";
 import { Sidebar } from "@/components/Sidebar";
 import { ShellProvider, useShell } from "@/stores/shell";
-import { PROVIDER_ROUTES } from "@/lib/nav";
+import { PROVIDER_ROUTES, SUPER_ROUTES } from "@/lib/nav";
 import { CreateTaskModal } from "@/components/modals/CreateTaskModal";
 import { useAuth } from "@/stores/auth";
 
@@ -20,6 +20,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [createTask, setCreateTask] = useState<{ providerId?: number } | null>(null);
 
   const providerBlocked = !!user && user.role === "provider" && !PROVIDER_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
+  const superBlocked = !!user && user.role === "platform_admin" && !SUPER_ROUTES.some((r) => pathname === r || pathname.startsWith(r + "/"));
 
   useEffect(() => {
     if (loading) return;
@@ -27,9 +28,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.replace("/signin");
     }
     else if (providerBlocked) router.replace("/my-portal");
-  }, [loading, user, providerBlocked, pathname, router]);
+    else if (superBlocked) router.replace("/dashboard");
+  }, [loading, user, providerBlocked, superBlocked, pathname, router]);
 
-  if (loading || !user || providerBlocked) {
+  if (loading || !user || providerBlocked || superBlocked) {
     return (
       <div className="bg-soft">
         <Loading label="Loading ZmartCredential" full />

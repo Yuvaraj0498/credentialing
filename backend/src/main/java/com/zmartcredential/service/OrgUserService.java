@@ -44,6 +44,7 @@ public class OrgUserService {
     private final AuthContext authContext;
     private final PermissionService permissionService;
     private final PasswordEncoder passwordEncoder;
+    private final com.zmartcredential.repository.UserRoleRepository userRoleRepository;
 
     @Transactional(readOnly = true)
     public List<UserResponse> list(String q, String role) {
@@ -103,6 +104,7 @@ public class OrgUserService {
         u.setEmail(email);
         apply(u, orgId, role, req.displayName(), req.firstName(), req.lastName(), req.title(), req.phone(),
                 req.providerId());
+        u.setUserRoleId(requireUserRole(req.userRoleId()));
         u.setDisabled(Boolean.TRUE.equals(req.disabled()));
         return toResponses(List.of(userRepository.save(u))).getFirst();
     }
@@ -139,6 +141,7 @@ public class OrgUserService {
         }
         apply(u, orgId, role, req.displayName(), req.firstName(), req.lastName(), req.title(), req.phone(),
                 req.providerId());
+        u.setUserRoleId(requireUserRole(req.userRoleId()));
         if (req.disabled() != null) u.setDisabled(req.disabled());
         return toResponses(List.of(userRepository.save(u))).getFirst();
     }
@@ -228,7 +231,14 @@ public class OrgUserService {
         if (!another) throw new ConflictException("The organization must keep at least one active Org Admin");
     }
 
+    private Long requireUserRole(Long id) {
+        if (id == null || !userRoleRepository.existsById(id)) throw new BadRequestException("Choose a role from the list");
+        return id;
+    }
+
     private List<UserResponse> toResponses(List<AppUser> users) {
+        Map<Long, String> roleNames = userRoleRepository.findAll().stream()
+                .collect(Collectors.toMap(com.zmartcredential.entity.UserRole::getId, com.zmartcredential.entity.UserRole::getName));
         List<Long> providerIds = users.stream().map(AppUser::getProviderId).filter(Objects::nonNull).distinct().toList();
         Map<Long, Provider> providers = providerIds.isEmpty() ? Map.of()
                 : providerRepository.findAllById(providerIds).stream()
@@ -241,7 +251,7 @@ public class OrgUserService {
                     u.getLastName(), u.getDisplayName(), u.getTitle(), u.getPhone(), normalizeRole(u.getRole()),
                     u.getProviderId(), providerName, Boolean.TRUE.equals(u.getDisabled()),
                     Boolean.TRUE.equals(u.getSelfSignup()), Boolean.TRUE.equals(u.getTestData()), u.getLastLoginAt(),
-                    u.getCreatedAt());
+                    u.getCreatedAt(), u.getUserRoleId(), u.getUserRoleId() == null ? null : roleNames.get(u.getUserRoleId()));
         }).toList();
     }
 

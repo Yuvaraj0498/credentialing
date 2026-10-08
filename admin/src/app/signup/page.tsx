@@ -1,7 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { SignupChoose } from "@/components/signup/SignupChoose";
-
+// Public sign-up is closed: the super admin creates admins (Create Admin) and admins add providers.
 export default function SignupPage() {
-  return <SignupChoose />;
+  redirect("/signin");
 }

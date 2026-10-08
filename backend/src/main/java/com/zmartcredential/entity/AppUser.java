@@ -39,6 +39,9 @@ public class AppUser {
 
     private String role;
 
+    /** role name picked from the super admin's User Roles list */
+    private Long userRoleId;
+
     private Long providerId;
 
     private Boolean disabled = false;

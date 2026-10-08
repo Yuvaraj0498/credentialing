@@ -67,3 +67,13 @@ export const PROVIDER_NAV: NavItem[] = [
 export const PROVIDER_ROUTES = ["/my-portal", "/my-documents", "/my-payer-logins", "/my-enrollments", "/caqh-authorization", "/folder-sync", "/notifications"];
 
 export const isVisible = (item: NavItem, role: Role) => (item.roles ? item.roles.includes(role) : STAFF.includes(role));
+
+// Super admin (platform_admin): only these three modules.
+export const SUPER_NAV: NavItem[] = [
+  { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard", roles: ["platform_admin"] },
+  { href: "/create-admin", label: "Create Admin", icon: "UserPlus", roles: ["platform_admin"] },
+  { href: "/user-roles", label: "User Roles", icon: "BadgeCheck", roles: ["platform_admin"] },
+];
+
+/** Routes the super admin may open; everything else redirects to /dashboard. */
+export const SUPER_ROUTES = ["/dashboard", "/create-admin", "/user-roles"];

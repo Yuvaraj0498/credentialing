@@ -188,6 +188,12 @@ export function OrganizationView() {
   const data = tree.data;
   const totals = data?.totals;
   const selectedLocation = location.data && location.data.id === selectedLocationId ? location.data : null;
+  // One loader for the whole page: while the tree, the open location or its providers are loading,
+  // the page is blurred under a single spinner (no separate loaders in each panel).
+  const pageLoading =
+    (tree.loading && !tree.data) ||
+    (!!selectedLocationId && !selectedLocation && !location.error) ||
+    (!!selectedLocation && locationProviders.loading && !locationProviders.data && !locationProviders.error);
   const selectedPractice: TreePractice | Practice | null = selectedLocation?.practiceId
     ? data?.clients.flatMap((c) => c.practices).find((p) => p.id === selectedLocation.practiceId) || practices.data?.find((p) => p.id === selectedLocation.practiceId) || null
     : null;
@@ -247,7 +253,14 @@ export function OrganizationView() {
   };
 
   return (
-    <div>
+    <div className="relative" aria-busy={pageLoading}>
+      {pageLoading && (
+        <div className="absolute inset-0 z-20 flex items-start justify-center rounded-lg" style={{ background: "rgba(255,255,255,0.45)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}>
+          <div className="sticky top-1/3 mt-40">
+            <Loading compact label="Loading organization" />
+          </div>
+        </div>
+      )}
       <PageHeader
         title={data ? data.organization.name + "'s Organization" : "Organization"}
         subtitle="Manage your clients, practices, locations, and providers"
@@ -290,7 +303,7 @@ export function OrganizationView() {
             {tree.error ? (
               <ErrorState message={tree.error} onRetry={tree.reload} />
             ) : tree.loading && !data ? (
-              <Loading />
+              <div style={{ minHeight: 400 }} />
             ) : data && data.clients.length === 0 && data.unassignedLocations.length === 0 ? (
               <EmptyState
                 icon={q ? "SearchX" : "Building"}
@@ -396,7 +409,7 @@ export function OrganizationView() {
               <ErrorState message={location.error} onRetry={location.reload} />
             </div>
           ) : !selectedLocation ? (
-            <Loading />
+            <div style={{ minHeight: 400 }} />
           ) : (
             <div>
               {/* Breadcrumb */}
@@ -508,7 +521,7 @@ export function OrganizationView() {
                 {locationProviders.error ? (
                   <ErrorState message={locationProviders.error} onRetry={locationProviders.reload} />
                 ) : locationProviders.loading && !locationProviders.data ? (
-                  <Loading />
+                  <div style={{ minHeight: 160 }} />
                 ) : !locationProviders.data || locationProviders.data.content.length === 0 ? (
                   <EmptyState icon="UserX" title="No providers at this location" description="Use “Add Provider” to add one directly to this location." />
                 ) : (

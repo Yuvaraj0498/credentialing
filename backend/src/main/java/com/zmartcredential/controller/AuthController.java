@@ -41,6 +41,7 @@ public class AuthController {
     public static final String REFRESH_COOKIE = "zc_refresh";
 
     private final AuthService authService;
+    private final com.zmartcredential.service.PasswordResetService passwordResetService;
     private final AppProperties props;
 
     @Operation(summary = "Sign in with username (or email) and password")
@@ -79,14 +80,39 @@ public class AuthController {
     @PostMapping("/signup/organization")
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse signupOrganization(@Valid @RequestBody OrgSignupRequest req, HttpServletResponse res) {
-        return withCookie(authService.signupOrganization(req), res);
+        // Admins are created by the super admin (Create Admin); public sign-up is closed.
+        throw new com.zmartcredential.exception.ForbiddenException(SIGNUP_CLOSED);
     }
 
     @Operation(summary = "Create a provider self-service account")
     @PostMapping("/signup/provider")
     @ResponseStatus(HttpStatus.CREATED)
     public AuthResponse signupProvider(@Valid @RequestBody ProviderSignupRequest req, HttpServletResponse res) {
-        return withCookie(authService.signupProvider(req), res);
+        throw new com.zmartcredential.exception.ForbiddenException(SIGNUP_CLOSED);
+    }
+
+    private static final String SIGNUP_CLOSED = "Sign-up is closed. Your administrator creates accounts.";
+
+    @Operation(summary = "Forgot password: email a 6-digit code (never reveals whether the email has an account)")
+    @PostMapping("/forgot-password")
+    public com.zmartcredential.dto.auth.PasswordResetDtos.MessageResponse forgotPassword(
+            @Valid @RequestBody com.zmartcredential.dto.auth.PasswordResetDtos.ForgotPasswordRequest req) {
+        return new com.zmartcredential.dto.auth.PasswordResetDtos.MessageResponse(passwordResetService.requestCode(req.email()));
+    }
+
+    @Operation(summary = "Forgot password: check the code and get a short-lived reset token")
+    @PostMapping("/forgot-password/verify")
+    public com.zmartcredential.dto.auth.PasswordResetDtos.VerifyCodeResponse verifyResetCode(
+            @Valid @RequestBody com.zmartcredential.dto.auth.PasswordResetDtos.VerifyCodeRequest req) {
+        return new com.zmartcredential.dto.auth.PasswordResetDtos.VerifyCodeResponse(passwordResetService.verifyCode(req.email(), req.code()));
+    }
+
+    @Operation(summary = "Forgot password: set the new password")
+    @PostMapping("/forgot-password/reset")
+    public com.zmartcredential.dto.auth.PasswordResetDtos.MessageResponse resetPassword(
+            @Valid @RequestBody com.zmartcredential.dto.auth.PasswordResetDtos.ResetPasswordRequest req) {
+        passwordResetService.resetPassword(req);
+        return new com.zmartcredential.dto.auth.PasswordResetDtos.MessageResponse("Your password has been changed. Sign in with the new password.");
     }
 
     private AuthResponse withCookie(AuthResponse auth, HttpServletResponse res) {

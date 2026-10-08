@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { todayISO } from "@/lib/utils";
 import { PasswordInput } from "@/components/PasswordInput";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
@@ -173,6 +174,8 @@ export function ProviderForm({
     req("license", form.license);
     req("licenseState", form.licenseState);
     req("licenseExpires", form.licenseExpires);
+    // expiration dates can't be in the past (an unchanged date of an existing provider is left alone)
+    if (form.licenseExpires && form.licenseExpires < todayISO() && form.licenseExpires !== (initial.licenseExpires || "")) e.licenseExpires = "Choose today or a later date";
     req("status", form.status);
     if (!form.caqhPassword && !hasStoredPassword) e.caqhPassword = "Required";
     if (!form.pecosAccess) e.pecosAccess = "Required";
@@ -294,7 +297,7 @@ export function ProviderForm({
           </select>
         </Field>
         <Field label="License Expires *" error={err("licenseExpires")}>
-          <input type="date" value={form.licenseExpires} onChange={(e) => set("licenseExpires", e.target.value)} className="input" />
+          <input type="date" min={todayISO()} value={form.licenseExpires} onChange={(e) => set("licenseExpires", e.target.value)} className="input" />
         </Field>
         <Field label="Status *" error={err("status")}>
           <select value={form.status} onChange={(e) => set("status", e.target.value)} className="input">

@@ -41,7 +41,13 @@ const STEP_OF: Partial<Record<keyof OrgSignupData, number>> = {
 
 const Err = ({ msg }: { msg?: string }) => (msg ? <div className="field-error">{msg}</div> : null);
 
-export function OrgSignupFlow() {
+/** Super admin → Create Admin: the same steps, saved through /platform/admins (nobody is signed in). */
+export interface EmbeddedSignup {
+  onCreated: (admin: { userId: number; name: string; email: string; orgName: string }) => void;
+  onCancel: () => void;
+}
+
+export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) {
   const router = useRouter();
   const { completeAuth } = useAuth();
   const toast = useToast();
@@ -126,12 +132,19 @@ export function OrgSignupFlow() {
     setSubmitting(true);
     try {
       // The card number and CVC never leave the browser: only brand, last 4, expiry and billing details are sent.
-      const res = await api.post<AuthResponse>("/auth/signup/organization", {
+      const body = {
         org: { name: data.orgName.trim(), type: data.orgType, taxId: data.taxId, website: data.website.trim(), address: data.address.trim(), city: data.city.trim(), state: data.state, zip: data.zip },
         admin: { firstName: data.firstName.trim(), lastName: data.lastName.trim(), email: data.email.trim(), phone: data.phone.trim(), password: data.password },
         plan: { packageId: data.packageId, estimatedProviders: data.estimatedProviders },
         paymentMethod: { brand: detectCardBrand(digits), last4: digits.slice(-4), exp: data.cardExp, billingName: data.cardName.trim(), billingZip: data.cardZip },
-      });
+      };
+      if (embedded) {
+        const admin = await api.post<{ userId: number; name: string; email: string; orgName: string }>("/platform/admins", body);
+        toast("Admin created · " + admin.name + " (" + admin.orgName + ")");
+        embedded.onCreated(admin);
+        return;
+      }
+      const res = await api.post<AuthResponse>("/auth/signup/organization", body);
       completeAuth(res);
       toast("Account created · Welcome to ZmartCredential!");
       router.replace("/dashboard");
@@ -160,12 +173,14 @@ export function OrgSignupFlow() {
   ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "linear-gradient(135deg, #fff7ed 0%, #ffffff 100%)" }}>
-      <div className="w-full max-w-2xl">
-        <div className="text-center mb-6">
-          <div className="atano-logo text-2xl mb-2"><span className="a-mark">▲</span>ZmartCredential</div>
-          <h1 className="font-display text-3xl font-bold text-ink">Create your organization account</h1>
-        </div>
+    <div className={embedded ? "" : "min-h-screen flex items-center justify-center p-4"} style={embedded ? undefined : { background: "linear-gradient(135deg, #fff7ed 0%, #ffffff 100%)" }}>
+      <div className={embedded ? "w-full max-w-3xl mx-auto" : "w-full max-w-2xl"}>
+        {!embedded && (
+          <div className="text-center mb-6">
+            <div className="atano-logo text-2xl mb-2"><span className="a-mark">▲</span>ZmartCredential</div>
+            <h1 className="font-display text-3xl font-bold text-ink">Create your organization account</h1>
+          </div>
+        )}
 
         {/* Step indicator */}
         <div className="flex items-center justify-center gap-2 mb-6 flex-wrap">
@@ -420,8 +435,8 @@ export function OrgSignupFlow() {
           )}
 
           <div className="flex justify-between items-center pt-4 mt-4 border-t border-line">
-            <button onClick={() => (step > 1 ? setStep(step - 1) : router.push("/signup"))} className="btn btn-ghost" disabled={submitting}>
-              <Icon name="ChevronLeft" size={13} /> Back
+            <button onClick={() => (step > 1 ? setStep(step - 1) : embedded ? embedded.onCancel() : router.push("/signin"))} className="btn btn-ghost" disabled={submitting}>
+              <Icon name="ChevronLeft" size={13} /> {step === 1 && embedded ? "Cancel" : "Back"}
             </button>
             {step < 4 ? (
               <button onClick={next} className="btn btn-primary" disabled={step === 3 && !packages.data}>
@@ -429,15 +444,17 @@ export function OrgSignupFlow() {
               </button>
             ) : (
               <button onClick={submit} className="btn btn-primary" disabled={submitting}>
-                {submitting ? <span className="loader" style={{ borderTopColor: "white" }} /> : <Icon name="Lock" size={13} />} Create Account · ${total.toLocaleString()}/mo
+                {submitting ? <span className="loader" style={{ borderTopColor: "white" }} /> : <Icon name={embedded ? "UserPlus" : "Lock"} size={13} />} {embedded ? "Create Admin" : "Create Account"} · ${total.toLocaleString()}/mo
               </button>
             )}
           </div>
         </div>
 
-        <div className="text-center mt-4">
-          <Link href="/signin" className="text-xs text-ink-light hover:text-ink">Already have an account? Sign in</Link>
-        </div>
+        {!embedded && (
+          <div className="text-center mt-4">
+            <Link href="/signin" className="text-xs text-ink-light hover:text-ink">Already have an account? Sign in</Link>
+          </div>
+        )}
       </div>
     </div>
   );

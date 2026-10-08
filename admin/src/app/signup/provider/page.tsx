@@ -1,7 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { ProviderSignupFlow } from "@/components/signup/ProviderSignupFlow";
-
+// Public sign-up is closed: the super admin creates admins (Create Admin) and admins add providers.
 export default function ProviderSignupPage() {
-  return <ProviderSignupFlow />;
+  redirect("/signin");
 }

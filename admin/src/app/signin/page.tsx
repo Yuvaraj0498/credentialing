@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { PasswordInput } from "@/components/PasswordInput";
-import Link from "next/link";
+import { ForgotPasswordModal } from "@/components/auth/ForgotPasswordModal";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
 import { Icon } from "@/components/Icon";
@@ -39,6 +39,7 @@ function SignInScreen() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
 
   // After sign-in always open the Dashboard (providers: their portal), whatever page was open before.
   const destination = (role: string) => (role === "provider" ? "/my-portal" : "/dashboard");
@@ -102,11 +103,6 @@ function SignInScreen() {
                 </div>
               ))}
             </div>
-            <div className="mt-6 pt-4 border-t" style={{ borderColor: "rgba(0,0,0,0.06)" }}>
-              <a href="https://atano.com" target="_blank" rel="noopener noreferrer" className="text-[11px] text-ink-light hover:text-accent transition-colors">
-                UI/UX inspired by <span className="font-semibold" style={{ color: "var(--accent)" }}>▲ Atano</span>
-              </a>
-            </div>
           </div>
 
           {/* RIGHT — form */}
@@ -136,11 +132,21 @@ function SignInScreen() {
             </form>
 
             <div className="text-center mt-4 pb-2 border-b border-line">
-              <span className="text-sm text-ink-light">Don&apos;t have an account? </span>
-              <Link href="/signup" className="text-sm text-accent font-medium hover:underline">
-                Sign up
-              </Link>
+              <button type="button" onClick={() => setForgotOpen(true)} className="text-sm text-accent font-medium hover:underline">
+                Forgot password?
+              </button>
             </div>
+            {forgotOpen && (
+              <ForgotPasswordModal
+                onClose={() => setForgotOpen(false)}
+                onDone={(email) => {
+                  setForgotOpen(false);
+                  setUsername(email);
+                  setPassword("");
+                  setError("");
+                }}
+              />
+            )}
 
             {SHOW_DEMO && (
               <div className="mt-8 pt-6 border-t border-line">

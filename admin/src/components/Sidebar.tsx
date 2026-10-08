@@ -8,9 +8,8 @@ import { Icon } from "./Icon";
 import { Logo } from "./Logo";
 import { useAuth, useUser } from "@/stores/auth";
 import { ROLE_LABEL } from "@/lib/constants";
-import { MAIN_NAV, PLATFORM_NAV, PROVIDER_NAV, SYSTEM_NAV, isVisible, type NavItem } from "@/lib/nav";
+import { MAIN_NAV, PROVIDER_NAV, SUPER_NAV, SYSTEM_NAV, isVisible, type NavItem } from "@/lib/nav";
 import { useShell } from "@/stores/shell";
-import { OrgSwitcher } from "./OrgSwitcher";
 
 function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -35,6 +34,21 @@ export function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () =>
   const { openCreateTask } = useShell();
   const canCreateTask = user.role === "platform_admin" || (user.permissions.task || []).includes("create");
 
+  // Super admin: Dashboard, Create Admin and User Roles only.
+  if (user.role === "platform_admin") {
+    return (
+      <aside className={"sidebar " + (open ? "open" : "")}>
+        <Logo />
+        <nav className="flex-1 py-2">
+          {SUPER_NAV.map((n) => (
+            <NavLink key={n.href} item={n} onNavigate={onNavigate} />
+          ))}
+        </nav>
+        <SidebarUserCard />
+      </aside>
+    );
+  }
+
   if (user.role === "provider") {
     return (
       <aside className={"sidebar " + (open ? "open" : "")}>
@@ -52,7 +66,6 @@ export function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () =>
   return (
     <aside className={"sidebar " + (open ? "open" : "")}>
       <Logo />
-      {user.role === "platform_admin" && <OrgSwitcher />}
       <nav className="flex-1 py-2 overflow-y-auto">
         {MAIN_NAV.filter((n) => isVisible(n, user.role)).map((n) => (
           <NavLink key={n.href} item={n} onNavigate={onNavigate} />
@@ -71,14 +84,6 @@ export function Sidebar({ open, onNavigate }: { open: boolean; onNavigate: () =>
           <NavLink key={n.href} item={n} onNavigate={onNavigate} />
         ))}
 
-        {user.role === "platform_admin" && (
-          <>
-            <div className="nav-section-label">Platform</div>
-            {PLATFORM_NAV.map((n) => (
-              <NavLink key={n.href} item={n} onNavigate={onNavigate} />
-            ))}
-          </>
-        )}
       </nav>
       <SidebarUserCard />
     </aside>

@@ -12,4 +12,9 @@ public interface RefreshTokenRepository extends JpaRepository<RefreshToken, Long
     @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
     @org.springframework.data.jpa.repository.Query("update RefreshToken t set t.revokedAt = :now where t.revokedAt is null and t.userId in (select u.id from AppUser u where u.orgId = :orgId)")
     int revokeAllForOrg(@org.springframework.data.repository.query.Param("orgId") Long orgId, @org.springframework.data.repository.query.Param("now") java.time.LocalDateTime now);
+
+    // forgot password: sign out every session of one account
+    @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
+    @org.springframework.data.jpa.repository.Query("update RefreshToken t set t.revokedAt = :now where t.revokedAt is null and t.userId = :userId")
+    int revokeAllForUser(@org.springframework.data.repository.query.Param("userId") Long userId, @org.springframework.data.repository.query.Param("now") java.time.LocalDateTime now);
 }

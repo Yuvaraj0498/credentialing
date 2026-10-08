@@ -121,6 +121,15 @@ public class AuthService {
 
     @Transactional
     public AuthResponse signupOrganization(OrgSignupRequest req) {
+        return issueTokens(createOrganizationWithAdmin(req, true));
+    }
+
+    /**
+     * Organization sign-up workflow: organization, admin user (all modules), subscription, payment method.
+     * Used by the super admin's "Create Admin" (selfSignup = false).
+     */
+    @Transactional
+    public AppUser createOrganizationWithAdmin(OrgSignupRequest req, boolean selfSignup) {
         String email = req.admin().email().trim().toLowerCase();
         if (userRepository.existsByEmail(email) || userRepository.existsByUsername(email)) {
             throw new ConflictException("An account with this email already exists");
@@ -144,7 +153,7 @@ public class AuthService {
         org.setZip(req.org().zip());
         org.setEmail(email);
         org.setPhone(req.admin().phone());
-        org.setSelfSignup(true);
+        org.setSelfSignup(selfSignup);
         org.setInviteCode(generateInviteCode());
         org = organizationRepository.save(org);
 
@@ -157,9 +166,9 @@ public class AuthService {
         user.setLastName(req.admin().lastName().trim());
         user.setDisplayName(user.getFirstName() + " " + user.getLastName());
         user.setPhone(req.admin().phone());
-        user.setTitle("Super Admin");
+        user.setTitle("Admin");
         user.setRole(Role.ORG_ADMIN.code());
-        user.setSelfSignup(true);
+        user.setSelfSignup(selfSignup);
         user = userRepository.save(user);
 
         Subscription sub = new Subscription();
@@ -192,7 +201,7 @@ public class AuthService {
         notificationService.notifyUser(org.getId(), user.getId(), "Welcome to ZmartCredential!",
                 "Your organization account is active. Subscription: " + pkg.getName(), "PartyPopper",
                 NotificationService.ACCENT);
-        return issueTokens(user);
+        return user;
     }
 
     @Transactional
