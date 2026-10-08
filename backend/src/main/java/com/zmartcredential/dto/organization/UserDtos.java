@@ -22,7 +22,8 @@ public final class UserDtos {
             @Pattern(regexp = "[A-Za-z0-9._@+-]+", message = "Letters, digits and . _ - @ + only") String username,
             @NotBlank(message = "Email is required") @Email(message = "Valid email required") @Size(max = 255) String email,
             @NotBlank(message = "Password is required") @Size(min = 8, max = 100, message = "At least 8 characters") String password,
-            @NotBlank(message = "Access level is required") String role,
+            /* ignored: the access level comes from the chosen role (userRoleId) */
+            String role,
             /* the role picked from the super admin's User Roles */
             @NotNull(message = "Role is required") Long userRoleId,
             @Size(max = 120, message = "Max 120 characters") String title,
@@ -38,7 +39,7 @@ public final class UserDtos {
             @Size(max = 100) String lastName,
             @NotBlank(message = "Email is required") @Email(message = "Valid email required") @Size(max = 255) String email,
             @Size(max = 100, message = "Max 100 characters") String password,
-            @NotBlank(message = "Access level is required") String role,
+            String role,
             @NotNull(message = "Role is required") Long userRoleId,
             @Size(max = 120, message = "Max 120 characters") String title,
             @Size(max = 30, message = "Max 30 characters") String phone,

@@ -26,6 +26,7 @@ export interface PlatformSummary {
 export interface UserRoleItem {
   id: number;
   name: string;
+  accessLevel: "org_admin" | "clerk" | "auditor" | "provider";
   userCount: number;
   createdAt: string;
   updatedAt: string;

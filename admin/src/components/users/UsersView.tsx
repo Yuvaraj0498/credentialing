@@ -33,7 +33,10 @@ export function UsersView() {
   const q = useDebounced(search.trim());
 
   const canList = can("list", "user");
-  const users = useAsync<User[]>(canList ? () => api.get<User[]>("/users", { q, role: roleFilter }) : null, [q, roleFilter, canList]);
+  const usersQ = useAsync<User[]>(canList ? () => api.get<User[]>("/users", { q }) : null, [q, canList]);
+  // the "All Roles" filter lists the super admin's User Roles
+  const roleList = useAsync<{ id: number; name: string }[]>(canList ? () => api.get<{ id: number; name: string }[]>("/user-roles") : null, [canList]);
+  const users = { ...usersQ, data: usersQ.data ? (roleFilter === "all" ? usersQ.data : usersQ.data.filter((u) => String(u.userRoleId) === roleFilter)) : usersQ.data };
   // Unfiltered list for the header counts.
   const all = useAsync<User[]>(canList ? () => api.get<User[]>("/users") : null, [canList]);
 
@@ -61,7 +64,6 @@ export function UsersView() {
 
   const allUsers = all.data || [];
   const filtered = users.data || [];
-  const roleOptions = ROLES.filter((r) => r.id !== "platform_admin" || authUser.role === "platform_admin");
 
   return (
     <div>
@@ -88,7 +90,7 @@ export function UsersView() {
         </div>
         <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="input" style={{ width: 200 }}>
           <option value="all">All Roles</option>
-          {roleOptions.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
+          {(roleList.data || []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
         </select>
       </div>
 
@@ -159,7 +161,6 @@ export function UsersView() {
         <UserFormModal
           user={editing}
           isSelf={!!editing && editing.id === authUser.id}
-          callerRole={authUser.role}
           onSaved={() => {
             setShowForm(false);
             setEditing(null);
@@ -194,7 +195,7 @@ interface UserForm {
   disabled: boolean;
 }
 
-export function UserFormModal({ user, isSelf, callerRole, onSaved, onClose }: { user: User | null; isSelf: boolean; callerRole: Role; onSaved: () => void; onClose: () => void }) {
+export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User | null; isSelf: boolean; onSaved: () => void; onClose: () => void }) {
   const toast = useToast();
   const [form, setForm] = useState<UserForm>(
     user
@@ -216,11 +217,12 @@ export function UserFormModal({ user, isSelf, callerRole, onSaved, onClose }: { 
   const [formError, setFormError] = useState("");
   const [busy, setBusy] = useState(false);
   // role names managed by the super admin (User Roles)
-  const userRoles = useAsync<{ id: number; name: string }[]>(() => api.get<{ id: number; name: string }[]>("/user-roles"), []);
-  const providers = useAsync<ProviderLite[]>(form.role === "provider" ? () => api.get<ProviderLite[]>("/providers/all-lite") : null, [form.role === "provider"]);
+  const userRoles = useAsync<{ id: number; name: string; accessLevel: Role }[]>(() => api.get<{ id: number; name: string; accessLevel: Role }[]>("/user-roles"), []);
+  // the chosen role decides the access level (set per role by the super admin)
+  const chosenRole = (userRoles.data || []).find((r) => String(r.id) === form.userRoleId);
+  const access: Role | undefined = chosenRole?.accessLevel;
+  const providers = useAsync<ProviderLite[]>(access === "provider" ? () => api.get<ProviderLite[]>("/providers/all-lite") : null, [access === "provider"]);
 
-  const canAssignOrgAdmin = callerRole === "platform_admin" || callerRole === "org_admin";
-  const roleOptions = ROLES.filter((r) => (r.id !== "platform_admin" || callerRole === "platform_admin") && (r.id !== "org_admin" || canAssignOrgAdmin || user?.role === "org_admin"));
 
   const validate = () => {
     const e: Record<string, string> = {};
@@ -234,7 +236,7 @@ export function UserFormModal({ user, isSelf, callerRole, onSaved, onClose }: { 
     if (user && form.password && form.password.length < 8) e.password = "8+ characters";
     if (!form.role) e.role = "Required";
     if (!form.userRoleId) e.userRoleId = "Choose a role";
-    if (form.role === "provider" && !form.providerId) e.providerId = "Select the provider this login belongs to";
+    if (access === "provider" && !form.providerId) e.providerId = "Select the provider this login belongs to";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -246,11 +248,11 @@ export function UserFormModal({ user, isSelf, callerRole, onSaved, onClose }: { 
     const common = {
       displayName: form.displayName.trim(),
       email: form.email.trim(),
-      role: form.role,
+      role: access || form.role,
       userRoleId: Number(form.userRoleId),
       title: form.title.trim() || undefined,
       phone: form.phone.trim() || undefined,
-      providerId: form.role === "provider" && form.providerId ? Number(form.providerId) : null,
+      providerId: access === "provider" && form.providerId ? Number(form.providerId) : null,
       disabled: form.disabled,
     };
     try {
@@ -288,19 +290,14 @@ export function UserFormModal({ user, isSelf, callerRole, onSaved, onClose }: { 
             <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className="input font-mono" disabled={!!user} autoComplete="off" />
           </Field>
           <Field label="Role *" error={errors.userRoleId}>
-            <select value={form.userRoleId} onChange={(e) => { setForm({ ...form, userRoleId: e.target.value }); setErrors((er) => ({ ...er, userRoleId: "" })); }} className="input" disabled={userRoles.loading}>
+            <select value={form.userRoleId} onChange={(e) => { setForm({ ...form, userRoleId: e.target.value }); setErrors((er) => ({ ...er, userRoleId: "" })); }} className="input" disabled={userRoles.loading || isSelf} title={isSelf ? "You cannot change your own role" : undefined}>
               <option value="">{userRoles.loading ? "Loading roles…" : "— Select role —"}</option>
               {(userRoles.data || []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
             {userRoles.error && <div className="field-error">{userRoles.error}</div>}
           </Field>
         </div>
-        <Field label="Access Level *" error={errors.role} hint="What this user can open and change">
-          <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as Role })} className="input" disabled={isSelf} title={isSelf ? "You cannot change your own access level" : undefined}>
-            {roleOptions.map((r) => <option key={r.id} value={r.id}>{r.label}</option>)}
-          </select>
-        </Field>
-        {form.role === "provider" && (
+        {access === "provider" && (
           <Field label="Linked Provider *" error={errors.providerId}>
             <select value={form.providerId} onChange={(e) => setForm({ ...form, providerId: e.target.value })} className="input" disabled={providers.loading}>
               <option value="">{providers.loading ? "Loading providers…" : "— Select provider —"}</option>

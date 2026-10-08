@@ -272,6 +272,8 @@ public class ProviderInviteService {
         else if (!req.phone().trim().matches("[0-9]{10}")) throw new BadRequestException("Phone must be 10 digits");
         if (blankToNull(req.licenseState()) == null) missing.add("License State");
         if (req.licenseExpires() == null) missing.add("License Expiration");
+        else if (req.licenseExpires().isBefore(java.time.LocalDate.now())) throw new BadRequestException("License Expiration can't be in the past");
+        if (req.deaExpires() != null && req.deaExpires().isBefore(java.time.LocalDate.now())) throw new BadRequestException("DEA Expiration can't be in the past");
         if (blankToNull(req.caqhId()) == null && p.getCaqhId() == null) missing.add("CAQH ID");
         if (blankToNull(req.caqhUsername()) == null) missing.add("CAQH Username");
         if (blankToNull(req.caqhPassword()) == null && p.getCaqhPasswordEnc() == null) missing.add("CAQH Password");
@@ -322,6 +324,10 @@ public class ProviderInviteService {
             if (files.get(i) == null || files.get(i).isEmpty()) {
                 throw new BadRequestException("File " + (i + 1) + " is empty");
             }
+        }
+        for (int i = 0; files != null && i < files.size(); i++) {
+            LocalDate given = ProviderDocumentService.parseDate(expiresAts != null && i < expiresAts.size() ? expiresAts.get(i) : null);
+            if (given != null && given.isBefore(LocalDate.now())) throw new BadRequestException("Expiration dates can't be in the past");
         }
         List<PublicUploadedFile> uploaded = new ArrayList<>();
         for (int i = 0; i < files.size(); i++) {

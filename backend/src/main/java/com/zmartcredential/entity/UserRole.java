@@ -22,6 +22,9 @@ public class UserRole {
 
     private String name;
 
+    /** org_admin | clerk | auditor | provider — what users with this role can open */
+    private String accessLevel = "clerk";
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

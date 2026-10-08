@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { cardExpProblem } from "@/lib/validation";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
@@ -45,7 +46,8 @@ export function AddCardModal({ onClose, onAdded }: { onClose: () => void; onAdde
     const cleaned = form.number.replace(/\s/g, "");
     if (cleaned.length < 13) return "Card number too short";
     if (!/^\d+$/.test(cleaned)) return "Invalid card number";
-    if (!/^\d{2}\/\d{2}$/.test(form.exp)) return "Invalid expiration (MM/YY)";
+    const expProblem = cardExpProblem(form.exp);
+    if (expProblem) return expProblem === "Required" ? "Expiration is required" : expProblem;
     const [mm, yy] = form.exp.split("/").map(Number);
     if (mm < 1 || mm > 12) return "Invalid expiration month";
     const now = new Date();

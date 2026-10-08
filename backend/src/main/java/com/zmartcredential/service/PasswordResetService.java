@@ -42,8 +42,10 @@ public class PasswordResetService {
     @Transactional
     public String requestCode(String rawEmail) {
         String email = rawEmail.trim().toLowerCase(Locale.ROOT);
+        // the super admin's password can't be changed (and the answer stays the same, so nothing is revealed)
         Optional<AppUser> found = userRepository.findByUsernameOrEmail(email, email)
-                .filter(u -> email.equalsIgnoreCase(u.getEmail()) && !Boolean.TRUE.equals(u.getDisabled()));
+                .filter(u -> email.equalsIgnoreCase(u.getEmail()) && !Boolean.TRUE.equals(u.getDisabled())
+                        && !com.zmartcredential.security.Role.PLATFORM_ADMIN.code().equals(u.getRole()));
         if (found.isEmpty()) return SENT_MESSAGE;
         AppUser user = found.get();
         // a new code replaces any earlier one
@@ -100,6 +102,7 @@ public class PasswordResetService {
                 .filter(x -> x.getUsedAt() == null && x.getTokenExpiresAt() != null && x.getTokenExpiresAt().isAfter(LocalDateTime.now()))
                 .orElseThrow(() -> new BadRequestException("This reset session has expired. Start again."));
         AppUser user = userRepository.findById(r.getUserId())
+                .filter(u -> !com.zmartcredential.security.Role.PLATFORM_ADMIN.code().equals(u.getRole()))
                 .orElseThrow(() -> new BadRequestException("This reset session has expired. Start again."));
         user.setPasswordHash(passwordEncoder.encode(req.password()));
         userRepository.save(user);

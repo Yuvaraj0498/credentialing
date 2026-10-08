@@ -12,9 +12,8 @@ import { useAuth } from "@/stores/auth";
 import { useAsync } from "@/lib/hooks";
 import { providerName, useProvidersLite } from "@/components/enrollments/shared";
 import type { ProviderLite } from "@/types/enrollments";
-import { PayerPortalLoginModal } from "@/components/modals/PayerPortalLoginModal";
 import { ProviderPayerLoginModal } from "@/components/modals/ProviderPayerLoginModal";
-import type { CredentialMatrix, Payer, PayerCredential, PayerOverviewItem } from "@/types/payers";
+import type { CredentialMatrix, Payer, PayerOverviewItem } from "@/types/payers";
 
 interface PayerRow {
   payer: Payer;
@@ -39,12 +38,10 @@ export function PayersView() {
   const canEditCreds = can("update", "credential_vault") || can("create", "credential_vault");
   const [selectedProviderId, setSelectedProviderId] = useState("");
   const [search, setSearch] = useState("");
-  const [orgModal, setOrgModal] = useState<Payer | null>(null);
   const [provModal, setProvModal] = useState<{ providerId: number; providerName: string; payer: Payer; has: boolean } | null>(null);
 
   const rows = useAsync(loadPayerRows, []);
   const providers = useProvidersLite();
-  const orgCreds = useAsync<PayerCredential[]>(canCreds ? () => api.get("/payer-credentials") : null, [canCreds]);
   const matrix = useAsync<CredentialMatrix>(canCreds ? () => api.get("/payer-credentials/matrix") : null, [canCreds]);
 
   const payers = useMemo(() => (rows.data || []).map((r) => r.payer), [rows.data]);
@@ -63,13 +60,12 @@ export function PayersView() {
   const configuredCount = selectedProvider && perProvider ? Object.keys(perProvider).filter((k) => perProvider[Number(k)]?.username).length : 0;
 
   const reloadCreds = () => {
-    orgCreds.reload();
     matrix.reload();
   };
 
+  // Portal logins belong to a provider: the button works only after a provider is chosen.
   const openForCard = (p: Payer) => {
     if (selectedProvider) setProvModal({ providerId: selectedProvider.id, providerName: providerName(selectedProvider), payer: p, has: !!perProvider?.[p.id]?.username });
-    else setOrgModal(p);
   };
 
   return (
@@ -97,7 +93,7 @@ export function PayersView() {
                 </div>
               ) : (
                 <div className="text-xs text-ink">
-                  <strong>Select a provider</strong> to view and manage their payer portal credentials. Each provider has their own login credentials per payer, stored securely.
+                  <strong>Choose a provider first</strong> — Portal Login is enabled once a provider is selected. Each provider has their own login credentials per payer, stored securely.
                 </div>
               )}
             </div>
@@ -115,7 +111,7 @@ export function PayersView() {
       )}
 
       {/* Search */}
-      <div className="mb-4 relative" style={{ maxWidth: 400 }}>
+      <div className="mb-4 relative w-full">
         <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
         <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder="Search payers..." className="input" style={{ paddingLeft: 32 }} />
       </div>
@@ -131,12 +127,8 @@ export function PayersView() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {filteredRows.map(({ payer: p, avgTatDays }) => {
-            const orgCred = (orgCreds.data || []).find((c) => c.payerId === p.id);
-            const orgHasCreds = !!orgCred?.username;
-            const assignedCount = orgCred?.providerIds?.length || 0;
             const providerCred = perProvider ? perProvider[p.id] : null;
             const providerHasCreds = !!providerCred?.username;
-            const effectiveHasCreds = selectedProvider ? providerHasCreds : orgHasCreds;
 
             return (
               <div key={p.id} className="card card-pad card-hover">
@@ -173,14 +165,9 @@ export function PayersView() {
                 )}
                 <div className="pt-3 border-t border-line flex items-center justify-between">
                   <div className="text-xs">
-                    {!selectedProvider && !orgHasCreds && (
+                    {!selectedProvider && (
                       <span className="flex items-center gap-1 text-ink-faint">
-                        <Icon name="Lock" size={11} /> No credentials
-                      </span>
-                    )}
-                    {!selectedProvider && orgHasCreds && (
-                      <span className="flex items-center gap-1 text-success">
-                        <Icon name="CheckCircle2" size={11} /> Org-level · {assignedCount} provider{assignedCount === 1 ? "" : "s"}
+                        <Icon name="UserRound" size={11} /> Choose a provider
                       </span>
                     )}
                     {selectedProvider && providerHasCreds && (
@@ -195,8 +182,14 @@ export function PayersView() {
                     )}
                   </div>
                   {canCreds && (
-                    <button onClick={() => openForCard(p)} className="btn btn-primary" style={{ fontSize: 11, padding: "5px 10px" }} disabled={!canEditCreds && !effectiveHasCreds}>
-                      <Icon name="LogIn" size={11} /> {effectiveHasCreds ? "Update Login" : "Portal Login"}
+                    <button
+                      onClick={() => openForCard(p)}
+                      className="btn btn-primary"
+                      style={{ fontSize: 11, padding: "5px 10px" }}
+                      disabled={!selectedProvider || (!canEditCreds && !providerHasCreds)}
+                      title={!selectedProvider ? "Choose a provider first" : undefined}
+                    >
+                      <Icon name="LogIn" size={11} /> {providerHasCreds ? "Update Login" : "Portal Login"}
                     </button>
                   )}
                 </div>
@@ -206,30 +199,6 @@ export function PayersView() {
         </div>
       )}
 
-      {!selectedProviderId && canCreds && providers.data && providers.data.length > 0 && (
-        <div className="card card-pad mt-4" style={{ background: "var(--bg-soft)" }}>
-          <div className="flex items-center gap-2 text-xs text-ink-light">
-            <Icon name="Lightbulb" size={13} className="text-warn" />
-            <span>
-              Tip: Credentials entered without selecting a provider are stored at the organization level. Select a provider to maintain their individual payer portal logins.
-            </span>
-          </div>
-        </div>
-      )}
-
-      {orgModal && (
-        <PayerPortalLoginModal
-          payer={orgModal}
-          existing={(orgCreds.data || []).find((c) => c.payerId === orgModal.id) || null}
-          canEdit={canEditCreds}
-          canDelete={can("delete", "credential_vault")}
-          onSaved={() => {
-            setOrgModal(null);
-            reloadCreds();
-          }}
-          onClose={() => setOrgModal(null)}
-        />
-      )}
       {provModal && (
         <ProviderPayerLoginModal
           providerId={provModal.providerId}

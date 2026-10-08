@@ -194,7 +194,12 @@ public class ProviderDocumentService {
         authContext.requireStaff();
         ProviderDocument d = loadDoc(docId);
         if (Boolean.TRUE.equals(req.clearExpiresAt())) d.setExpiresAt(null);
-        else if (req.expiresAt() != null) d.setExpiresAt(req.expiresAt());
+        else if (req.expiresAt() != null) {
+            if (!req.expiresAt().equals(d.getExpiresAt()) && req.expiresAt().isBefore(LocalDate.now())) {
+                throw new BadRequestException("The expiration date can't be in the past");
+            }
+            d.setExpiresAt(req.expiresAt());
+        }
         if (req.status() != null) {
             d.setStatus(req.status());
         } else if (req.expiresAt() != null && ("approved".equals(d.getStatus()) || "expired".equals(d.getStatus()))) {

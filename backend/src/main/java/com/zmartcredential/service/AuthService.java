@@ -50,6 +50,7 @@ import java.util.Map;
 public class AuthService {
 
     private final AppUserRepository userRepository;
+    private final com.zmartcredential.repository.UserRoleRepository userRoleRepository;
     private final OrganizationRepository organizationRepository;
     private final ProviderRepository providerRepository;
     private final RefreshTokenRepository refreshTokenRepository;
@@ -130,6 +131,9 @@ public class AuthService {
      */
     @Transactional
     public AppUser createOrganizationWithAdmin(OrgSignupRequest req, boolean selfSignup) {
+        String exp = req.paymentMethod().exp();
+        java.time.YearMonth cardMonth = java.time.YearMonth.of(2000 + Integer.parseInt(exp.substring(3)), Integer.parseInt(exp.substring(0, 2)));
+        if (cardMonth.isBefore(java.time.YearMonth.now())) throw new BadRequestException("The card has expired — enter a current expiration date");
         String email = req.admin().email().trim().toLowerCase();
         if (userRepository.existsByEmail(email) || userRepository.existsByUsername(email)) {
             throw new ConflictException("An account with this email already exists");
@@ -168,6 +172,9 @@ public class AuthService {
         user.setPhone(req.admin().phone());
         user.setTitle("Admin");
         user.setRole(Role.ORG_ADMIN.code());
+        user.setUserRoleId(userRoleRepository.findAllByOrderByNameAsc().stream()
+                .filter(r -> Role.ORG_ADMIN.code().equals(r.getAccessLevel())).map(com.zmartcredential.entity.UserRole::getId)
+                .findFirst().orElse(null));
         user.setSelfSignup(selfSignup);
         user = userRepository.save(user);
 

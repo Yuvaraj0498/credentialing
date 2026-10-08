@@ -74,3 +74,16 @@ export function validate(rules: Record<string, [string, Rule]>): Record<string, 
 
 /** Existing phones may be stored formatted ("(313) 555-1000"); forms edit the digits only. */
 export const phoneDigits = (v: string | null | undefined) => (v ? v.replace(/\D/g, "").slice(-10) : "");
+
+/** Card expiry "MM/YY": a real month, and this month or later. */
+export const cardExpProblem = (exp: string): string | null => {
+  if (!exp || !exp.trim()) return "Required";
+  const m = /^(\d{2})\/(\d{2})$/.exec(exp.trim());
+  if (!m) return "MM/YY format";
+  const month = Number(m[1]);
+  const year = 2000 + Number(m[2]);
+  if (month < 1 || month > 12) return "Month must be 01-12";
+  const now = new Date();
+  if (year < now.getFullYear() || (year === now.getFullYear() && month < now.getMonth() + 1)) return "The card has expired";
+  return null;
+};

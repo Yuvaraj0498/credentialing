@@ -36,6 +36,7 @@ public class UserRoleService {
         if (repository.existsByNameIgnoreCase(name)) throw new ConflictException("A role named \"" + name + "\" already exists");
         UserRole r = new UserRole();
         r.setName(name);
+        r.setAccessLevel(req.accessLevel());
         return toResponse(repository.saveAndFlush(r));
     }
 
@@ -46,6 +47,13 @@ public class UserRoleService {
         String name = clean(req.name());
         if (repository.existsByNameIgnoreCaseAndIdNot(name, id)) throw new ConflictException("A role named \"" + name + "\" already exists");
         r.setName(name);
+        if (!req.accessLevel().equals(r.getAccessLevel())) {
+            r.setAccessLevel(req.accessLevel());
+            // users with this role follow the new access level
+            userRepository.findAll().stream().filter(u -> id.equals(u.getUserRoleId())).forEach(u -> {
+                if (!"provider".equals(req.accessLevel()) || u.getProviderId() != null) u.setRole(req.accessLevel());
+            });
+        }
         return toResponse(repository.saveAndFlush(r));
     }
 
@@ -70,6 +78,6 @@ public class UserRoleService {
     }
 
     private UserRoleResponse toResponse(UserRole r) {
-        return new UserRoleResponse(r.getId(), r.getName(), userRepository.countByUserRoleId(r.getId()), r.getCreatedAt(), r.getUpdatedAt());
+        return new UserRoleResponse(r.getId(), r.getName(), r.getAccessLevel(), userRepository.countByUserRoleId(r.getId()), r.getCreatedAt(), r.getUpdatedAt());
     }
 }

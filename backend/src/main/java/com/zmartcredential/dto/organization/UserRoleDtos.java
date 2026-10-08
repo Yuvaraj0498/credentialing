@@ -15,10 +15,13 @@ public final class UserRoleDtos {
             @NotBlank(message = "Role name is required")
             @Size(min = 2, max = 80, message = "2-80 characters")
             @Pattern(regexp = "^[A-Za-z][A-Za-z0-9 &/().,'-]*$", message = "Start with a letter; letters, digits, spaces and & / ( ) . , ' - only")
-            String name) {
+            String name,
+            @NotBlank(message = "Access level is required")
+            @Pattern(regexp = "org_admin|clerk|auditor|provider", message = "Choose an access level")
+            String accessLevel) {
     }
 
     /** userCount: users that currently have this role (a role in use cannot be deleted). */
-    public record UserRoleResponse(Long id, String name, long userCount, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public record UserRoleResponse(Long id, String name, String accessLevel, long userCount, LocalDateTime createdAt, LocalDateTime updatedAt) {
     }
 }

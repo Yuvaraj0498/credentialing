@@ -131,26 +131,13 @@ export function PayerSubmissionCenter() {
     <div>
       <PageHeader title="Payer Submission Center" subtitle="Submit credentialing applications to payers via API, portal, or manual channel" />
 
-      <div className="card card-pad mb-4" style={{ background: "var(--warn-soft)", borderColor: "var(--warn)" }}>
-        <div className="flex items-start gap-3">
-          <Icon name="AlertTriangle" size={18} style={{ color: "#a16207" }} className="flex-shrink-0 mt-0.5" />
-          <div className="text-xs text-ink">
-            <strong>The reality of payer submission APIs:</strong> Most private payers do not offer public credentialing APIs. Realistic breakdown: <strong>UHC</strong> has
-            partial API support for enrollment workflows (limited partner access). <strong>BCBS</strong>, <strong>Aetna</strong>, <strong>Anthem</strong> support submission via{" "}
-            <strong>Availity clearinghouse</strong>. All others use their <strong>provider portals</strong> (web forms) or accept faxed/emailed PDF applications. This tool models
-            each channel honestly.
-          </div>
-        </div>
-      </div>
-
       {/* Provider picker */}
       <div className="card card-pad mb-4">
         <label className="label">Provider to submit for</label>
         <select
           value={selectedProvider ?? ""}
           onChange={(e) => setSelectedProvider(e.target.value ? Number(e.target.value) : null)}
-          className="input"
-          style={{ maxWidth: 400 }}
+          className="input w-full"
           disabled={providers.loading}
         >
           {providers.loading && <option value="">Loading providers…</option>}

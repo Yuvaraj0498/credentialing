@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import { cleanSearch } from "@/lib/utils";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AccessDenied } from "@/components/AlertBox";
@@ -43,7 +43,6 @@ export function OrganizationView() {
   const [search, setSearch] = useState("");
   const q = useDebounced(search.trim());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [initialized, setInitialized] = useState(false);
 
   const [showAdd, setShowAdd] = useState(false);
   const [editOrg, setEditOrg] = useState(false);
@@ -89,10 +88,6 @@ export function OrganizationView() {
   if (tree.data && tree.data !== seenTree) {
     setSeenTree(tree.data);
     if (q) setExpanded(new Set(allNodeIds));
-    else if (!initialized) {
-      setExpanded(new Set(tree.data.clients.map((c) => "c" + c.id)));
-      setInitialized(true);
-    }
   }
 
   // Make sure the selected location's branch is open.
@@ -140,20 +135,6 @@ export function OrganizationView() {
     if (selectedLocationId) selectLocation(null);
   };
 
-  // Like the prototype (which opened on a location), select the first location with providers on first visit.
-  const autoSelected = useRef(false);
-  useEffect(() => {
-    if (autoSelected.current || selectedLocationId || !tree.data || q) return;
-    autoSelected.current = true;
-    const locs = tree.data.clients.flatMap((c) => c.practices.flatMap((p) => p.locations));
-    const pick = locs.find((l) => l.providerCount > 0) || locs[0];
-    if (pick) {
-      const sp = new URLSearchParams(params.toString());
-      sp.set("location", String(pick.id));
-      router.replace(pathname + "?" + sp.toString(), { scroll: false });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tree.data, selectedLocationId, q]);
 
   const reloadAll = () => {
     tree.reload();
@@ -255,10 +236,8 @@ export function OrganizationView() {
   return (
     <div className="relative" aria-busy={pageLoading}>
       {pageLoading && (
-        <div className="absolute inset-0 z-20 flex items-start justify-center rounded-lg" style={{ background: "rgba(255,255,255,0.45)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}>
-          <div className="sticky top-1/3 mt-40">
-            <Loading compact label="Loading organization" />
-          </div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center" style={{ background: "rgba(255,255,255,0.45)", backdropFilter: "blur(3px)", WebkitBackdropFilter: "blur(3px)" }}>
+          <Loading compact label="Loading organization" />
         </div>
       )}
       <PageHeader

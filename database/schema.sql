@@ -1,6 +1,6 @@
 -- ============================================================
 -- ZmartCredential — full schema + required reference data
--- Generated from backend/src/main/resources/db/migration (V1, V2, V102, V103, V104, V105, V106, V107).
+-- Generated from backend/src/main/resources/db/migration (V1, V2, V102, V103, V104, V105, V106, V107, V108).
 -- Normally Flyway applies these automatically when Spring Boot starts;
 -- use this file only to create the database manually (e.g. phpMyAdmin).
 -- ============================================================
@@ -1256,3 +1256,28 @@ CREATE TABLE password_reset (
   KEY idx_pwreset_user (user_id),
   KEY idx_pwreset_token (reset_token_hash)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ------------------------------------------------------------
+-- V108__user_role_access_level.sql
+-- ------------------------------------------------------------
+-- Each User Role (managed by the super admin) maps to an access level, so the Users form shows only these roles
+-- and a user's permissions come from the role picked: org_admin (all modules), clerk (staff), auditor (read-only)
+-- or provider (provider portal login).
+ALTER TABLE user_role
+  ADD COLUMN access_level VARCHAR(20) NOT NULL DEFAULT 'clerk' AFTER name;
+
+UPDATE user_role SET access_level = 'org_admin' WHERE name = 'Administrator';
+UPDATE user_role SET access_level = 'auditor'   WHERE name = 'Auditor';
+
+INSERT INTO user_role (name, access_level)
+SELECT 'Provider', 'provider' FROM DUAL WHERE NOT EXISTS (SELECT 1 FROM user_role WHERE name = 'Provider');
+
+-- Existing users get the matching role so every user shows a role from the list.
+UPDATE app_user u JOIN user_role r ON r.name = 'Administrator'
+   SET u.user_role_id = r.id WHERE u.user_role_id IS NULL AND u.role IN ('org_admin', 'admin');
+UPDATE app_user u JOIN user_role r ON r.name = 'Auditor'
+   SET u.user_role_id = r.id WHERE u.user_role_id IS NULL AND u.role = 'auditor';
+UPDATE app_user u JOIN user_role r ON r.name = 'Credentialing Specialist'
+   SET u.user_role_id = r.id WHERE u.user_role_id IS NULL AND u.role = 'clerk';
+UPDATE app_user u JOIN user_role r ON r.name = 'Provider'
+   SET u.user_role_id = r.id WHERE u.user_role_id IS NULL AND u.role = 'provider';

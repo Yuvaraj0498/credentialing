@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { cardExpProblem } from "@/lib/validation";
 import { PasswordInput } from "@/components/PasswordInput";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -113,7 +114,8 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
     } else if (s === 4) {
       const cleaned = data.cardNumber.replace(/\s/g, "");
       if (cleaned.length < 13) e.cardNumber = "Invalid card";
-      if (!/^\d{2}\/\d{2}$/.test(data.cardExp)) e.cardExp = "MM/YY format";
+      const expProblem = cardExpProblem(data.cardExp);
+      if (expProblem) e.cardExp = expProblem;
       if (data.cardCvc.length < 3) e.cardCvc = "3-4 digits";
       if (!data.cardName.trim()) e.cardName = "Required";
       if (!/^\d{5}$/.test(data.cardZip)) e.cardZip = "5 digits";

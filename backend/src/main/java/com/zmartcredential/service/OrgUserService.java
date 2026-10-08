@@ -89,7 +89,7 @@ public class OrgUserService {
         authContext.requireStaff();
         permissionService.require("user", "create");
         Long orgId = authContext.orgId();
-        String role = validateRole(req.role());
+        String role = validateRole(accessLevelOf(req.userRoleId()));
         String username = req.username().trim().toLowerCase(Locale.ROOT);
         String email = req.email().trim().toLowerCase(Locale.ROOT);
         if (userRepository.existsByUsername(username) || userRepository.existsByEmail(username)) {
@@ -115,7 +115,7 @@ public class OrgUserService {
         permissionService.require("user", "update");
         Long orgId = authContext.orgId();
         AppUser u = load(id);
-        String role = validateRole(req.role());
+        String role = validateRole(accessLevelOf(req.userRoleId()));
         boolean self = u.getId().equals(authContext.userId());
         if (self && !role.equals(normalizeRole(u.getRole()))) {
             throw new BadRequestException("You cannot change your own role");
@@ -229,6 +229,14 @@ public class OrgUserService {
                         && Role.ORG_ADMIN.code().equals(normalizeRole(o.getRole()))
                         && !Boolean.TRUE.equals(o.getDisabled()));
         if (!another) throw new ConflictException("The organization must keep at least one active Org Admin");
+    }
+
+    /** The access level (system role) of a User Roles entry. */
+    private String accessLevelOf(Long userRoleId) {
+        if (userRoleId == null) throw new BadRequestException("Choose a role from the list");
+        return userRoleRepository.findById(userRoleId)
+                .map(com.zmartcredential.entity.UserRole::getAccessLevel)
+                .orElseThrow(() -> new BadRequestException("Choose a role from the list"));
     }
 
     private Long requireUserRole(Long id) {

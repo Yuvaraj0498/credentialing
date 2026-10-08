@@ -40,7 +40,7 @@ public record OrgSignupRequest(
     public record PaymentMethod(
             @NotBlank String brand,
             @NotBlank @Pattern(regexp = "[0-9]{4}", message = "Invalid card") String last4,
-            @NotBlank @Pattern(regexp = "[0-9]{2}/[0-9]{2}", message = "MM/YY format") String exp,
+            @NotBlank @Pattern(regexp = "(0[1-9]|1[0-2])/[0-9]{2}", message = "MM/YY format (month 01-12)") String exp,
             @NotBlank(message = "Name on card is required") String billingName,
             @NotBlank @Pattern(regexp = "[0-9]{5}", message = "5 digits") String billingZip) {}
 }

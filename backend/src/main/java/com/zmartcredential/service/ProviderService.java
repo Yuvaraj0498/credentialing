@@ -242,10 +242,20 @@ public class ProviderService {
         p.setClientId(h.clientId());
         p.setPracticeId(h.practiceId());
         p.setLocationId(h.locationId());
-        if (req.licenseExpires() != null) p.setLicenseExpires(req.licenseExpires());
+        if (req.licenseExpires() != null) {
+            if (!req.licenseExpires().equals(p.getLicenseExpires()) && req.licenseExpires().isBefore(LocalDate.now())) {
+                throw new BadRequestException("License Expires can't be in the past");
+            }
+            p.setLicenseExpires(req.licenseExpires());
+        }
         if (req.taxonomyCode() != null) p.setTaxonomyCode(blankToNull(req.taxonomyCode()));
         if (req.deaNumber() != null) p.setDeaNumber(blankToNull(req.deaNumber()));
-        if (req.deaExpires() != null) p.setDeaExpires(req.deaExpires());
+        if (req.deaExpires() != null) {
+            if (!req.deaExpires().equals(p.getDeaExpires()) && req.deaExpires().isBefore(LocalDate.now())) {
+                throw new BadRequestException("DEA Expiration can't be in the past");
+            }
+            p.setDeaExpires(req.deaExpires());
+        }
         if (req.boardCert() != null) p.setBoardCert(blankToNull(req.boardCert()));
         if (req.malpracticeCarrier() != null) p.setMalpracticeCarrier(blankToNull(req.malpracticeCarrier()));
         if (req.practitionerType() != null) p.setPractitionerType(blankToNull(req.practitionerType()));
@@ -537,6 +547,7 @@ public class ProviderService {
         if (blankToNull(req.licenseNumber()) == null) missing.add("License #");
         if (blankToNull(req.licenseState()) == null) missing.add("License State");
         if (req.licenseExpires() == null) missing.add("License Expires");
+        else if (req.licenseExpires().isBefore(LocalDate.now())) throw new BadRequestException("License Expires can't be in the past");
         if (blankToNull(req.status()) == null) missing.add("Status");
         if (blankToNull(req.caqhId()) == null) missing.add("CAQH ID");
         else if (!req.caqhId().trim().matches("[0-9]{6,10}")) throw new BadRequestException("CAQH ID must be 6-10 digits");
