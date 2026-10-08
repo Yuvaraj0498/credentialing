@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { useEmailCheck } from "@/lib/useEmailCheck";
 import { cardExpProblem } from "@/lib/validation";
 import { PasswordInput } from "@/components/PasswordInput";
 import Link from "next/link";
@@ -68,6 +69,8 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
     // Step 4: Payment
     cardNumber: "", cardExp: "", cardCvc: "", cardName: "", cardZip: "",
   });
+  // Create Admin (super admin signed in): warn about an email that already belongs to someone
+  const emailTaken = useEmailCheck(data.email, { kind: "organization" }, !!embedded);
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -106,6 +109,7 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
       if (!data.firstName.trim()) e.firstName = "Required";
       if (!data.lastName.trim()) e.lastName = "Required";
       if (!data.email || !EMAIL_RE.test(data.email)) e.email = "Valid email required";
+      else if (emailTaken) e.email = emailTaken;
       if (!data.password || data.password.length < 8) e.password = "At least 8 characters";
       if (data.password !== data.confirmPassword) e.confirmPassword = "Passwords don't match";
     } else if (s === 3) {
@@ -290,7 +294,7 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
                   <label className="label">Work Email *</label>
                   <input type="email" value={data.email} onChange={(e) => set("email", e.target.value)} className={"input" + (errors.email ? " input-error" : "")} placeholder="you@yourcompany.com" autoComplete="email" />
                   <div className="text-[10px] text-ink-faint mt-1">This will be your username</div>
-                  <Err msg={errors.email} />
+                  <Err msg={errors.email || emailTaken} />
                 </div>
                 <div>
                   <label className="label">Phone</label>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { cleanSearch } from "@/lib/utils";
 import { AsyncBoundary } from "@/components/AsyncState";
 import { EmptyState } from "@/components/EmptyState";
 import { Icon } from "@/components/Icon";
@@ -16,6 +17,7 @@ import type { AdminSummary } from "./types";
  * Payment). Every admin gets a new organization and access to all of its modules. Any number can be created.
  */
 export function CreateAdminView() {
+  const [search, setSearch] = useState("");
   const [creating, setCreating] = useState(false);
   // remount the form after each admin so the next one starts empty
   const [formKey, setFormKey] = useState(0);
@@ -41,6 +43,13 @@ export function CreateAdminView() {
   }
 
   const list = admins.data || [];
+  const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = terms.length
+    ? list.filter((a) => {
+        const hay = [a.name, a.email, a.phone, a.orgName, a.planName, a.disabled ? "disabled" : a.orgStatus === "suspended" ? "suspended" : "active"].join(" ").toLowerCase();
+        return terms.every((t) => hay.includes(t));
+      })
+    : list;
   return (
     <div>
       <PageHeader
@@ -52,12 +61,18 @@ export function CreateAdminView() {
           </button>
         }
       />
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative flex-1 max-w-xs" style={{ minWidth: 200 }}>
+          <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
+          <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder="Search admin, email, organization, plan..." className="input" style={{ paddingLeft: 32 }} aria-label="Search admins" />
+        </div>
+      </div>
       <div className="card overflow-hidden">
         <AsyncBoundary loading={admins.loading && !admins.data} error={admins.error} onRetry={admins.reload}>
           {list.length === 0 ? (
             <EmptyState icon="UserPlus" title="No admins yet" description="Click “Create Admin” to set up the first organization." />
           ) : (
-            <AdminsTable admins={list} />
+            <AdminsTable admins={shown} emptyText={"No admins match “" + search.trim() + "”"} />
           )}
         </AsyncBoundary>
       </div>

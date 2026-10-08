@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useEmailCheck } from "@/lib/useEmailCheck";
 import { todayISO } from "@/lib/utils";
 import { PasswordInput } from "@/components/PasswordInput";
 import { Field } from "@/components/Field";
@@ -71,6 +72,7 @@ export function ProviderForm({
   org,
   initial,
   hasStoredPassword = false,
+  providerId,
   lockCaqhId = false,
   lockPlacement = false,
   submitLabel,
@@ -84,6 +86,8 @@ export function ProviderForm({
   initial: ProviderFormValues;
   /** editing a provider that already has a CAQH password: the field may stay blank */
   hasStoredPassword?: boolean;
+  /** editing: the provider's id (its own email is not a duplicate) */
+  providerId?: number;
   /** CAQH import: the CAQH ID comes from the lookup and can't change */
   lockCaqhId?: boolean;
   /** Organization screen: the client / practice / location are fixed */
@@ -126,6 +130,7 @@ export function ProviderForm({
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const emailTaken = useEmailCheck(form.email, { kind: "provider", id: providerId });
   // Typing in a field clears its message.
   const set = (k: keyof typeof form, v: string) => {
     setForm((f) => ({ ...f, [k]: v }));
@@ -169,6 +174,7 @@ export function ProviderForm({
     req("specialty", form.specialty);
     if (!form.email.trim()) e.email = "Required";
     else if (!EMAIL_RE.test(form.email.trim())) e.email = "Valid email required";
+    else if (emailTaken) e.email = emailTaken;
     if (!form.phone) e.phone = "Required";
     else if (!PHONE_RE.test(form.phone)) e.phone = "Phone must be 10 digits";
     req("license", form.license);
@@ -279,7 +285,7 @@ export function ProviderForm({
         </select>
       </Field>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Email *" error={err("email")}>
+        <Field label="Email *" error={err("email") || emailTaken}>
           <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="input" />
         </Field>
         <Field label="Phone *" error={err("phone")}>

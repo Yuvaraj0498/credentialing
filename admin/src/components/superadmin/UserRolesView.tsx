@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { cleanSearch } from "@/lib/utils";
 import { AsyncBoundary } from "@/components/AsyncState";
 import { EmptyState } from "@/components/EmptyState";
 import { Field } from "@/components/Field";
@@ -25,6 +26,9 @@ export function UserRolesView() {
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [toggling, setToggling] = useState<number | null>(null);
   const list = roles.data || [];
+  const [search, setSearch] = useState("");
+  const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = terms.length ? list.filter((r) => terms.every((t) => [r.name, r.active ? "enabled" : "disabled"].join(" ").toLowerCase().includes(t))) : list;
 
   const toggleActive = async (r: UserRoleItem) => {
     setToggling(r.id);
@@ -65,6 +69,12 @@ export function UserRolesView() {
           </button>
         }
       />
+      <div className="flex items-center gap-3 mb-4">
+        <div className="relative flex-1 max-w-xs" style={{ minWidth: 200 }}>
+          <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
+          <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder="Search role name..." className="input" style={{ paddingLeft: 32 }} aria-label="Search roles" />
+        </div>
+      </div>
       <div className="card overflow-hidden">
         <AsyncBoundary loading={roles.loading && !roles.data} error={roles.error} onRetry={roles.reload}>
           {list.length === 0 ? (
@@ -81,7 +91,12 @@ export function UserRolesView() {
                   </tr>
                 </thead>
                 <tbody>
-                  {list.map((r) => (
+                  {shown.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="text-center text-sm text-ink-light py-8">No roles match “{search.trim()}”</td>
+                    </tr>
+                  )}
+                  {shown.map((r) => (
                     <tr key={r.id}>
                       <td className="font-medium text-ink">{r.name}</td>
                       <td className="text-right font-mono text-xs">{r.userCount}</td>

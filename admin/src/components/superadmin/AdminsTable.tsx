@@ -5,7 +5,7 @@ import { fmtDate } from "@/lib/utils";
 import type { AdminSummary } from "./types";
 
 /** The admins (one per organization account) created by the super admin. */
-export function AdminsTable({ admins }: { admins: AdminSummary[] }) {
+export function AdminsTable({ admins, emptyText }: { admins: AdminSummary[]; emptyText?: string }) {
   return (
     <div className="table-scroll">
       <table>
@@ -22,6 +22,11 @@ export function AdminsTable({ admins }: { admins: AdminSummary[] }) {
           </tr>
         </thead>
         <tbody>
+          {admins.length === 0 && emptyText && (
+            <tr>
+              <td colSpan={8} className="text-center text-sm text-ink-light py-8">{emptyText}</td>
+            </tr>
+          )}
           {admins.map((a) => (
             <tr key={a.userId}>
               <td className="font-medium text-ink">{a.name}</td>

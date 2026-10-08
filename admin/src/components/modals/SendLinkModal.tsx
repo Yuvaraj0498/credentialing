@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useEmailCheck } from "@/lib/useEmailCheck";
 import { AlertBox, DeferredNotice } from "@/components/AlertBox";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
@@ -34,6 +35,7 @@ export function SendLinkModal({
 }) {
   const toast = useToast();
   const [form, setForm] = useState({ firstName: provider?.firstName || "", lastName: provider?.lastName || "", email: provider?.email || "", caqhId: "" });
+  const emailTaken = useEmailCheck(form.email, { kind: "provider", id: provider?.id });
   const [assignment, setAssignment] = useState<OrgAssignment>(
     !provider && placement
       ? placementAssignment(placement)
@@ -55,6 +57,7 @@ export function SendLinkModal({
     if (!form.lastName.trim()) e.lastName = "Required";
     if (!form.email.trim()) e.email = "Required";
     else if (!EMAIL_RE.test(form.email.trim())) e.email = "Valid email required";
+    else if (emailTaken) e.email = emailTaken;
     if (!assignment.practiceId) e.practiceId = "Pick a practice to continue";
     if (!provider) {
       if (!assignment.locationId) e.locationId = "Pick a location to continue";
@@ -162,7 +165,7 @@ export function SendLinkModal({
             <input value={form.lastName} onChange={(e) => set("lastName", e.target.value)} className="input" disabled={!!provider} />
           </Field>
         </div>
-        <Field label="Email Address" error={errors.email}>
+        <Field label="Email Address" error={errors.email || emailTaken}>
           <input value={form.email} onChange={(e) => set("email", e.target.value)} type="email" className="input" placeholder="provider@example.com" />
         </Field>
         {!provider && (

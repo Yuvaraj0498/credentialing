@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useEmailCheck } from "@/lib/useEmailCheck";
 import { cleanSearch } from "@/lib/utils";
 import { AccessDenied } from "@/components/AlertBox";
 import { Avatar } from "@/components/Avatar";
@@ -234,6 +235,12 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
   const newProvider = !user && access === "provider" && providerMode === "new";
   const org = useOrgStructure(newProvider);
 
+  const emailTaken = useEmailCheck(
+    form.email,
+    { kind: "user", id: user?.id, providerId: access === "provider" && form.providerId ? Number(form.providerId) : undefined, orgAdmin: access === "org_admin" },
+    !newProvider
+  );
+
   const validateLogin = () => {
     const e: Record<string, string> = {};
     if (!form.username.trim()) e.username = "Required";
@@ -253,6 +260,7 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
       else if (!/^[A-Za-z0-9._@+-]{3,150}$/.test(form.username.trim())) e.username = "3-150 characters: letters, digits and . _ @ + -";
     }
     if (!form.email || !/^[^@]+@[^@]+\.[^@]+$/.test(form.email)) e.email = "Valid email required";
+    else if (emailTaken) e.email = emailTaken;
     if (!user && (!form.password || form.password.length < 8)) e.password = "8+ characters";
     if (user && form.password && form.password.length < 8) e.password = "8+ characters";
     if (!form.role) e.role = "Required";
@@ -408,7 +416,7 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
             {providers.error && <div className="field-error">{providers.error}</div>}
           </Field>
         )}
-        <Field label="Email *" error={errors.email}>
+        <Field label="Email *" error={errors.email || emailTaken}>
           <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input" />
         </Field>
         <Field label="Phone" error={errors.phone}>

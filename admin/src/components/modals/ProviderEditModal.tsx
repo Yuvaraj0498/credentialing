@@ -32,6 +32,7 @@ export function ProviderEditModal({ provider, onSaved, onClose }: { provider: Pr
           org={org.data}
           initial={provider}
           hasStoredPassword={!!provider.hasCaqhPassword}
+          providerId={provider.id}
           submitLabel="Update"
           onCancel={onClose}
           onSubmit={async (body) => {
