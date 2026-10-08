@@ -54,6 +54,7 @@ public class AuthService {
     private final OrganizationRepository organizationRepository;
     private final ProviderRepository providerRepository;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final EmailRegistry emailRegistry;
     private final SubscriptionPackageRepository packageRepository;
     private final SubscriptionRepository subscriptionRepository;
     private final PaymentMethodRepository paymentMethodRepository;
@@ -140,8 +141,9 @@ public class AuthService {
         if (cardMonth.isBefore(java.time.YearMonth.now())) throw new BadRequestException("The card has expired — enter a current expiration date");
         String email = req.admin().email().trim().toLowerCase();
         if (userRepository.existsByEmail(email) || userRepository.existsByUsername(email)) {
-            throw new ConflictException("An account with this email already exists");
+            throw ConflictException.onField("email", "An account with this email already exists");
         }
+        emailRegistry.requireFreeForOrganization(email, null);
         SubscriptionPackage pkg = packageRepository.findById(req.plan().packageId())
                 .filter(p -> Boolean.TRUE.equals(p.getActive()))
                 .orElseThrow(() -> new BadRequestException("Unknown plan"));
@@ -219,8 +221,9 @@ public class AuthService {
     public AuthResponse signupProvider(ProviderSignupRequest req) {
         String email = req.email().trim().toLowerCase();
         if (userRepository.existsByEmail(email) || userRepository.existsByUsername(email)) {
-            throw new ConflictException("An account with this email already exists");
+            throw ConflictException.onField("email", "An account with this email already exists");
         }
+        emailRegistry.requireFreeForProvider(email, null);
         Long orgId = null;
         if (req.organizationCode() != null && !req.organizationCode().isBlank()) {
             orgId = organizationRepository.findByInviteCode(req.organizationCode().trim().toUpperCase())

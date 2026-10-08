@@ -11,4 +11,6 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
     Optional<Organization> findByInviteCode(String code);
 
     boolean existsByInviteCode(String code);
+
+    java.util.List<Organization> findAllByEmailIgnoreCase(String email);
 }

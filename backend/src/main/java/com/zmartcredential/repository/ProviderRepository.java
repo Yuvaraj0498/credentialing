@@ -60,4 +60,6 @@ public interface ProviderRepository extends JpaRepository<Provider, Long>, JpaSp
     @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
     @org.springframework.data.jpa.repository.Query("delete from Provider p where p.orgId = :orgId and p.testData = true")
     int orgDeleteTestData(@org.springframework.data.repository.query.Param("orgId") Long orgId);
+
+    java.util.List<Provider> findAllByEmailIgnoreCase(String email);
 }

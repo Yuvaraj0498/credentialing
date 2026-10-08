@@ -40,6 +40,7 @@ public class OrgUserService {
     private static final Set<String> ORG_ROLES = Set.of("org_admin", "clerk", "auditor", "provider");
 
     private final AppUserRepository userRepository;
+    private final EmailRegistry emailRegistry;
     private final ProviderRepository providerRepository;
     private final AuthContext authContext;
     private final PermissionService permissionService;
@@ -96,8 +97,12 @@ public class OrgUserService {
             throw new ConflictException("Username is already taken");
         }
         if (userRepository.existsByEmail(email) || userRepository.existsByUsername(email)) {
-            throw new ConflictException("Email is already used by another account");
+            throw ConflictException.onField("email", "Email is already used by another account");
         }
+        emailRegistry.requireFreeForUser(email, null, "provider".equals(role) ? req.providerId() : null,
+                Role.ORG_ADMIN.code().equals(role) ? orgId : null);
+        if (!username.equals(email)) emailRegistry.requireFreeForUser(username, null, "provider".equals(role) ? req.providerId() : null,
+                Role.ORG_ADMIN.code().equals(role) ? orgId : null);
         AppUser u = new AppUser();
         u.setUsername(username);
         u.setPasswordHash(passwordEncoder.encode(req.password()));
@@ -131,8 +136,10 @@ public class OrgUserService {
         if (!email.equalsIgnoreCase(Objects.toString(u.getEmail(), ""))) {
             if (userRepository.existsByEmailAndIdNot(email, u.getId())
                     || userRepository.findByUsername(email).filter(o -> !o.getId().equals(u.getId())).isPresent()) {
-                throw new ConflictException("Email is already used by another account");
+                throw ConflictException.onField("email", "Email is already used by another account");
             }
+            emailRegistry.requireFreeForUser(email, u.getId(), "provider".equals(role) ? req.providerId() : null,
+                    Role.ORG_ADMIN.code().equals(role) ? u.getOrgId() : null);
             u.setEmail(email);
         }
         if (req.password() != null && !req.password().isBlank()) {

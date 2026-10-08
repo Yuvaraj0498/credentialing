@@ -64,6 +64,7 @@ public class CaqhLookupService {
     private static final HttpClient HTTP = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
 
     private final CaqhConfigRepository configRepository;
+    private final EmailRegistry emailRegistry;
     private final ProviderRepository providerRepository;
     private final ProviderDocumentRepository documentRepository;
     private final ProviderDocumentInitializer documentInitializer;
@@ -197,6 +198,7 @@ public class CaqhLookupService {
         }
         p.setSource("caqh");
         p.setDateAdded(today);
+        emailRegistry.requireFreeForProvider(p.getEmail(), null);
         p = providerRepository.save(p);
         documentInitializer.initialize(p);
 

@@ -38,4 +38,7 @@ public interface AppUserRepository extends JpaRepository<AppUser, Long> {
     @org.springframework.data.jpa.repository.Modifying(flushAutomatically = true, clearAutomatically = true)
     @org.springframework.data.jpa.repository.Query("delete from AppUser u where u.orgId = :orgId and u.testData = true and u.id <> :keepUserId")
     int orgDeleteTestData(@org.springframework.data.repository.query.Param("orgId") Long orgId, @org.springframework.data.repository.query.Param("keepUserId") Long keepUserId);
+
+    @org.springframework.data.jpa.repository.Query("select u from AppUser u where lower(u.email) = :e or lower(u.username) = :e")
+    java.util.List<AppUser> findAllByEmailOrUsernameIgnoreCase(@org.springframework.data.repository.query.Param("e") String email);
 }

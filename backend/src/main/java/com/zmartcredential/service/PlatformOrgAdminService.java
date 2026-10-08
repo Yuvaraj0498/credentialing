@@ -45,6 +45,7 @@ import static com.zmartcredential.service.OrgLocationService.countMap;
 public class PlatformOrgAdminService {
 
     private final OrganizationRepository organizationRepository;
+    private final EmailRegistry emailRegistry;
     private final AppUserRepository userRepository;
     private final ProviderRepository providerRepository;
     private final SubscriptionRepository subscriptionRepository;
@@ -84,8 +85,11 @@ public class PlatformOrgAdminService {
         FirstAdmin a = req.admin();
         String adminEmail = a == null ? null : a.email().trim().toLowerCase(Locale.ROOT);
         if (adminEmail != null && (userRepository.existsByEmail(adminEmail) || userRepository.existsByUsername(adminEmail))) {
-            throw new ConflictException("An account with this email already exists");
+            throw ConflictException.onField("email", "An account with this email already exists");
         }
+        String orgEmail = req.email() == null || req.email().isBlank() ? adminEmail : req.email().trim().toLowerCase(Locale.ROOT);
+        emailRegistry.requireFreeForOrganization(orgEmail, null);
+        if (adminEmail != null && !adminEmail.equals(orgEmail)) emailRegistry.requireFreeForOrganization(adminEmail, null);
 
         Organization org = new Organization();
         org.setName(req.name().trim());

@@ -55,6 +55,7 @@ public class ProviderInviteService {
     private static final DateTimeFormatter EXPIRY_FMT = DateTimeFormatter.ofPattern("MMMM d, yyyy");
 
     private final ProviderInviteRepository inviteRepository;
+    private final EmailRegistry emailRegistry;
     private final ProviderRepository providerRepository;
     private final EmailTemplateRepository templateRepository;
     private final EmailLogRepository emailLogRepository;
@@ -89,6 +90,7 @@ public class ProviderInviteService {
         permissionService.require("provider", "create");
         authContext.requireStaff();
         Long orgId = authContext.orgId();
+        emailRegistry.requireFreeForProvider(req.email(), null);
         ProviderService.Hierarchy h = providerService.resolveHierarchy(orgId, req.clientId(), req.practiceId(), req.locationId());
         Provider p = new Provider();
         p.setOrgId(orgId);
@@ -109,6 +111,8 @@ public class ProviderInviteService {
 
     private ProviderInviteResponse createInvite(Provider provider, String email) {
         Long orgId = provider.getOrgId();
+        // the link goes to this provider: the address must not belong to anybody else
+        emailRegistry.requireFreeForProvider(email, provider.getId());
         if (provider.getEmail() == null) provider.setEmail(email);
         ProviderInvite inv = linkIssuer.issue(provider, email, authContext.userId());
         String uploadUrl = SecureLinkIssuer.uploadPath(inv);

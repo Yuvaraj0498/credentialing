@@ -66,6 +66,7 @@ public class ProviderService {
             "npi", "npi", "dateadded", "dateAdded", "createdat", "createdAt", "email", "email", "name", "lastName");
 
     private final ProviderRepository providerRepository;
+    private final EmailRegistry emailRegistry;
     private final ProviderDocumentRepository documentRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final ClientRepository clientRepository;
@@ -169,6 +170,7 @@ public class ProviderService {
         if (npi != null && providerRepository.existsByOrgIdAndNpi(orgId, npi)) {
             throw new ConflictException("A provider with NPI " + npi + " already exists in this organization");
         }
+        emailRegistry.requireFreeForProvider(req.email(), null);
         Hierarchy h = resolveHierarchy(orgId, req.clientId(), req.practiceId(), req.locationId());
         Provider p = new Provider();
         p.setOrgId(orgId);
@@ -234,6 +236,7 @@ public class ProviderService {
         }
         if (req.pecosUsername() != null && !Boolean.FALSE.equals(p.getPecosAccessGranted())) p.setPecosUsername(blankToNull(req.pecosUsername()));
         p.setSpecialty(blankToNull(req.specialty()));
+        emailRegistry.requireFreeForProvider(req.email(), p.getId());
         p.setEmail(lower(req.email()));
         p.setPhone(blankToNull(req.phone()));
         p.setLicenseNumber(blankToNull(req.licenseNumber()));
@@ -351,7 +354,10 @@ public class ProviderService {
         Provider p = loadMine();
         // partial update: fields left out of the request keep their value ("" clears a text field)
         if (req.phone() != null) p.setPhone(blankToNull(req.phone()));
-        if (req.email() != null) p.setEmail(lower(req.email()));
+        if (req.email() != null) {
+            emailRegistry.requireFreeForProvider(req.email(), p.getId());
+            p.setEmail(lower(req.email()));
+        }
         if (req.specialty() != null) p.setSpecialty(blankToNull(req.specialty()));
         if (req.licenseNumber() != null) p.setLicenseNumber(blankToNull(req.licenseNumber()));
         if (req.licenseState() != null) p.setLicenseState(upper(req.licenseState()));

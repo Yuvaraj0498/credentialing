@@ -71,6 +71,7 @@ public class OrgDataTransferService {
     private static final Set<String> TASK_PRIORITIES = Set.of("low", "medium", "high", "urgent");
 
     private final ClientRepository clientRepository;
+    private final EmailRegistry emailRegistry;
     private final PracticeRepository practiceRepository;
     private final LocationRepository locationRepository;
     private final ProviderRepository providerRepository;
@@ -191,6 +192,7 @@ public class OrgDataTransferService {
         // providers (+ document statuses)
         Map<String, Long> providerIds = new HashMap<>();
         Set<String> npis = new HashSet<>();
+        Set<String> importEmails = new HashSet<>();
         for (BundleProvider bp : data.providers()) {
             String name = bp.firstName() + " " + bp.lastName();
             String npi = blankToNull(bp.npi());
@@ -200,6 +202,11 @@ public class OrgDataTransferService {
             }
             if (!npis.add(npi) || providerRepository.existsByOrgIdAndNpi(orgId, npi)) {
                 skipped.add("Provider " + name + ": NPI " + npi + " already exists");
+                continue;
+            }
+            String bpEmail = EmailRegistry.normalize(bp.email());
+            if (bpEmail != null && (emailRegistry.inUse(bpEmail) || !importEmails.add(bpEmail))) {
+                skipped.add("Provider " + name + ": email " + bpEmail + " is already used");
                 continue;
             }
             Provider p = new Provider();

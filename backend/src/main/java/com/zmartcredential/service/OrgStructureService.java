@@ -47,6 +47,7 @@ import static com.zmartcredential.service.OrgLocationService.countMap;
 public class OrgStructureService {
 
     private final OrganizationRepository organizationRepository;
+    private final EmailRegistry emailRegistry;
     private final ClientRepository clientRepository;
     private final PracticeRepository practiceRepository;
     private final LocationRepository locationRepository;
@@ -128,6 +129,7 @@ public class OrgStructureService {
         o.setState(blankToNull(req.state()));
         o.setZip(blankToNull(req.zip()));
         o.setPhone(blankToNull(req.phone()));
+        emailRegistry.requireFreeForOrganization(req.email(), o.getId());
         o.setEmail(req.email() == null || req.email().isBlank() ? null : req.email().trim().toLowerCase(Locale.ROOT));
         return OrganizationResponse.of(organizationRepository.save(o));
     }

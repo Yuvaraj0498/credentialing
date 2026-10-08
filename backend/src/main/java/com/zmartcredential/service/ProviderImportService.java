@@ -37,6 +37,7 @@ public class ProviderImportService {
     private static final DateTimeFormatter US_DATE = DateTimeFormatter.ofPattern("M/d/yyyy");
 
     private final ProviderRepository providerRepository;
+    private final EmailRegistry emailRegistry;
     private final ProviderDocumentRepository documentRepository;
     private final ProviderDocumentInitializer documentInitializer;
     private final ProviderService providerService;
@@ -54,6 +55,7 @@ public class ProviderImportService {
         List<ProviderImportCreated> created = new ArrayList<>();
         List<ProviderImportSkipped> skipped = new ArrayList<>();
         Set<String> seenNpis = new HashSet<>();
+        Set<String> seenEmails = new HashSet<>();
         for (int i = 0; i < req.providers().size(); i++) {
             ProviderImportRow r = req.providers().get(i);
             int rowIndex = r.rowIndex() != null ? r.rowIndex() : i + 1;
@@ -78,6 +80,10 @@ public class ProviderImportService {
             if (providerRepository.existsByOrgIdAndNpi(orgId, npi)) {
                 skipped.add(new ProviderImportSkipped(rowIndex, name,
                         "A provider with NPI " + npi + " already exists"));
+                continue;
+            }
+            if (email != null && (emailRegistry.inUse(email) || !seenEmails.add(email.toLowerCase()))) {
+                skipped.add(new ProviderImportSkipped(rowIndex, name, "Email " + email + " is already used"));
                 continue;
             }
             Provider p = new Provider();

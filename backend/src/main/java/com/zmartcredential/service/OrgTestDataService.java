@@ -94,6 +94,7 @@ public class OrgTestDataService {
     private static final String[] TASK_PRIORITIES = {"high", "medium", "medium", "low"};
 
     private final ProviderRepository providerRepository;
+    private final EmailRegistry emailRegistry;
     private final ProviderDocumentRepository documentRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final LocationRepository locationRepository;
@@ -171,7 +172,7 @@ public class OrgTestDataService {
             p.setTaxonomyCode("Cardiology".equals(specialty) ? "207RC0000X"
                     : "Internal Medicine".equals(specialty) ? "207R00000X" : "207Q00000X");
             p.setNpi(uniqueNpi(orgId, usedNpis, rnd));
-            p.setEmail(first.toLowerCase(Locale.ROOT) + "." + last.toLowerCase(Locale.ROOT) + "@test.com");
+            p.setEmail(uniqueEmail(first.toLowerCase(Locale.ROOT) + "." + last.toLowerCase(Locale.ROOT), "test.com"));
             p.setPhone("(" + String.valueOf(200 + i * 7).substring(String.valueOf(200 + i * 7).length() - 3)
                     + ") 555-" + last4(1000 + i * 73));
             p.setLicenseState(state);
@@ -391,7 +392,7 @@ public class OrgTestDataService {
 
     private String uniqueEmail(String local, String domain) {
         String candidate = local + "@" + domain;
-        for (int n = 2; userRepository.existsByEmail(candidate) || userRepository.existsByUsername(candidate); n++) {
+        for (int n = 2; emailRegistry.inUse(candidate); n++) {
             candidate = local + "." + n + "@" + domain;
         }
         return candidate;
