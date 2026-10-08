@@ -62,7 +62,7 @@ export function CreateAdminView() {
         }
       />
       <div className="flex items-center gap-3 mb-4">
-        <div className="relative flex-1 max-w-xs" style={{ minWidth: 200 }}>
+        <div className="relative flex-1">
           <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
           <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder="Search admin, email, organization, plan..." className="input" style={{ paddingLeft: 32 }} aria-label="Search admins" />
         </div>
