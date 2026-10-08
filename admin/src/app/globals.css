@@ -91,11 +91,11 @@ body { margin: 0; }
 /* Fixed to the screen height (menu scrolls inside), so a long menu never stretches short pages with empty space. */
 .sidebar { width: 220px; height: 100vh; flex-shrink: 0; background: var(--bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; overflow: hidden; }
 .sidebar > nav { min-height: 0; overflow-y: auto; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 4px 14px; margin: 0.5px 8px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--ink-light); cursor: pointer; position: relative; }
+.nav-item { display: flex; align-items: center; gap: 10px; height: 18px; line-height: 18px; padding: 0 14px; margin: 0 8px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--ink-light); cursor: pointer; position: relative; }
 .nav-item:hover { background: var(--bg-soft); color: var(--ink); }
 .nav-item.active { background: var(--accent-soft); color: var(--accent-strong); }
-.nav-item.active::before { content: ''; position: absolute; left: -8px; top: 4px; bottom: 4px; width: 3px; background: var(--accent); border-radius: 0 3px 3px 0; }
-.nav-section-label { font-size: 10px; font-weight: 600; color: var(--ink-faint); letter-spacing: 0.08em; text-transform: uppercase; padding: 10px 16px 3px; }
+.nav-item.active::before { content: ''; position: absolute; left: -8px; top: 2px; bottom: 2px; width: 3px; background: var(--accent); border-radius: 0 3px 3px 0; }
+.nav-section-label { font-size: 10px; font-weight: 600; color: var(--ink-faint); letter-spacing: 0.08em; text-transform: uppercase; padding: 6px 16px 2px; }
 
 /* Tables */
 table { width: 100%; border-collapse: collapse; }

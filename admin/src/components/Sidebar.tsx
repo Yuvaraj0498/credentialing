@@ -19,7 +19,7 @@ function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void 
     <Link href={item.href} className={"nav-item " + (active ? "active" : "")} onClick={onNavigate}>
       <Icon name={item.icon} size={16} /> <span className="flex-1">{item.label}</span>
       {badge > 0 && (
-        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "var(--accent)", color: "white", minWidth: 16, textAlign: "center" }}>
+        <span className="text-[10px] font-bold px-1.5 rounded-full" style={{ background: "var(--accent)", color: "white", minWidth: 14, height: 14, lineHeight: "14px", textAlign: "center" }}>
           {badge}
         </span>
       )}
