@@ -106,7 +106,8 @@ public final class CaqhLookupDtos {
             /* the provider form completed after the CAQH lookup (all fields required); overrides the CAQH profile */
             @jakarta.validation.Valid com.zmartcredential.dto.provider.ProviderDtos.ProviderCreateRequest details,
             /* the provider's sign-in to this app */
-            @NotBlank(message = "Username is required") String username,
+            /* ignored: the provider's email is the username */
+            String username,
             @NotBlank(message = "Password is required") String password) {
     }
 

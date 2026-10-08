@@ -131,7 +131,9 @@ public class CaqhLookupService {
         authContext.requireStaff();
         Long orgId = authContext.orgId();
         ProviderService.Hierarchy h = providerService.resolveHierarchy(orgId, req.clientId(), req.practiceId(), req.locationId());
-        orgUserService.checkLogin(req.username(), req.password());
+        if (req.password() == null || req.password().length() < 8) {
+            throw com.zmartcredential.exception.BadRequestException.onField("password", "At least 8 characters");
+        }
         // re-read the profile server-side: the browser preview is never trusted
         CaqhProfile cp = find(loadConfig(orgId), req.caqhId());
         String first = blankToNull(cp.firstName());
@@ -203,7 +205,7 @@ public class CaqhLookupService {
         emailRegistry.requireFreeForProvider(p.getEmail(), null);
         p = providerRepository.save(p);
         documentInitializer.initialize(p);
-        orgUserService.createProviderLogin(p.getId(), req.username(), req.password(), null);
+        orgUserService.createProviderLogin(p.getId(), req.password(), null);
 
         int applied = 0;
         for (CaqhDocument doc : cp.documents()) {

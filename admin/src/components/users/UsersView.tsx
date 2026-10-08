@@ -316,8 +316,8 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
                 <Field label="Role *" error={errors.userRoleId}>{roleSelect}</Field>
               </div>
             }
-            onSubmit={async ({ username, password, ...provider }) => {
-              await api.post("/users/with-provider", { username, password, userRoleId: Number(form.userRoleId), provider });
+            onSubmit={async ({ password, ...provider }) => {
+              await api.post("/users/with-provider", { password, userRoleId: Number(form.userRoleId), provider });
               toast("Provider and sign-in created");
               onSaved();
             }}

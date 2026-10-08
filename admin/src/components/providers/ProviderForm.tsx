@@ -58,8 +58,7 @@ export interface ProviderFormPayload {
   clientId: number | null;
   practiceId: number | null;
   locationId: number | null;
-  /** withLogin: the provider's sign-in to this app */
-  username?: string;
+  /** withLogin: the provider's sign-in password (their email is the username) */
   password?: string;
 }
 
@@ -92,7 +91,7 @@ export function ProviderForm({
   hasStoredPassword?: boolean;
   /** editing: the provider's id (its own email is not a duplicate) */
   providerId?: number;
-  /** adding a provider: also ask for their sign-in username and password */
+  /** adding a provider: also ask for a sign-in password (the provider signs in with their email) */
   withLogin?: boolean;
   /** CAQH import: the CAQH ID comes from the lookup and can't change */
   lockCaqhId?: boolean;
@@ -133,7 +132,6 @@ export function ProviderForm({
     clientId: idStr(initialClientId),
     practiceId: idStr(initialPracticeId),
     locationId: idStr(initial.locationId),
-    username: "",
     password: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -172,8 +170,6 @@ export function ProviderForm({
       if (!v.trim()) e[k] = "Required";
     };
     if (withLogin) {
-      if (!form.username.trim()) e.username = "Required";
-      else if (!/^[A-Za-z0-9._@+-]{3,150}$/.test(form.username.trim())) e.username = "3-150 characters: letters, digits and . _ @ + -";
       if (!form.password) e.password = "Required";
       else if (form.password.length < 8) e.password = "At least 8 characters";
     }
@@ -233,7 +229,7 @@ export function ProviderForm({
         clientId: num(form.clientId),
         practiceId: num(form.practiceId),
         locationId: num(form.locationId),
-        ...(withLogin ? { username: form.username.trim(), password: form.password } : {}),
+        ...(withLogin ? { password: form.password } : {}),
       });
     } catch (err) {
       if (err instanceof ApiError) {
@@ -262,17 +258,13 @@ export function ProviderForm({
       {top}
       {withLogin && (
         <div className="pb-3 mb-1 border-b border-line">
-          <div className="text-xs font-semibold text-ink mb-2 flex items-center gap-1.5">
+          <div className="text-xs font-semibold text-ink mb-1 flex items-center gap-1.5">
             <Icon name="KeyRound" size={13} /> Sign-in for the provider
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Username *" error={err("username")}>
-              <input value={form.username} onChange={(e) => set("username", e.target.value.replace(/\s/g, ""))} className="input font-mono" autoComplete="off" maxLength={150} placeholder="e.g. jsmith" />
-            </Field>
-            <Field label="Password *" error={err("password")}>
-              <PasswordInput value={form.password} onChange={(e) => set("password", e.target.value)} className="input" autoComplete="new-password" placeholder="At least 8 characters" />
-            </Field>
-          </div>
+          <div className="text-[11px] text-ink-light mb-2">The provider signs in with the <strong>Email</strong> entered below and this password.</div>
+          <Field label="Password *" error={err("password")}>
+            <PasswordInput value={form.password} onChange={(e) => set("password", e.target.value)} className="input" autoComplete="new-password" placeholder="At least 8 characters" />
+          </Field>
         </div>
       )}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

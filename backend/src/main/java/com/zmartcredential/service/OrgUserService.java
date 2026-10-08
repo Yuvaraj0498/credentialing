@@ -127,36 +127,35 @@ public class OrgUserService {
         if (req.userRoleId() != null && !"provider".equals(accessLevelOf(req.userRoleId()))) {
             throw new BadRequestException("Choose a provider role");
         }
-        checkLogin(req.username(), req.password());
+        checkProviderLogin(req.provider().email(), req.password());
         var provider = providerService.create(req.provider());
-        return createProviderLogin(provider.id(), req.username(), req.password(), req.userRoleId());
+        return createProviderLogin(provider.id(), req.password(), req.userRoleId());
     }
 
-    /** Username / password rules for a new sign-in (checked before anything is saved). */
-    public void checkLogin(String rawUsername, String password) {
-        String username = rawUsername == null ? "" : rawUsername.trim().toLowerCase(Locale.ROOT);
-        if (username.isEmpty()) throw BadRequestException.onField("username", "Username is required");
-        if (!username.matches("[a-z0-9._@+-]{3,150}")) {
-            throw BadRequestException.onField("username", "3-150 characters: letters, digits and . _ - @ + only");
-        }
-        if (userRepository.existsByUsername(username) || userRepository.existsByEmail(username)) {
-            throw ConflictException.onField("username", "Username is already taken");
+    /**
+     * A provider signs in with their email: it is their username. Checked before anything is saved: the email
+     * must not already be anybody's username or email, and the password needs 8+ characters.
+     */
+    public void checkProviderLogin(String rawEmail, String password) {
+        String email = rawEmail == null ? "" : rawEmail.trim().toLowerCase(Locale.ROOT);
+        if (email.isEmpty()) throw BadRequestException.onField("email", "Email is required — it is the provider's username");
+        if (email.length() > 150) throw BadRequestException.onField("email", "At most 150 characters");
+        if (userRepository.existsByUsername(email) || userRepository.existsByEmail(email)) {
+            throw ConflictException.onField("email", "An account with this email already exists");
         }
         if (password == null || password.length() < 8) throw BadRequestException.onField("password", "At least 8 characters");
         if (password.length() > 100) throw BadRequestException.onField("password", "At most 100 characters");
     }
 
-    /** The sign-in of a provider that was just added (the caller checked the permissions). */
+    /** The sign-in of a provider that was just added; username = the provider's email (the caller checked the permissions). */
     @Transactional
-    public UserResponse createProviderLogin(Long providerId, String rawUsername, String password, Long userRoleId) {
-        checkLogin(rawUsername, password);
+    public UserResponse createProviderLogin(Long providerId, String password, Long userRoleId) {
         Provider p = providerRepository.findById(providerId).orElseThrow(() -> NotFoundException.of("Provider", providerId));
-        String email = p.getEmail() == null ? null : p.getEmail().trim().toLowerCase(Locale.ROOT);
-        if (email == null) throw BadRequestException.onField("email", "Email is required");
-        if (userRepository.existsByEmail(email)) throw ConflictException.onField("email", "Email is already used by another account");
+        checkProviderLogin(p.getEmail(), password);
+        String email = p.getEmail().trim().toLowerCase(Locale.ROOT);
         emailRegistry.requireFreeForUser(email, null, providerId, null);
         AppUser u = new AppUser();
-        u.setUsername(rawUsername.trim().toLowerCase(Locale.ROOT));
+        u.setUsername(email);
         u.setPasswordHash(passwordEncoder.encode(password));
         u.setEmail(email);
         String name = ((p.getFirstName() == null ? "" : p.getFirstName()) + " " + (p.getLastName() == null ? "" : p.getLastName())).trim();

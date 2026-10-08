@@ -34,8 +34,8 @@ public final class UserDtos {
 
     /** Users → Add User with the Provider role: the provider (same fields as Add Provider Manually) and their login. */
     public record UserWithProviderRequest(
-            @NotBlank(message = "Username is required") @Size(min = 3, max = 150, message = "3-150 characters")
-            @Pattern(regexp = "[A-Za-z0-9._@+-]+", message = "Letters, digits and . _ - @ + only") String username,
+            /* ignored: a provider signs in with their email (the provider's email is the username) */
+            String username,
             @NotBlank(message = "Password is required") @Size(min = 8, max = 100, message = "At least 8 characters") String password,
             /* optional: defaults to the Provider user role */
             Long userRoleId,
