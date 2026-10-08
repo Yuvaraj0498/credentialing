@@ -256,17 +256,6 @@ export function ProviderForm({
   return (
     <div className="space-y-3">
       {top}
-      {withLogin && (
-        <div className="pb-3 mb-1 border-b border-line">
-          <div className="text-xs font-semibold text-ink mb-1 flex items-center gap-1.5">
-            <Icon name="KeyRound" size={13} /> Sign-in for the provider
-          </div>
-          <div className="text-[11px] text-ink-light mb-2">The provider signs in with the <strong>Email</strong> entered below and this password.</div>
-          <Field label="Password *" error={err("password")}>
-            <PasswordInput value={form.password} onChange={(e) => set("password", e.target.value)} className="input" autoComplete="new-password" placeholder="At least 8 characters" />
-          </Field>
-        </div>
-      )}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Field label="First Name *" error={err("firstName")}>
           <input value={form.firstName} onChange={(e) => set("firstName", e.target.value)} className="input" maxLength={80} />
@@ -308,13 +297,18 @@ export function ProviderForm({
           ))}
         </select>
       </Field>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div className={"grid grid-cols-1 gap-3 " + (withLogin ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
         <Field label="Email *" error={err("email") || emailTaken}>
           <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="input" />
         </Field>
         <Field label="Phone *" error={err("phone")}>
           <input value={form.phone} onChange={(e) => set("phone", digitsOnly(e.target.value, 10))} className="input font-mono" inputMode="numeric" placeholder="10 digits" />
         </Field>
+        {withLogin && (
+          <Field label="Password *" error={err("password")} hint="Sign-in: the email + this password">
+            <PasswordInput value={form.password} onChange={(e) => set("password", e.target.value)} className="input" autoComplete="new-password" placeholder="At least 8 characters" />
+          </Field>
+        )}
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
         <Field label="License # *" error={err("license")}>

@@ -27,7 +27,8 @@ export interface UserCreate {
   displayName: string;
   firstName?: string;
   lastName?: string;
-  username: string;
+  /** optional: the email is the username when left out */
+  username?: string;
   email: string;
   password: string;
   role: Role;

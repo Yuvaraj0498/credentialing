@@ -92,11 +92,13 @@ public class OrgUserService {
         permissionService.require("user", "create");
         Long orgId = authContext.orgId();
         String role = validateRole(accessLevelOf(req.userRoleId()));
-        String username = req.username().trim().toLowerCase(Locale.ROOT);
         String email = req.email().trim().toLowerCase(Locale.ROOT);
-        if (userRepository.existsByUsername(username) || userRepository.existsByEmail(username)) {
+        // users sign in with their email: it is the username unless one was given
+        String username = req.username() == null || req.username().isBlank() ? email : req.username().trim().toLowerCase(Locale.ROOT);
+        if (!username.equals(email) && (userRepository.existsByUsername(username) || userRepository.existsByEmail(username))) {
             throw ConflictException.onField("username", "Username is already taken");
         }
+        requirePhone(req.phone());
         if (userRepository.existsByEmail(email) || userRepository.existsByUsername(email)) {
             throw ConflictException.onField("email", "Email is already used by another account");
         }
@@ -130,6 +132,13 @@ public class OrgUserService {
         checkProviderLogin(req.provider().email(), req.password());
         var provider = providerService.create(req.provider());
         return createProviderLogin(provider.id(), req.password(), req.userRoleId());
+    }
+
+    /** Phone is required for a new user: 10 digits (formatting characters are ignored). */
+    private static void requirePhone(String phone) {
+        String digits = phone == null ? "" : phone.replaceAll("\\D", "");
+        if (digits.isEmpty()) throw BadRequestException.onField("phone", "Phone is required");
+        if (digits.length() != 10) throw BadRequestException.onField("phone", "Phone must be 10 digits");
     }
 
     /**
@@ -191,6 +200,11 @@ public class OrgUserService {
             }
             emailRegistry.requireFreeForUser(email, u.getId(), "provider".equals(role) ? req.providerId() : null,
                     Role.ORG_ADMIN.code().equals(role) ? u.getOrgId() : null);
+            // a username that was the old email follows the new email
+            if (u.getUsername() != null && u.getUsername().equalsIgnoreCase(Objects.toString(u.getEmail(), ""))
+                    && userRepository.findByUsername(email).filter(o -> !o.getId().equals(u.getId())).isEmpty()) {
+                u.setUsername(email);
+            }
             u.setEmail(email);
         }
         if (req.password() != null && !req.password().isBlank()) {

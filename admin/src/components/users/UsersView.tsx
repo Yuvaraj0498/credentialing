@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { PasswordInput } from "@/components/PasswordInput";
+import { digitsOnly, PHONE_RE, phoneDigits } from "@/lib/validation";
 import { useEmailCheck } from "@/lib/useEmailCheck";
 import { cleanSearch } from "@/lib/utils";
 import { AccessDenied } from "@/components/AlertBox";
@@ -144,16 +146,22 @@ export function UsersView() {
                           <Pill type={u.disabled ? "danger" : "success"}>{u.disabled ? "Disabled" : "Active"}</Pill>
                         </td>
                         <td className="text-right" style={{ whiteSpace: "nowrap" }}>
-                          {can("update", "user") && (
-                            <button onClick={() => { setEditing(u); setShowForm(true); }} className="btn btn-ghost text-xs">
-                              <Icon name="Edit" size={11} /> Edit
-                            </button>
-                          )}
-                          {can("delete", "user") && u.id !== authUser.id && (
-                            <button onClick={() => setPendingDelete(u)} className="btn-ghost p-1 hover:text-danger" title="Delete user">
-                              <Icon name="Trash2" size={11} />
-                            </button>
-                          )}
+                          <div className="inline-flex items-center justify-end gap-1">
+                            {can("update", "user") && (
+                              <button onClick={() => { setEditing(u); setShowForm(true); }} className="btn btn-ghost text-xs">
+                                <Icon name="Edit" size={11} /> Edit
+                              </button>
+                            )}
+                            {can("delete", "user") &&
+                              (u.id !== authUser.id ? (
+                                <button onClick={() => setPendingDelete(u)} className="btn-ghost p-1 hover:text-danger" title="Delete user" aria-label={"Delete " + u.displayName} style={{ width: 22 }}>
+                                  <Icon name="Trash2" size={11} />
+                                </button>
+                              ) : (
+                                // keeps Edit lined up with the other rows (you can't delete yourself)
+                                <span aria-hidden style={{ width: 22, display: "inline-block" }} />
+                              ))}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -191,8 +199,8 @@ export function UsersView() {
 }
 
 interface UserForm {
-  displayName: string;
-  username: string;
+  firstName: string;
+  lastName: string;
   email: string;
   password: string;
   role: Role;
@@ -208,18 +216,18 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
   const [form, setForm] = useState<UserForm>(
     user
       ? {
-          displayName: user.displayName || "",
-          username: user.username,
+          firstName: user.firstName || (user.displayName || "").split(" ")[0] || "",
+          lastName: user.lastName || (user.displayName || "").split(" ").slice(1).join(" "),
           email: user.email || "",
           password: "",
           role: user.role,
           userRoleId: user.userRoleId ? String(user.userRoleId) : "",
           title: user.title || "",
-          phone: user.phone || "",
+          phone: phoneDigits(user.phone),
           providerId: user.providerId ? String(user.providerId) : "",
           disabled: user.disabled,
         }
-      : { displayName: "", username: "", email: "", password: "", role: "clerk", userRoleId: "", title: "", phone: "", providerId: "", disabled: false }
+      : { firstName: "", lastName: "", email: "", password: "", role: "clerk", userRoleId: "", title: "", phone: "", providerId: "", disabled: false }
   );
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState("");
@@ -242,13 +250,12 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
 
   const validate = () => {
     const e: Record<string, string> = {};
-    if (!form.displayName.trim()) e.displayName = "Required";
-    if (!user) {
-      if (!form.username.trim()) e.username = "Required";
-      else if (!/^[A-Za-z0-9._@+-]{3,150}$/.test(form.username.trim())) e.username = "3-150 characters: letters, digits and . _ @ + -";
-    }
+    if (!form.firstName.trim()) e.firstName = "Required";
+    if (!form.lastName.trim()) e.lastName = "Required";
     if (!form.email || !/^[^@]+@[^@]+\.[^@]+$/.test(form.email)) e.email = "Valid email required";
     else if (emailTaken) e.email = emailTaken;
+    if (!form.phone) e.phone = "Required";
+    else if (!PHONE_RE.test(form.phone)) e.phone = "Phone must be 10 digits";
     if (!user && (!form.password || form.password.length < 8)) e.password = "8+ characters";
     if (user && form.password && form.password.length < 8) e.password = "8+ characters";
     if (!form.role) e.role = "Required";
@@ -263,7 +270,9 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
     setBusy(true);
     setFormError("");
     const common = {
-      displayName: form.displayName.trim(),
+      displayName: (form.firstName.trim() + " " + form.lastName.trim()).trim(),
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
       email: form.email.trim(),
       role: access || form.role,
       userRoleId: Number(form.userRoleId),
@@ -278,14 +287,20 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
         await api.put("/users/" + user.id, body);
         toast("User updated");
       } else {
-        const body: UserCreate = { ...common, username: form.username.trim(), password: form.password };
+        // the email is the username
+        const body: UserCreate = { ...common, password: form.password };
         await api.post("/users", body);
         toast("User created");
       }
       onSaved();
     } catch (e) {
-      if (e instanceof ApiError) setErrors(e.fieldErrors);
-      setFormError(errorMessage(e));
+      if (e instanceof ApiError) {
+        const fe = { ...e.fieldErrors };
+        if (fe.displayName && !fe.firstName) fe.firstName = fe.displayName;
+        if (fe.username && !fe.email) fe.email = fe.username;
+        setErrors(fe);
+        if (!Object.keys(fe).length) setFormError(errorMessage(e));
+      } else setFormError(errorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -328,23 +343,23 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
   }
 
   return (
-    <Modal title={user ? "Edit User" : "Add User"} onClose={onClose} maxWidth={520}>
+    <Modal title={user ? "Edit User" : "Add User"} onClose={onClose} maxWidth={640}>
       <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Display Name *" error={errors.displayName}>
-            <input value={form.displayName} onChange={(e) => setForm({ ...form, displayName: e.target.value })} className="input" />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="First Name *" error={errors.firstName}>
+            <input value={form.firstName} onChange={(e) => { setForm({ ...form, firstName: e.target.value }); setErrors((er) => ({ ...er, firstName: "" })); }} className="input" maxLength={100} />
           </Field>
-          <Field label="Title" error={errors.title}>
-            <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input" placeholder="e.g. Credentialing Specialist" />
+          <Field label="Last Name *" error={errors.lastName}>
+            <input value={form.lastName} onChange={(e) => { setForm({ ...form, lastName: e.target.value }); setErrors((er) => ({ ...er, lastName: "" })); }} className="input" maxLength={100} />
           </Field>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Username *" error={errors.username}>
-            <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className="input font-mono" disabled={!!user} autoComplete="off" />
-          </Field>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Role *" error={errors.userRoleId}>
             {roleSelect}
             {userRoles.error && <div className="field-error">{userRoles.error}</div>}
+          </Field>
+          <Field label="Title" error={errors.title}>
+            <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input" placeholder="e.g. Credentialing Specialist" maxLength={120} />
           </Field>
         </div>
         {access === "provider" && (
@@ -361,16 +376,21 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
             {providers.error && <div className="field-error">{providers.error}</div>}
           </Field>
         )}
-        <Field label="Email *" error={errors.email || emailTaken}>
-          <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input" />
-        </Field>
-        <Field label="Phone" error={errors.phone}>
-          <input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} className="input" />
-        </Field>
-        <Field label={user ? "New Password" : "Password *"} error={errors.password} hint={user ? "Leave blank to keep the current password" : undefined}>
-          <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} className="input" placeholder="At least 8 characters" autoComplete="new-password" />
-        </Field>
-        {access !== "provider" && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="Email *" error={errors.email || emailTaken} hint="Used to sign in">
+            <input type="email" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setErrors((er) => ({ ...er, email: "" })); }} className="input" autoComplete="off" />
+          </Field>
+          <Field label="Phone *" error={errors.phone}>
+            <input value={form.phone} onChange={(e) => { setForm({ ...form, phone: digitsOnly(e.target.value, 10) }); setErrors((er) => ({ ...er, phone: "" })); }} className="input" inputMode="numeric" placeholder="10 digits" />
+          </Field>
+          <Field label={user ? "New Password" : "Password *"} error={errors.password} hint={user ? "Blank = keep the current one" : undefined}>
+            <PasswordInput value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); setErrors((er) => ({ ...er, password: "" })); }} className="input" placeholder="At least 8 characters" autoComplete="new-password" />
+          </Field>
+        </div>
+        {user && user.username !== user.email && (
+          <div className="text-[11px] text-ink-faint">Username: <span className="font-mono">{user.username}</span> (this user can also sign in with it)</div>
+        )}
+        {user && access !== "provider" && (
           <label className="flex items-center gap-2 text-sm" style={isSelf ? { opacity: 0.6 } : undefined}>
             <input type="checkbox" checked={form.disabled} disabled={isSelf} onChange={(e) => setForm({ ...form, disabled: e.target.checked })} />
             Disabled (user cannot sign in)

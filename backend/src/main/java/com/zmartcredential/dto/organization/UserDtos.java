@@ -18,9 +18,10 @@ public final class UserDtos {
             @NotBlank(message = "Display name is required") @Size(max = 200, message = "Max 200 characters") String displayName,
             @Size(max = 100) String firstName,
             @Size(max = 100) String lastName,
-            @NotBlank(message = "Username is required") @Size(min = 3, max = 150, message = "3-150 characters")
-            @Pattern(regexp = "[A-Za-z0-9._@+-]+", message = "Letters, digits and . _ - @ + only") String username,
-            @NotBlank(message = "Email is required") @Email(message = "Valid email required") @Size(max = 255) String email,
+            /* optional: users sign in with their email, which is the username when this is left out */
+            @Size(max = 150, message = "At most 150 characters")
+            @Pattern(regexp = "^$|[A-Za-z0-9._@+-]{3,}", message = "Letters, digits and . _ - @ + only (3+)") String username,
+            @NotBlank(message = "Email is required") @Email(message = "Valid email required") @Size(max = 150) String email,
             @NotBlank(message = "Password is required") @Size(min = 8, max = 100, message = "At least 8 characters") String password,
             /* ignored: the access level comes from the chosen role (userRoleId) */
             String role,
