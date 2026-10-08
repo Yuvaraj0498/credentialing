@@ -1,0 +1,444 @@
+"use client";
+
+import { Fragment, useState } from "react";
+import { PasswordInput } from "@/components/PasswordInput";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { DeferredNotice } from "@/components/AlertBox";
+import { ErrorState, Loading } from "@/components/AsyncState";
+import { Icon } from "@/components/Icon";
+import { api, ApiError, errorMessage } from "@/lib/api";
+import { useAuth } from "@/stores/auth";
+import { useAsync } from "@/lib/hooks";
+import { useToast } from "@/stores/toast";
+import type { AuthResponse } from "@/types";
+import { ORG_TYPES } from "@/types/admin";
+import { calcSubscriptionTotal, detectCardBrand, EMAIL_RE, FALLBACK_STATES, isUnlimited, loadPackages, loadStates, overCap, type Package, type StateOption } from "@/types/signup";
+
+interface OrgSignupData {
+  orgName: string; orgType: string; taxId: string; website: string; address: string; city: string; state: string; zip: string;
+  firstName: string; lastName: string; email: string; phone: string; password: string; confirmPassword: string;
+  packageId: string; estimatedProviders: number;
+  cardNumber: string; cardExp: string; cardCvc: string; cardName: string; cardZip: string;
+}
+type Errors = Partial<Record<keyof OrgSignupData | "form", string>>;
+
+// Server field-error keys (request field names) → form keys.
+const SERVER_KEYS: Record<string, keyof OrgSignupData> = {
+  "org.name": "orgName", "org.type": "orgType", "org.taxId": "taxId", "org.website": "website", "org.address": "address",
+  "org.city": "city", "org.state": "state", "org.zip": "zip",
+  "admin.firstName": "firstName", "admin.lastName": "lastName", "admin.email": "email", "admin.phone": "phone", "admin.password": "password",
+  "plan.packageId": "packageId", "plan.estimatedProviders": "estimatedProviders",
+  "paymentMethod.brand": "cardNumber", "paymentMethod.last4": "cardNumber", "paymentMethod.exp": "cardExp",
+  "paymentMethod.billingName": "cardName", "paymentMethod.billingZip": "cardZip",
+};
+const STEP_OF: Partial<Record<keyof OrgSignupData, number>> = {
+  orgName: 1, orgType: 1, taxId: 1, website: 1, address: 1, city: 1, state: 1, zip: 1,
+  firstName: 2, lastName: 2, email: 2, phone: 2, password: 2, confirmPassword: 2,
+  packageId: 3, estimatedProviders: 3,
+  cardNumber: 4, cardExp: 4, cardCvc: 4, cardName: 4, cardZip: 4,
+};
+
+const Err = ({ msg }: { msg?: string }) => (msg ? <div className="field-error">{msg}</div> : null);
+
+export function OrgSignupFlow() {
+  const router = useRouter();
+  const { completeAuth } = useAuth();
+  const toast = useToast();
+  const packages = useAsync<Package[]>(loadPackages, []);
+  const states = useAsync<StateOption[]>(loadStates, []);
+  const stateOptions = states.data && states.data.length ? states.data : FALLBACK_STATES;
+
+  const [step, setStep] = useState(1);
+  const [data, setData] = useState<OrgSignupData>({
+    // Step 1: Org info
+    orgName: "", orgType: "physician_group", taxId: "", website: "",
+    address: "", city: "", state: "TX", zip: "",
+    // Step 2: Admin user
+    firstName: "", lastName: "", email: "", phone: "", password: "", confirmPassword: "",
+    // Step 3: Plan
+    packageId: "professional", estimatedProviders: 5,
+    // Step 4: Payment
+    cardNumber: "", cardExp: "", cardCvc: "", cardName: "", cardZip: "",
+  });
+  const [errors, setErrors] = useState<Errors>({});
+  const [submitting, setSubmitting] = useState(false);
+
+  const set = <K extends keyof OrgSignupData>(k: K, v: OrgSignupData[K]) => setData((d) => ({ ...d, [k]: v }));
+
+  const pkgList = packages.data || [];
+  const selectedPkg = pkgList.find((p) => p.id === data.packageId);
+  const total = calcSubscriptionTotal(selectedPkg, data.estimatedProviders);
+
+  // Default to the recommended plan when "professional" is not offered.
+  if (pkgList.length && !pkgList.some((p) => p.id === data.packageId)) {
+    set("packageId", (pkgList.find((p) => p.recommended) || pkgList[0]).id);
+  }
+
+  // Prototype bug fix: raising the slider above the selected plan's cap switches to the first plan that fits.
+  const setProviders = (n: number) => {
+    setData((d) => {
+      const cur = pkgList.find((p) => p.id === d.packageId);
+      let packageId = d.packageId;
+      if (cur && overCap(cur, n)) {
+        const fit = pkgList.find((p) => !overCap(p, n));
+        if (fit) packageId = fit.id;
+      }
+      return { ...d, estimatedProviders: n, packageId };
+    });
+  };
+
+  const validateStep = (s: number) => {
+    const e: Errors = {};
+    if (s === 1) {
+      if (!data.orgName.trim()) e.orgName = "Required";
+      if (!data.taxId || !/^\d{9}$/.test(data.taxId.replace(/\D/g, ""))) e.taxId = "9 digits required";
+      if (!data.city.trim()) e.city = "Required";
+      if (!data.zip || !/^\d{5}$/.test(data.zip)) e.zip = "5 digits required";
+    } else if (s === 2) {
+      if (!data.firstName.trim()) e.firstName = "Required";
+      if (!data.lastName.trim()) e.lastName = "Required";
+      if (!data.email || !EMAIL_RE.test(data.email)) e.email = "Valid email required";
+      if (!data.password || data.password.length < 8) e.password = "At least 8 characters";
+      if (data.password !== data.confirmPassword) e.confirmPassword = "Passwords don't match";
+    } else if (s === 3) {
+      if (!selectedPkg) e.packageId = "Choose a plan";
+      else if (overCap(selectedPkg, data.estimatedProviders)) e.packageId = selectedPkg.name + " supports up to " + selectedPkg.providerCap + " providers";
+    } else if (s === 4) {
+      const cleaned = data.cardNumber.replace(/\s/g, "");
+      if (cleaned.length < 13) e.cardNumber = "Invalid card";
+      if (!/^\d{2}\/\d{2}$/.test(data.cardExp)) e.cardExp = "MM/YY format";
+      if (data.cardCvc.length < 3) e.cardCvc = "3-4 digits";
+      if (!data.cardName.trim()) e.cardName = "Required";
+      if (!/^\d{5}$/.test(data.cardZip)) e.cardZip = "5 digits";
+    }
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const next = () => {
+    if (validateStep(step)) setStep(step + 1);
+  };
+
+  const submit = async () => {
+    if (!validateStep(4)) return;
+    const digits = data.cardNumber.replace(/\D/g, "");
+    setSubmitting(true);
+    try {
+      // The card number and CVC never leave the browser: only brand, last 4, expiry and billing details are sent.
+      const res = await api.post<AuthResponse>("/auth/signup/organization", {
+        org: { name: data.orgName.trim(), type: data.orgType, taxId: data.taxId, website: data.website.trim(), address: data.address.trim(), city: data.city.trim(), state: data.state, zip: data.zip },
+        admin: { firstName: data.firstName.trim(), lastName: data.lastName.trim(), email: data.email.trim(), phone: data.phone.trim(), password: data.password },
+        plan: { packageId: data.packageId, estimatedProviders: data.estimatedProviders },
+        paymentMethod: { brand: detectCardBrand(digits), last4: digits.slice(-4), exp: data.cardExp, billingName: data.cardName.trim(), billingZip: data.cardZip },
+      });
+      completeAuth(res);
+      toast("Account created · Welcome to ZmartCredential!");
+      router.replace("/dashboard");
+    } catch (err) {
+      const e: Errors = {};
+      if (err instanceof ApiError) {
+        Object.entries(err.fieldErrors).forEach(([k, v]) => {
+          const key = SERVER_KEYS[k] || (k.split(".").pop() as keyof OrgSignupData);
+          if (key in data) e[key] = v;
+        });
+      }
+      const firstStep = Math.min(...Object.keys(e).map((k) => STEP_OF[k as keyof OrgSignupData] || 4), 4);
+      e.form = errorMessage(err);
+      setErrors(e);
+      setStep(firstStep);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const steps = [
+    { n: 1, label: "Organization" },
+    { n: 2, label: "Admin Account" },
+    { n: 3, label: "Plan" },
+    { n: 4, label: "Payment" },
+  ];
+
+  return (
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: "linear-gradient(135deg, #fff7ed 0%, #ffffff 100%)" }}>
+      <div className="w-full max-w-2xl">
+        <div className="text-center mb-6">
+          <div className="atano-logo text-2xl mb-2"><span className="a-mark">▲</span>ZmartCredential</div>
+          <h1 className="font-display text-3xl font-bold text-ink">Create your organization account</h1>
+        </div>
+
+        {/* Step indicator */}
+        <div className="flex items-center justify-center gap-2 mb-6 flex-wrap">
+          {steps.map((s, i, arr) => (
+            <Fragment key={s.n}>
+              <div
+                className={"flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium " + (step === s.n ? "bg-accent text-white" : step > s.n ? "" : "text-ink-faint")}
+                style={step > s.n ? { background: "var(--success-soft)", color: "var(--success)" } : {}}
+              >
+                <div
+                  className={"w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold " + (step === s.n ? "bg-paper text-accent" : step > s.n ? "" : "bg-soft-2")}
+                  style={step > s.n ? { background: "var(--success)", color: "white" } : {}}
+                >
+                  {step > s.n ? <Icon name="Check" size={10} /> : s.n}
+                </div>
+                <span>{s.label}</span>
+              </div>
+              {i < arr.length - 1 && <Icon name="ChevronRight" size={11} className="text-ink-faint" />}
+            </Fragment>
+          ))}
+        </div>
+
+        <div className="card card-pad">
+          {errors.form && (
+            <div className="mb-4 px-3 py-2 rounded-lg flex items-center gap-2" style={{ background: "var(--danger-soft)", color: "#991b1b", fontSize: 13 }}>
+              <Icon name="AlertCircle" size={14} /> {errors.form}
+            </div>
+          )}
+
+          {step === 1 && (
+            <div>
+              <h2 className="font-display text-xl font-semibold text-ink mb-1">Organization Information</h2>
+              <p className="text-xs text-ink-light mb-4">Tell us about your organization</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="label">Organization Name *</label>
+                  <input value={data.orgName} onChange={(e) => set("orgName", e.target.value)} className={"input" + (errors.orgName ? " input-error" : "")} placeholder="ACME Medical Group, P.A." />
+                  <Err msg={errors.orgName} />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Organization Type</label>
+                    <select value={data.orgType} onChange={(e) => set("orgType", e.target.value)} className="input">
+                      {ORG_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                    </select>
+                    <Err msg={errors.orgType} />
+                  </div>
+                  <div>
+                    <label className="label">Tax ID (EIN) *</label>
+                    <input value={data.taxId} onChange={(e) => set("taxId", e.target.value.replace(/\D/g, "").slice(0, 9))} className={"input font-mono" + (errors.taxId ? " input-error" : "")} placeholder="9 digits" />
+                    <Err msg={errors.taxId} />
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Website</label>
+                  <input value={data.website} onChange={(e) => set("website", e.target.value)} className="input" placeholder="https://acmemedical.com" />
+                  <Err msg={errors.website} />
+                </div>
+                <div>
+                  <label className="label">Address</label>
+                  <input value={data.address} onChange={(e) => set("address", e.target.value)} className="input" placeholder="123 Main St, Suite 100" />
+                  <Err msg={errors.address} />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="label">City *</label>
+                    <input value={data.city} onChange={(e) => set("city", e.target.value)} className={"input" + (errors.city ? " input-error" : "")} />
+                    <Err msg={errors.city} />
+                  </div>
+                  <div>
+                    <label className="label">State</label>
+                    <select value={data.state} onChange={(e) => set("state", e.target.value)} className="input">
+                      {stateOptions.map((s) => <option key={s.code} value={s.code}>{s.code}</option>)}
+                    </select>
+                    <Err msg={errors.state} />
+                  </div>
+                  <div>
+                    <label className="label">ZIP *</label>
+                    <input value={data.zip} onChange={(e) => set("zip", e.target.value.replace(/\D/g, "").slice(0, 5))} className={"input font-mono" + (errors.zip ? " input-error" : "")} />
+                    <Err msg={errors.zip} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div>
+              <h2 className="font-display text-xl font-semibold text-ink mb-1">Admin Account</h2>
+              <p className="text-xs text-ink-light mb-4">You&apos;ll be the primary administrator. Invite more team members later.</p>
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">First Name *</label>
+                    <input value={data.firstName} onChange={(e) => set("firstName", e.target.value)} className={"input" + (errors.firstName ? " input-error" : "")} autoComplete="given-name" />
+                    <Err msg={errors.firstName} />
+                  </div>
+                  <div>
+                    <label className="label">Last Name *</label>
+                    <input value={data.lastName} onChange={(e) => set("lastName", e.target.value)} className={"input" + (errors.lastName ? " input-error" : "")} autoComplete="family-name" />
+                    <Err msg={errors.lastName} />
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Work Email *</label>
+                  <input type="email" value={data.email} onChange={(e) => set("email", e.target.value)} className={"input" + (errors.email ? " input-error" : "")} placeholder="you@yourcompany.com" autoComplete="email" />
+                  <div className="text-[10px] text-ink-faint mt-1">This will be your username</div>
+                  <Err msg={errors.email} />
+                </div>
+                <div>
+                  <label className="label">Phone</label>
+                  <input value={data.phone} onChange={(e) => set("phone", e.target.value)} className="input" placeholder="(555) 123-4567" autoComplete="tel" />
+                  <Err msg={errors.phone} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Password *</label>
+                    <PasswordInput value={data.password} onChange={(e) => set("password", e.target.value)} className={"input" + (errors.password ? " input-error" : "")} placeholder="At least 8 characters" autoComplete="new-password" />
+                    <Err msg={errors.password} />
+                  </div>
+                  <div>
+                    <label className="label">Confirm Password *</label>
+                    <PasswordInput value={data.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} className={"input" + (errors.confirmPassword ? " input-error" : "")} autoComplete="new-password" />
+                    <Err msg={errors.confirmPassword} />
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 3 && (
+            <div>
+              <h2 className="font-display text-xl font-semibold text-ink mb-1">Choose Your Plan</h2>
+              <p className="text-xs text-ink-light mb-4">You can change or cancel anytime</p>
+              <div>
+                <label className="label">Estimated number of providers</label>
+                <div className="flex items-center gap-2 mb-4">
+                  <input type="range" min="1" max="100" value={data.estimatedProviders} onChange={(e) => setProviders(Number(e.target.value))} className="flex-1" />
+                  <div className="font-display text-2xl font-bold text-accent w-12 text-center">{data.estimatedProviders}</div>
+                </div>
+              </div>
+              {packages.error ? (
+                <ErrorState message={packages.error} onRetry={packages.reload} />
+              ) : packages.loading && !packages.data ? (
+                <Loading label="Loading plans…" />
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {pkgList.map((pkg) => {
+                      const pkgTotal = calcSubscriptionTotal(pkg, data.estimatedProviders);
+                      const isSelected = pkg.id === data.packageId;
+                      const capped = overCap(pkg, data.estimatedProviders);
+                      return (
+                        <button
+                          key={pkg.id}
+                          onClick={() => !capped && set("packageId", pkg.id)}
+                          disabled={capped}
+                          className={"card text-left p-4 transition-all relative " + (isSelected ? "border-accent" : capped ? "opacity-50 cursor-not-allowed" : "card-hover")}
+                          style={isSelected ? { borderColor: "var(--accent)", borderWidth: 2 } : {}}
+                        >
+                          {pkg.recommended && !capped && (
+                            <div className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider" style={{ background: "var(--accent)", color: "white" }}>Popular</div>
+                          )}
+                          {capped && (
+                            <div className="absolute top-2 right-2 text-[9px] px-1.5 py-0.5 rounded" style={{ background: "var(--danger-soft)", color: "var(--danger)" }}>Cap exceeded</div>
+                          )}
+                          <div className="font-display font-semibold text-ink">{pkg.name}</div>
+                          <div className="font-display text-2xl font-bold mt-2">
+                            ${pkgTotal.toLocaleString()}
+                            <span className="text-xs font-normal text-ink-light">/mo</span>
+                          </div>
+                          <div className="text-xs text-ink-light mt-1">
+                            ${pkg.basePrice} + ${pkg.perProvider}/provider
+                          </div>
+                          <div className="text-[10px] text-ink-faint mt-2">{isUnlimited(pkg.providerCap) ? "Unlimited" : "Up to " + pkg.providerCap} providers</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <Err msg={errors.packageId || errors.estimatedProviders} />
+                  <div className="mt-4 p-3 rounded text-xs" style={{ background: "var(--info-soft)" }}>
+                    <Icon name="Info" size={11} className="inline mr-1" style={{ color: "var(--info)" }} />
+                    Your subscription will be ${total.toLocaleString()} per month, billed on the same day each month once online payments launch. Per-service credentialing fees are billed monthly based on activity.
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {step === 4 && (
+            <div>
+              <h2 className="font-display text-xl font-semibold text-ink mb-1">Payment Information</h2>
+              <p className="text-xs text-ink-light mb-4">
+                Your subscription: <span className="font-semibold text-ink">${total.toLocaleString()}</span>/mo{selectedPkg ? " · " + selectedPkg.name : ""}
+              </p>
+              <DeferredNotice className="mb-4">
+                <strong>Your card is not charged yet.</strong> Online payments launch in a later phase. We only save the card brand, last 4 digits, expiry and billing ZIP — the full card number and CVC never leave your browser.
+              </DeferredNotice>
+              <div className="space-y-3">
+                <div>
+                  <label className="label">Card Number *</label>
+                  <input
+                    value={data.cardNumber}
+                    onChange={(e) => set("cardNumber", e.target.value.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})/g, "$1 ").trim())}
+                    className={"input font-mono" + (errors.cardNumber ? " input-error" : "")}
+                    placeholder="1234 5678 9012 3456"
+                    autoComplete="cc-number"
+                    inputMode="numeric"
+                  />
+                  {data.cardNumber.replace(/\D/g, "").length >= 2 && !errors.cardNumber && (
+                    <div className="text-[10px] text-ink-faint mt-1">{detectCardBrand(data.cardNumber)}</div>
+                  )}
+                  <Err msg={errors.cardNumber} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="label">Exp (MM/YY) *</label>
+                    <input
+                      value={data.cardExp}
+                      onChange={(e) => {
+                        const v = e.target.value.replace(/\D/g, "").slice(0, 4);
+                        set("cardExp", v.length <= 2 ? v : v.slice(0, 2) + "/" + v.slice(2));
+                      }}
+                      className={"input font-mono" + (errors.cardExp ? " input-error" : "")}
+                      placeholder="12/27"
+                      autoComplete="cc-exp"
+                      inputMode="numeric"
+                    />
+                    <Err msg={errors.cardExp} />
+                  </div>
+                  <div>
+                    <label className="label">CVC *</label>
+                    <input value={data.cardCvc} onChange={(e) => set("cardCvc", e.target.value.replace(/\D/g, "").slice(0, 4))} className={"input font-mono" + (errors.cardCvc ? " input-error" : "")} placeholder="123" autoComplete="cc-csc" inputMode="numeric" />
+                    <Err msg={errors.cardCvc} />
+                  </div>
+                </div>
+                <div>
+                  <label className="label">Cardholder Name *</label>
+                  <input value={data.cardName} onChange={(e) => set("cardName", e.target.value)} className={"input" + (errors.cardName ? " input-error" : "")} autoComplete="cc-name" />
+                  <Err msg={errors.cardName} />
+                </div>
+                <div>
+                  <label className="label">Billing ZIP *</label>
+                  <input value={data.cardZip} onChange={(e) => set("cardZip", e.target.value.replace(/\D/g, "").slice(0, 5))} className={"input font-mono" + (errors.cardZip ? " input-error" : "")} style={{ maxWidth: 120 }} autoComplete="postal-code" inputMode="numeric" />
+                  <Err msg={errors.cardZip} />
+                </div>
+              </div>
+              <div className="mt-4 text-[10px] text-ink-faint flex items-center gap-1">
+                <Icon name="Lock" size={10} /> When online payments launch, card details will be tokenized via Stripe Elements before submission.
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-between items-center pt-4 mt-4 border-t border-line">
+            <button onClick={() => (step > 1 ? setStep(step - 1) : router.push("/signup"))} className="btn btn-ghost" disabled={submitting}>
+              <Icon name="ChevronLeft" size={13} /> Back
+            </button>
+            {step < 4 ? (
+              <button onClick={next} className="btn btn-primary" disabled={step === 3 && !packages.data}>
+                Continue <Icon name="ArrowRight" size={13} />
+              </button>
+            ) : (
+              <button onClick={submit} className="btn btn-primary" disabled={submitting}>
+                {submitting ? <span className="loader" style={{ borderTopColor: "white" }} /> : <Icon name="Lock" size={13} />} Create Account · ${total.toLocaleString()}/mo
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="text-center mt-4">
+          <Link href="/signin" className="text-xs text-ink-light hover:text-ink">Already have an account? Sign in</Link>
+        </div>
+      </div>
+    </div>
+  );
+}

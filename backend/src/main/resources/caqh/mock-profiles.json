@@ -1,0 +1,802 @@
+[
+ {
+  "caqhId": "10000001",
+  "firstName": "Stephanie",
+  "lastName": "Carlson",
+  "suffix": "MD",
+  "specialty": "Family Medicine",
+  "npi": "1234598765",
+  "email": "stephanie.carlson@example.com",
+  "phone": "(512) 555-0101",
+  "license": "TX98765",
+  "licenseState": "TX",
+  "licenseExpires": "2027-08-15",
+  "deaNumber": "BC4477889",
+  "deaExpires": "2028-03-20",
+  "boardCert": {
+   "board": "ABFM",
+   "status": "active",
+   "expires": "2029-07-01"
+  },
+  "taxonomy": "207Q00000X",
+  "gender": "Female",
+  "dob": "1985-04-12",
+  "address": {
+   "street": "150 S Lamar Blvd",
+   "city": "Austin",
+   "state": "TX",
+   "zip": "78704"
+  },
+  "educationHistory": [
+   {
+    "school": "UT Southwestern Medical School",
+    "degree": "MD",
+    "year": "2011"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "Austin Family Medicine",
+    "title": "Attending Physician",
+    "startDate": "2015-07",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "The Doctors Company",
+   "policyNumber": "TDC-2024-98765",
+   "expires": "2026-12-31",
+   "limit": "$1M/$3M"
+  },
+  "docCount": 11,
+  "attestedAt": "2026-01-15T10:30:00.000Z"
+ },
+ {
+  "caqhId": "10000002",
+  "firstName": "Marcus",
+  "lastName": "Chen",
+  "suffix": "MD",
+  "specialty": "Internal Medicine",
+  "npi": "1945672301",
+  "email": "marcus.chen@example.com",
+  "phone": "(617) 555-0102",
+  "license": "MA42189",
+  "licenseState": "MA",
+  "licenseExpires": "2027-11-30",
+  "deaNumber": "BC2234567",
+  "deaExpires": "2027-10-15",
+  "boardCert": {
+   "board": "ABIM",
+   "status": "active",
+   "expires": "2028-05-01"
+  },
+  "taxonomy": "207R00000X",
+  "gender": "Male",
+  "dob": "1980-09-23",
+  "address": {
+   "street": "22 Longwood Ave",
+   "city": "Boston",
+   "state": "MA",
+   "zip": "02115"
+  },
+  "educationHistory": [
+   {
+    "school": "Harvard Medical School",
+    "degree": "MD",
+    "year": "2008"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "Mass General Hospital",
+    "title": "Internal Medicine Physician",
+    "startDate": "2012-07",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "ProAssurance",
+   "policyNumber": "PA-2024-11223",
+   "expires": "2026-06-30",
+   "limit": "$2M/$6M"
+  },
+  "docCount": 13,
+  "attestedAt": "2026-02-01T14:20:00.000Z"
+ },
+ {
+  "caqhId": "10000003",
+  "firstName": "Priya",
+  "lastName": "Patel",
+  "suffix": "MD",
+  "specialty": "Cardiology",
+  "npi": "1872654309",
+  "email": "priya.patel@example.com",
+  "phone": "(312) 555-0103",
+  "license": "IL77821",
+  "licenseState": "IL",
+  "licenseExpires": "2028-03-15",
+  "deaNumber": "BP5566778",
+  "deaExpires": "2027-05-20",
+  "boardCert": {
+   "board": "ABIM Cardiology",
+   "status": "active",
+   "expires": "2029-11-15"
+  },
+  "taxonomy": "207RC0000X",
+  "gender": "Female",
+  "dob": "1978-12-05",
+  "address": {
+   "street": "251 E Huron St",
+   "city": "Chicago",
+   "state": "IL",
+   "zip": "60611"
+  },
+  "educationHistory": [
+   {
+    "school": "Northwestern Feinberg School of Medicine",
+    "degree": "MD",
+    "year": "2006"
+   },
+   {
+    "school": "Northwestern Memorial Hospital",
+    "degree": "Cardiology Fellowship",
+    "year": "2012"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "Northwestern Medicine",
+    "title": "Interventional Cardiologist",
+    "startDate": "2012-08",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "ISMIE Mutual",
+   "policyNumber": "IS-2024-55667",
+   "expires": "2026-09-30",
+   "limit": "$2M/$6M"
+  },
+  "docCount": 15,
+  "attestedAt": "2026-01-28T09:15:00.000Z"
+ },
+ {
+  "caqhId": "10000004",
+  "firstName": "Jordan",
+  "lastName": "Garcia",
+  "suffix": "NP",
+  "specialty": "Family Practice NP",
+  "npi": "1322789934",
+  "email": "jordan.garcia@example.com",
+  "phone": "(305) 555-0104",
+  "license": "FL44321",
+  "licenseState": "FL",
+  "licenseExpires": "2027-06-30",
+  "deaNumber": "MG1122334",
+  "deaExpires": "2026-11-10",
+  "boardCert": {
+   "board": "ANCC",
+   "status": "active",
+   "expires": "2027-12-01"
+  },
+  "taxonomy": "363LF0000X",
+  "gender": "Non-binary",
+  "dob": "1988-07-14",
+  "address": {
+   "street": "1200 Brickell Ave",
+   "city": "Miami",
+   "state": "FL",
+   "zip": "33131"
+  },
+  "educationHistory": [
+   {
+    "school": "University of Miami",
+    "degree": "MSN",
+    "year": "2014"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "Miami Primary Care Network",
+    "title": "Nurse Practitioner",
+    "startDate": "2016-01",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "CM&F Group",
+   "policyNumber": "CMF-2024-77889",
+   "expires": "2026-08-15",
+   "limit": "$1M/$6M"
+  },
+  "docCount": 9,
+  "attestedAt": "2026-02-10T11:00:00.000Z"
+ },
+ {
+  "caqhId": "10000005",
+  "firstName": "Diana",
+  "lastName": "Nguyen",
+  "suffix": "MD",
+  "specialty": "Pediatrics",
+  "npi": "1756565201",
+  "email": "diana.nguyen@example.com",
+  "phone": "(206) 555-0105",
+  "license": "WA33445",
+  "licenseState": "WA",
+  "licenseExpires": "2028-02-28",
+  "deaNumber": "BN8899001",
+  "deaExpires": "2027-01-15",
+  "boardCert": {
+   "board": "ABP",
+   "status": "active",
+   "expires": "2029-04-01"
+  },
+  "taxonomy": "208000000X",
+  "gender": "Female",
+  "dob": "1983-03-28",
+  "address": {
+   "street": "4800 Sand Point Way NE",
+   "city": "Seattle",
+   "state": "WA",
+   "zip": "98105"
+  },
+  "educationHistory": [
+   {
+    "school": "University of Washington",
+    "degree": "MD",
+    "year": "2010"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "Seattle Children's Hospital",
+    "title": "Pediatrician",
+    "startDate": "2014-07",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "Physicians Insurance",
+   "policyNumber": "PI-2024-33445",
+   "expires": "2026-11-30",
+   "limit": "$1M/$3M"
+  },
+  "docCount": 12,
+  "attestedAt": "2026-01-22T15:45:00.000Z"
+ },
+ {
+  "caqhId": "10000006",
+  "firstName": "Yusuf",
+  "lastName": "Johnson",
+  "suffix": "MD",
+  "specialty": "Psychiatry",
+  "npi": "1655432198",
+  "email": "yusuf.johnson@example.com",
+  "phone": "(415) 555-0106",
+  "license": "CA88723",
+  "licenseState": "CA",
+  "licenseExpires": "2027-09-30",
+  "deaNumber": "BJ3344556",
+  "deaExpires": "2028-02-28",
+  "boardCert": {
+   "board": "ABPN",
+   "status": "active",
+   "expires": "2028-08-01"
+  },
+  "taxonomy": "2084P0800X",
+  "gender": "Male",
+  "dob": "1982-06-18",
+  "address": {
+   "street": "500 Parnassus Ave",
+   "city": "San Francisco",
+   "state": "CA",
+   "zip": "94143"
+  },
+  "educationHistory": [
+   {
+    "school": "UCSF Medical School",
+    "degree": "MD",
+    "year": "2009"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "UCSF Psychiatry",
+    "title": "Psychiatrist",
+    "startDate": "2013-07",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "The Doctors Company",
+   "policyNumber": "TDC-2024-11223",
+   "expires": "2026-10-15",
+   "limit": "$1M/$3M"
+  },
+  "docCount": 10,
+  "attestedAt": "2026-02-05T13:30:00.000Z"
+ },
+ {
+  "caqhId": "10000007",
+  "firstName": "Elena",
+  "lastName": "Williams",
+  "suffix": "MD",
+  "specialty": "Dermatology",
+  "npi": "1544332109",
+  "email": "elena.williams@example.com",
+  "phone": "(323) 555-0107",
+  "license": "CA55443",
+  "licenseState": "CA",
+  "licenseExpires": "2027-12-31",
+  "deaNumber": "BW5566778",
+  "deaExpires": "2027-08-10",
+  "boardCert": {
+   "board": "ABD",
+   "status": "active",
+   "expires": "2029-02-01"
+  },
+  "taxonomy": "207N00000X",
+  "gender": "Female",
+  "dob": "1979-11-02",
+  "address": {
+   "street": "8631 W 3rd St",
+   "city": "Los Angeles",
+   "state": "CA",
+   "zip": "90048"
+  },
+  "educationHistory": [
+   {
+    "school": "UCLA David Geffen School of Medicine",
+    "degree": "MD",
+    "year": "2007"
+   },
+   {
+    "school": "USC Dermatology",
+    "degree": "Dermatology Residency",
+    "year": "2011"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "Cedars-Sinai Dermatology",
+    "title": "Dermatologist",
+    "startDate": "2011-08",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "NORCAL",
+   "policyNumber": "NC-2024-66778",
+   "expires": "2026-07-20",
+   "limit": "$1M/$3M"
+  },
+  "docCount": 14,
+  "attestedAt": "2026-01-30T10:00:00.000Z"
+ },
+ {
+  "caqhId": "10000008",
+  "firstName": "Kenji",
+  "lastName": "Rodriguez",
+  "suffix": "DO",
+  "specialty": "OB/GYN",
+  "npi": "1433221098",
+  "email": "kenji.rodriguez@example.com",
+  "phone": "(214) 555-0108",
+  "license": "TX66554",
+  "licenseState": "TX",
+  "licenseExpires": "2027-05-15",
+  "deaNumber": "BR6677889",
+  "deaExpires": "2028-04-30",
+  "boardCert": {
+   "board": "ABOG",
+   "status": "active",
+   "expires": "2028-09-01"
+  },
+  "taxonomy": "207V00000X",
+  "gender": "Male",
+  "dob": "1984-02-20",
+  "address": {
+   "street": "5323 Harry Hines Blvd",
+   "city": "Dallas",
+   "state": "TX",
+   "zip": "75390"
+  },
+  "educationHistory": [
+   {
+    "school": "Texas College of Osteopathic Medicine",
+    "degree": "DO",
+    "year": "2010"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "UT Southwestern Medical Center",
+    "title": "OB/GYN",
+    "startDate": "2014-08",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "TMLT",
+   "policyNumber": "TMLT-2024-99887",
+   "expires": "2026-12-15",
+   "limit": "$1M/$3M"
+  },
+  "docCount": 12,
+  "attestedAt": "2026-02-12T16:00:00.000Z"
+ },
+ {
+  "caqhId": "10000009",
+  "firstName": "Olivia",
+  "lastName": "Brown",
+  "suffix": "MD",
+  "specialty": "Orthopedic Surgery",
+  "npi": "1322110987",
+  "email": "olivia.brown@example.com",
+  "phone": "(503) 555-0109",
+  "license": "OR77665",
+  "licenseState": "OR",
+  "licenseExpires": "2028-06-30",
+  "deaNumber": "BB7788990",
+  "deaExpires": "2027-12-20",
+  "boardCert": {
+   "board": "ABOS",
+   "status": "active",
+   "expires": "2029-06-01"
+  },
+  "taxonomy": "207X00000X",
+  "gender": "Female",
+  "dob": "1981-08-30",
+  "address": {
+   "street": "3181 SW Sam Jackson Park Rd",
+   "city": "Portland",
+   "state": "OR",
+   "zip": "97239"
+  },
+  "educationHistory": [
+   {
+    "school": "Oregon Health & Science University",
+    "degree": "MD",
+    "year": "2008"
+   },
+   {
+    "school": "OHSU Orthopedics",
+    "degree": "Orthopedic Surgery Residency",
+    "year": "2013"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "OHSU Orthopedics",
+    "title": "Orthopedic Surgeon",
+    "startDate": "2013-09",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "CNA",
+   "policyNumber": "CNA-2024-55443",
+   "expires": "2026-09-30",
+   "limit": "$2M/$6M"
+  },
+  "docCount": 16,
+  "attestedAt": "2026-02-08T12:30:00.000Z"
+ },
+ {
+  "caqhId": "10000010",
+  "firstName": "Rachel",
+  "lastName": "Kim",
+  "suffix": "MD",
+  "specialty": "Family Medicine",
+  "npi": "1211009876",
+  "email": "rachel.kim@example.com",
+  "phone": "(734) 555-0110",
+  "license": "MI88776",
+  "licenseState": "MI",
+  "licenseExpires": "2027-10-31",
+  "deaNumber": "BK8899001",
+  "deaExpires": "2028-05-15",
+  "boardCert": {
+   "board": "ABFM",
+   "status": "active",
+   "expires": "2028-11-01"
+  },
+  "taxonomy": "207Q00000X",
+  "gender": "Female",
+  "dob": "1986-01-10",
+  "address": {
+   "street": "1500 E Medical Center Dr",
+   "city": "Ann Arbor",
+   "state": "MI",
+   "zip": "48109"
+  },
+  "educationHistory": [
+   {
+    "school": "University of Michigan Medical School",
+    "degree": "MD",
+    "year": "2012"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "Michigan Medicine",
+    "title": "Family Medicine Physician",
+    "startDate": "2015-07",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "MMIC",
+   "policyNumber": "MMIC-2024-33221",
+   "expires": "2026-11-15",
+   "limit": "$1M/$3M"
+  },
+  "docCount": 11,
+  "attestedAt": "2026-01-25T14:00:00.000Z"
+ },
+ {
+  "caqhId": "10000011",
+  "firstName": "Alex",
+  "lastName": "Thompson",
+  "suffix": "PA",
+  "specialty": "Emergency Medicine PA",
+  "npi": "1109988765",
+  "email": "alex.thompson@example.com",
+  "phone": "(702) 555-0111",
+  "license": "NV99887",
+  "licenseState": "NV",
+  "licenseExpires": "2027-07-15",
+  "deaNumber": "MT9900112",
+  "deaExpires": "2026-10-30",
+  "boardCert": {
+   "board": "NCCPA",
+   "status": "active",
+   "expires": "2028-07-01"
+  },
+  "taxonomy": "363A00000X",
+  "gender": "Male",
+  "dob": "1989-05-25",
+  "address": {
+   "street": "1800 W Charleston Blvd",
+   "city": "Las Vegas",
+   "state": "NV",
+   "zip": "89102"
+  },
+  "educationHistory": [
+   {
+    "school": "Rosalind Franklin University",
+    "degree": "MPAS",
+    "year": "2015"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "University Medical Center",
+    "title": "Emergency Medicine PA",
+    "startDate": "2016-08",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "CM&F Group",
+   "policyNumber": "CMF-2024-00119",
+   "expires": "2026-10-01",
+   "limit": "$1M/$6M"
+  },
+  "docCount": 9,
+  "attestedAt": "2026-02-15T09:00:00.000Z"
+ },
+ {
+  "caqhId": "10000012",
+  "firstName": "Mia",
+  "lastName": "Davis",
+  "suffix": "DDS",
+  "specialty": "General Dentistry",
+  "npi": "1998877654",
+  "email": "mia.davis@example.com",
+  "phone": "(615) 555-0112",
+  "license": "TN11223",
+  "licenseState": "TN",
+  "licenseExpires": "2027-04-30",
+  "deaNumber": "BD1122334",
+  "deaExpires": "2027-11-05",
+  "boardCert": {
+   "board": "ADA",
+   "status": "active",
+   "expires": "N/A"
+  },
+  "taxonomy": "1223G0001X",
+  "gender": "Female",
+  "dob": "1987-10-14",
+  "address": {
+   "street": "1600 West End Ave",
+   "city": "Nashville",
+   "state": "TN",
+   "zip": "37203"
+  },
+  "educationHistory": [
+   {
+    "school": "Vanderbilt University School of Medicine",
+    "degree": "DDS",
+    "year": "2013"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "Nashville Family Dental",
+    "title": "Dentist",
+    "startDate": "2014-06",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "Fortress Insurance",
+   "policyNumber": "FI-2024-22334",
+   "expires": "2026-07-01",
+   "limit": "$1M/$3M"
+  },
+  "docCount": 8,
+  "attestedAt": "2026-02-18T11:30:00.000Z"
+ },
+ {
+  "caqhId": "10000013",
+  "firstName": "Daniel",
+  "lastName": "Martinez",
+  "suffix": "MD",
+  "specialty": "Anesthesiology",
+  "npi": "1887766543",
+  "email": "daniel.martinez@example.com",
+  "phone": "(602) 555-0113",
+  "license": "AZ22334",
+  "licenseState": "AZ",
+  "licenseExpires": "2027-11-30",
+  "deaNumber": "BM2233445",
+  "deaExpires": "2028-01-15",
+  "boardCert": {
+   "board": "ABA",
+   "status": "active",
+   "expires": "2028-10-01"
+  },
+  "taxonomy": "207L00000X",
+  "gender": "Male",
+  "dob": "1980-04-07",
+  "address": {
+   "street": "1111 E McDowell Rd",
+   "city": "Phoenix",
+   "state": "AZ",
+   "zip": "85006"
+  },
+  "educationHistory": [
+   {
+    "school": "University of Arizona College of Medicine",
+    "degree": "MD",
+    "year": "2008"
+   },
+   {
+    "school": "Mayo Clinic Arizona",
+    "degree": "Anesthesiology Residency",
+    "year": "2012"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "Banner Health",
+    "title": "Anesthesiologist",
+    "startDate": "2012-08",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "MICA",
+   "policyNumber": "MICA-2024-11098",
+   "expires": "2026-12-31",
+   "limit": "$2M/$6M"
+  },
+  "docCount": 13,
+  "attestedAt": "2026-02-20T13:45:00.000Z"
+ },
+ {
+  "caqhId": "10000014",
+  "firstName": "Sarah",
+  "lastName": "Lopez",
+  "suffix": "LCSW",
+  "specialty": "Mental Health Counseling",
+  "npi": "1776655432",
+  "email": "sarah.lopez@example.com",
+  "phone": "(720) 555-0114",
+  "license": "CO33445",
+  "licenseState": "CO",
+  "licenseExpires": "2027-08-31",
+  "deaNumber": null,
+  "deaExpires": null,
+  "boardCert": {
+   "board": "ACSW",
+   "status": "active",
+   "expires": "2027-07-01"
+  },
+  "taxonomy": "1041C0700X",
+  "gender": "Female",
+  "dob": "1985-12-03",
+  "address": {
+   "street": "1375 Delaware St",
+   "city": "Denver",
+   "state": "CO",
+   "zip": "80204"
+  },
+  "educationHistory": [
+   {
+    "school": "University of Denver",
+    "degree": "MSW",
+    "year": "2012"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "Mental Health Center of Denver",
+    "title": "Clinical Social Worker",
+    "startDate": "2014-05",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "HPSO",
+   "policyNumber": "HPSO-2024-77665",
+   "expires": "2026-06-30",
+   "limit": "$1M/$3M"
+  },
+  "docCount": 7,
+  "attestedAt": "2026-02-22T10:15:00.000Z"
+ },
+ {
+  "caqhId": "10000015",
+  "firstName": "Michael",
+  "lastName": "Harris",
+  "suffix": "BCBA",
+  "specialty": "Applied Behavior Analysis",
+  "npi": "1665544321",
+  "email": "michael.harris@example.com",
+  "phone": "(781) 555-0115",
+  "license": "MA44556",
+  "licenseState": "MA",
+  "licenseExpires": "2027-03-15",
+  "deaNumber": null,
+  "deaExpires": null,
+  "boardCert": {
+   "board": "BACB",
+   "status": "active",
+   "expires": "2028-12-01"
+  },
+  "taxonomy": "103K00000X",
+  "gender": "Male",
+  "dob": "1990-07-22",
+  "address": {
+   "street": "100 Pennsylvania Ave",
+   "city": "Boston",
+   "state": "MA",
+   "zip": "02215"
+  },
+  "educationHistory": [
+   {
+    "school": "Northeastern University",
+    "degree": "MS ABA",
+    "year": "2016"
+   }
+  ],
+  "workHistory": [
+   {
+    "employer": "Precision ABA",
+    "title": "BCBA",
+    "startDate": "2017-08",
+    "endDate": null
+   }
+  ],
+  "malpractice": {
+   "carrier": "HPSO",
+   "policyNumber": "HPSO-2024-55667",
+   "expires": "2026-05-15",
+   "limit": "$1M/$3M"
+  },
+  "docCount": 8,
+  "attestedAt": "2026-02-25T15:00:00.000Z"
+ }
+]
