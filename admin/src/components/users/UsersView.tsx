@@ -314,7 +314,7 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
   );
   if (newProvider) {
     return (
-      <Modal title="Add User" subtitle="Provider login — enter the provider's details, every field is required." onClose={onClose} maxWidth={720}>
+      <Modal title="Add User" onClose={onClose} maxWidth={720}>
         {org.error ? (
           <div className="field-error">{org.error}</div>
         ) : !org.data ? (

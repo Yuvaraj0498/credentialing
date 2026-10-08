@@ -389,7 +389,6 @@ export function ManualAddModal({
   return (
     <Modal
       title={placement ? "Add Provider" : "Add Provider Manually"}
-      subtitle="Enter the provider's details — every field is required. You can upload documents in the next step."
       onClose={onClose}
       showBack={!!onBack}
       onBack={onBack}
