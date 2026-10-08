@@ -139,11 +139,7 @@ export function VerifyClassificationModal({
               <Pill type="info">
                 <Icon name="Check" size={10} /> Chosen manually
               </Pill>
-            ) : (
-              <Pill type="danger">
-                <Icon name="AlertCircle" size={10} /> Type not recognised
-              </Pill>
-            )}
+            ) : null}
           </div>
           <div className="bg-soft border border-line rounded-lg p-8 text-center" style={{ minHeight: 400 }}>
             {previewUrl && cur.file.type.startsWith("image/") ? (

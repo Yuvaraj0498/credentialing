@@ -55,6 +55,7 @@ public class OrgPermissionMatrixService {
         Map<String, Boolean> effective = permissionService.matrix(orgId);
         Map<String, Boolean> defaults = permissionService.matrix(null);
 
+        java.util.Set<String> visible = new java.util.HashSet<>(roles().stream().map(RoleInfo::id).toList());
         repository.deleteOrgOverrides(orgId);
         List<RolePermission> rows = new ArrayList<>();
         for (String entity : PermissionService.ENTITIES) {
@@ -62,7 +63,8 @@ public class OrgPermissionMatrixService {
                 List<String> requested = cell(req.matrix(), entity, action);
                 for (String role : tenantRoles()) {
                     String key = PermissionService.key(entity, action, role);
-                    boolean desired = requested != null ? requested.contains(role) : effective.getOrDefault(key, false);
+                    // disabled roles are not on the page: keep what they had
+                    boolean desired = requested != null && visible.contains(role) ? requested.contains(role) : effective.getOrDefault(key, false);
                     if (desired != defaults.getOrDefault(key, false)) {
                         rows.add(row(orgId, entity, action, role, desired));
                     }
@@ -121,17 +123,23 @@ public class OrgPermissionMatrixService {
 
     /** Matrix columns: Super Admin first, then every role the super admin created (User Roles). */
     private List<RoleInfo> roles() {
+        return roles(false);
+    }
+
+    /** includeDisabled: also the roles the super admin disabled (hidden on the page, their settings are kept). */
+    private List<RoleInfo> roles(boolean includeDisabled) {
         List<RoleInfo> out = new ArrayList<>();
         out.add(SUPER_ADMIN);
         int i = 0;
         for (var r : userRoleRepository.findAllByOrderByNameAsc()) {
+            if (!includeDisabled && Boolean.FALSE.equals(r.getActive())) continue;
             out.add(new RoleInfo(PermissionService.userRoleKey(r.getId()), r.getName(), COLORS[i++ % COLORS.length], ""));
         }
         return out;
     }
 
     private List<String> tenantRoles() {
-        return roles().stream().map(RoleInfo::id).filter(id -> !Role.PLATFORM_ADMIN.code().equals(id)).toList();
+        return roles(true).stream().map(RoleInfo::id).filter(id -> !Role.PLATFORM_ADMIN.code().equals(id)).toList();
     }
 
     private PermissionMatrixResponse build(Long orgId) {
