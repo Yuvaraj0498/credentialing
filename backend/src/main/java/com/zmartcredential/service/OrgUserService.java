@@ -40,6 +40,7 @@ public class OrgUserService {
     private static final Set<String> ORG_ROLES = Set.of("org_admin", "clerk", "auditor", "provider");
 
     private final AppUserRepository userRepository;
+    private final ProviderService providerService;
     private final EmailRegistry emailRegistry;
     private final ProviderRepository providerRepository;
     private final AuthContext authContext;
@@ -94,7 +95,7 @@ public class OrgUserService {
         String username = req.username().trim().toLowerCase(Locale.ROOT);
         String email = req.email().trim().toLowerCase(Locale.ROOT);
         if (userRepository.existsByUsername(username) || userRepository.existsByEmail(username)) {
-            throw new ConflictException("Username is already taken");
+            throw ConflictException.onField("username", "Username is already taken");
         }
         if (userRepository.existsByEmail(email) || userRepository.existsByUsername(email)) {
             throw ConflictException.onField("email", "Email is already used by another account");
@@ -112,6 +113,24 @@ public class OrgUserService {
         u.setUserRoleId(requireUserRole(req.userRoleId()));
         u.setDisabled(Boolean.TRUE.equals(req.disabled()));
         return toResponses(List.of(userRepository.save(u))).getFirst();
+    }
+
+    /** Creates the provider (every Add Provider Manually rule applies) and their login; nothing is saved if either fails. */
+    @Transactional
+    public UserResponse createWithProvider(com.zmartcredential.dto.organization.UserDtos.UserWithProviderRequest req) {
+        authContext.requireStaff();
+        permissionService.require("user", "create");
+        if (!"provider".equals(accessLevelOf(req.userRoleId()))) throw new BadRequestException("Choose a provider role");
+        String username = req.username().trim().toLowerCase(Locale.ROOT);
+        if (userRepository.existsByUsername(username) || userRepository.existsByEmail(username)) {
+            throw ConflictException.onField("username", "Username is already taken");
+        }
+        var p = req.provider();
+        var provider = providerService.create(p);
+        String name = (p.firstName().trim() + " " + p.lastName().trim()).trim();
+        return create(new UserCreateRequest(name, p.firstName().trim(), p.lastName().trim(), username, p.email(),
+                req.password(), "provider", req.userRoleId(), blankToNull(p.suffix()), blankToNull(p.phone()),
+                provider.id(), req.disabled()));
     }
 
     @Transactional

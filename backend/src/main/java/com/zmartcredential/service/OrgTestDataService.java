@@ -95,6 +95,7 @@ public class OrgTestDataService {
 
     private final ProviderRepository providerRepository;
     private final EmailRegistry emailRegistry;
+    private final com.zmartcredential.repository.UserRoleRepository userRoleRepository;
     private final ProviderDocumentRepository documentRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final LocationRepository locationRepository;
@@ -229,6 +230,7 @@ public class OrgTestDataService {
             u.setDisplayName(t[1]);
             u.setTitle(t[3]);
             u.setRole(t[2]);
+            u.setUserRoleId(userRoleRepository.defaultFor(t[2]));
             u.setDisabled("1".equals(t[5]));
             if ("provider".equals(t[2])) u.setProviderId(providers.getFirst().getId());
             u.setTestData(true);

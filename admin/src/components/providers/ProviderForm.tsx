@@ -218,7 +218,8 @@ export function ProviderForm({
       if (err instanceof ApiError) {
         const fe = { ...err.fieldErrors };
         if (fe.licenseNumber) fe.license = fe.licenseNumber;
-        if (err.status === 409 && !fe.npi) fe.npi = err.message;
+        // a 409 without a field (duplicate NPI) is shown under NPI
+        if (err.status === 409 && Object.keys(fe).length === 0) fe.npi = err.message;
         setErrors(fe);
       }
       toast(errorMessage(err), "error");

@@ -19,6 +19,8 @@ import { ROLE_LABEL } from "@/lib/constants";
 import type { Role } from "@/types";
 import { ROLES } from "@/types/permissions";
 import type { ProviderLite, User, UserCreate, UserUpdate } from "@/types/users";
+import { ProviderForm } from "@/components/providers/ProviderForm";
+import { useOrgStructure } from "@/components/providers/shared";
 
 export function UsersView() {
   const authUser = useUser();
@@ -35,8 +37,13 @@ export function UsersView() {
   const canList = can("list", "user");
   const usersQ = useAsync<User[]>(canList ? () => api.get<User[]>("/users", { q }) : null, [q, canList]);
   // the "All Roles" filter lists the super admin's User Roles
-  const roleList = useAsync<{ id: number; name: string }[]>(canList ? () => api.get<{ id: number; name: string }[]>("/user-roles") : null, [canList]);
-  const users = { ...usersQ, data: usersQ.data ? (roleFilter === "all" ? usersQ.data : usersQ.data.filter((u) => String(u.userRoleId) === roleFilter)) : usersQ.data };
+  const roleList = useAsync<{ id: number; name: string; accessLevel: string }[]>(canList ? () => api.get<{ id: number; name: string; accessLevel: string }[]>("/user-roles") : null, [canList]);
+  const filterRole = (roleList.data || []).find((r) => String(r.id) === roleFilter);
+  const matchesRole = (u: User) =>
+    u.userRoleId != null
+      ? String(u.userRoleId) === roleFilter
+      : !!filterRole && (filterRole.accessLevel === u.role || ((u.role as string) === "admin" && filterRole.accessLevel === "org_admin"));
+  const users = { ...usersQ, data: usersQ.data ? (roleFilter === "all" ? usersQ.data : usersQ.data.filter(matchesRole)) : usersQ.data };
   // Unfiltered list for the header counts.
   const all = useAsync<User[]>(canList ? () => api.get<User[]>("/users") : null, [canList]);
 
@@ -222,6 +229,20 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
   const chosenRole = (userRoles.data || []).find((r) => String(r.id) === form.userRoleId);
   const access: Role | undefined = chosenRole?.accessLevel;
   const providers = useAsync<ProviderLite[]>(access === "provider" ? () => api.get<ProviderLite[]>("/providers/all-lite") : null, [access === "provider"]);
+  // Add User with a provider role: a new provider (all the Add Provider Manually fields) or an existing one
+  const [providerMode, setProviderMode] = useState<"new" | "existing">("new");
+  const newProvider = !user && access === "provider" && providerMode === "new";
+  const org = useOrgStructure(newProvider);
+
+  const validateLogin = () => {
+    const e: Record<string, string> = {};
+    if (!form.username.trim()) e.username = "Required";
+    else if (!/^[A-Za-z0-9._@+-]{3,150}$/.test(form.username.trim())) e.username = "3-150 characters: letters, digits and . _ @ + -";
+    if (!form.password || form.password.length < 8) e.password = "8+ characters";
+    if (!form.userRoleId) e.userRoleId = "Choose a role";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
 
   const validate = () => {
@@ -274,6 +295,84 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
     }
   };
 
+  const roleSelect = (
+    <select value={form.userRoleId} onChange={(e) => { setForm({ ...form, userRoleId: e.target.value }); setErrors((er) => ({ ...er, userRoleId: "" })); }} className="input" disabled={userRoles.loading || isSelf} title={isSelf ? "You cannot change your own role" : undefined}>
+      <option value="">{userRoles.loading ? "Loading roles…" : "— Select role —"}</option>
+      {(userRoles.data || []).filter((r) => r.active !== false || r.id === user?.userRoleId).map((r) => <option key={r.id} value={r.id}>{r.name}{r.active === false ? " (disabled)" : ""}</option>)}
+    </select>
+  );
+  const providerModeToggle = !user && access === "provider" && (
+    <div className="flex gap-4 text-sm">
+      <label className="flex items-center gap-1.5">
+        <input type="radio" checked={providerMode === "new"} onChange={() => setProviderMode("new")} /> New provider
+      </label>
+      <label className="flex items-center gap-1.5">
+        <input type="radio" checked={providerMode === "existing"} onChange={() => setProviderMode("existing")} /> Login for an existing provider
+      </label>
+    </div>
+  );
+
+  if (newProvider) {
+    return (
+      <Modal title="Add User" subtitle="Provider login — enter the provider's details, every field is required." onClose={onClose} maxWidth={720}>
+        {org.error ? (
+          <div className="field-error">{org.error}</div>
+        ) : !org.data ? (
+          <Loading compact />
+        ) : (
+          <ProviderForm
+            org={org.data}
+            initial={{ email: form.email }}
+            submitLabel="Create User"
+            onCancel={onClose}
+            top={
+              <div className="space-y-3 pb-3 mb-1 border-b border-line">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <Field label="Role *" error={errors.userRoleId}>{roleSelect}</Field>
+                  <Field label="Username *" error={errors.username}>
+                    <input value={form.username} onChange={(e) => { setForm({ ...form, username: e.target.value }); setErrors((er) => ({ ...er, username: "" })); }} className="input font-mono" autoComplete="off" />
+                  </Field>
+                  <Field label="Password *" error={errors.password}>
+                    <input type="password" value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); setErrors((er) => ({ ...er, password: "" })); }} className="input" placeholder="At least 8 characters" autoComplete="new-password" />
+                  </Field>
+                </div>
+                {providerModeToggle}
+                <label className="flex items-center gap-2 text-sm">
+                  <input type="checkbox" checked={form.disabled} onChange={(e) => setForm({ ...form, disabled: e.target.checked })} />
+                  Disabled (user cannot sign in)
+                </label>
+              </div>
+            }
+            onSubmit={async (provider) => {
+              if (!validateLogin()) throw new Error("Fill in the login details (role, username and password)");
+              try {
+                await api.post("/users/with-provider", {
+                  username: form.username.trim(),
+                  password: form.password,
+                  userRoleId: Number(form.userRoleId),
+                  disabled: form.disabled,
+                  provider,
+                });
+              } catch (e) {
+                if (e instanceof ApiError) {
+                  // provider field errors come back as "provider.npi" — show them under the provider fields
+                  const fe = e.fieldErrors as Record<string, string>;
+                  for (const k of Object.keys(fe)) if (k.startsWith("provider.")) { fe[k.slice(9)] = fe[k]; delete fe[k]; }
+                  const login: Record<string, string> = {};
+                  for (const k of ["username", "password", "userRoleId"]) if (fe[k]) login[k] = fe[k];
+                  if (Object.keys(login).length) setErrors(login);
+                }
+                throw e;
+              }
+              toast("Provider and login created");
+              onSaved();
+            }}
+          />
+        )}
+      </Modal>
+    );
+  }
+
   return (
     <Modal title={user ? "Edit User" : "Add User"} onClose={onClose} maxWidth={520}>
       <div className="space-y-3">
@@ -290,13 +389,11 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
             <input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} className="input font-mono" disabled={!!user} autoComplete="off" />
           </Field>
           <Field label="Role *" error={errors.userRoleId}>
-            <select value={form.userRoleId} onChange={(e) => { setForm({ ...form, userRoleId: e.target.value }); setErrors((er) => ({ ...er, userRoleId: "" })); }} className="input" disabled={userRoles.loading || isSelf} title={isSelf ? "You cannot change your own role" : undefined}>
-              <option value="">{userRoles.loading ? "Loading roles…" : "— Select role —"}</option>
-              {(userRoles.data || []).filter((r) => r.active !== false || r.id === user?.userRoleId).map((r) => <option key={r.id} value={r.id}>{r.name}{r.active === false ? " (disabled)" : ""}</option>)}
-            </select>
+            {roleSelect}
             {userRoles.error && <div className="field-error">{userRoles.error}</div>}
           </Field>
         </div>
+        {providerModeToggle}
         {access === "provider" && (
           <Field label="Linked Provider *" error={errors.providerId}>
             <select value={form.providerId} onChange={(e) => setForm({ ...form, providerId: e.target.value })} className="input" disabled={providers.loading}>

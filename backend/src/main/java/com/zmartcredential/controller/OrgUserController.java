@@ -59,6 +59,13 @@ public class OrgUserController {
         return service.create(req);
     }
 
+    @Operation(summary = "Create a provider and their login together (Add User → Provider role)")
+    @PostMapping("/with-provider")
+    @ResponseStatus(HttpStatus.CREATED)
+    public UserResponse createWithProvider(@Valid @RequestBody com.zmartcredential.dto.organization.UserDtos.UserWithProviderRequest req) {
+        return service.createWithProvider(req);
+    }
+
     @Operation(summary = "Update user (password changes only when provided)")
     @PutMapping("/{id}")
     public UserResponse update(@PathVariable Long id, @Valid @RequestBody UserUpdateRequest req) {

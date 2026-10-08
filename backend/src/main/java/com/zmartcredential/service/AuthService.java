@@ -178,9 +178,7 @@ public class AuthService {
         user.setPhone(req.admin().phone());
         user.setTitle("Admin");
         user.setRole(Role.ORG_ADMIN.code());
-        user.setUserRoleId(userRoleRepository.findAllByOrderByNameAsc().stream()
-                .filter(r -> Role.ORG_ADMIN.code().equals(r.getAccessLevel())).map(com.zmartcredential.entity.UserRole::getId)
-                .findFirst().orElse(null));
+        user.setUserRoleId(userRoleRepository.defaultFor(Role.ORG_ADMIN.code()));
         user.setSelfSignup(selfSignup);
         user = userRepository.save(user);
 
@@ -264,6 +262,7 @@ public class AuthService {
         user.setRole(Role.PROVIDER.code());
         user.setProviderId(provider.getId());
         user.setSelfSignup(true);
+        user.setUserRoleId(userRoleRepository.defaultFor("provider"));
         user = userRepository.save(user);
 
         if (orgId != null) {

@@ -46,6 +46,7 @@ public class PlatformOrgAdminService {
 
     private final OrganizationRepository organizationRepository;
     private final EmailRegistry emailRegistry;
+    private final com.zmartcredential.repository.UserRoleRepository userRoleRepository;
     private final AppUserRepository userRepository;
     private final ProviderRepository providerRepository;
     private final SubscriptionRepository subscriptionRepository;
@@ -131,6 +132,7 @@ public class PlatformOrgAdminService {
             u.setTitle(blankToNull(a.title()) == null ? "Org Admin" : a.title().trim());
             u.setPhone(blankToNull(a.phone()));
             u.setRole(Role.ORG_ADMIN.code());
+            u.setUserRoleId(userRoleRepository.defaultFor(Role.ORG_ADMIN.code()));
             adminId = userRepository.save(u).getId();
             notificationService.notifyUser(org.getId(), adminId, "Welcome to ZmartCredential!",
                     "Your organization account has been created by ZmartCredential.", "PartyPopper",

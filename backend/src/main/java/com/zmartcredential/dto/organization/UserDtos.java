@@ -32,6 +32,17 @@ public final class UserDtos {
             Boolean disabled) {
     }
 
+    /** Users → Add User with the Provider role: the provider (same fields as Add Provider Manually) and their login. */
+    public record UserWithProviderRequest(
+            @NotBlank(message = "Username is required") @Size(min = 3, max = 150, message = "3-150 characters")
+            @Pattern(regexp = "[A-Za-z0-9._@+-]+", message = "Letters, digits and . _ - @ + only") String username,
+            @NotBlank(message = "Password is required") @Size(min = 8, max = 100, message = "At least 8 characters") String password,
+            @NotNull(message = "Role is required") Long userRoleId,
+            Boolean disabled,
+            @NotNull(message = "Provider details are required") @jakarta.validation.Valid
+            com.zmartcredential.dto.provider.ProviderDtos.ProviderCreateRequest provider) {
+    }
+
     /** Username cannot be changed. Password is changed only when non-blank. */
     public record UserUpdateRequest(
             @NotBlank(message = "Display name is required") @Size(max = 200, message = "Max 200 characters") String displayName,

@@ -1,6 +1,6 @@
 -- ============================================================
 -- ZmartCredential — full schema + required reference data
--- Generated from backend/src/main/resources/db/migration (V1, V2, V102, V103, V104, V105, V106, V107, V108, V109, V110).
+-- Generated from backend/src/main/resources/db/migration (V1, V2, V102, V103, V104, V105, V106, V107, V108, V109, V110, V111).
 -- Normally Flyway applies these automatically when Spring Boot starts;
 -- use this file only to create the database manually (e.g. phpMyAdmin).
 -- ============================================================
@@ -1305,3 +1305,12 @@ ALTER TABLE user_role ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1 AFTER acce
 -- Documents whose expiration date has passed are shown as expired.
 UPDATE provider_document SET status = 'expired'
  WHERE expires_at IS NOT NULL AND expires_at < CURDATE() AND status IN ('approved', 'pending_review');
+
+-- V111__backfill_user_roles.sql
+-- Every user has a User Role (Users → role filter). Users created without one get the first role
+-- with the same access level as their built-in role.
+UPDATE app_user u
+  JOIN (SELECT access_level, MIN(id) AS id FROM user_role GROUP BY access_level) r
+    ON r.access_level = CASE WHEN u.role = 'admin' THEN 'org_admin' ELSE u.role END
+   SET u.user_role_id = r.id
+ WHERE u.user_role_id IS NULL AND u.role <> 'platform_admin';
