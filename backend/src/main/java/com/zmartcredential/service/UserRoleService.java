@@ -48,7 +48,8 @@ public class UserRoleService {
         String name = clean(req.name());
         if (repository.existsByNameIgnoreCaseAndIdNot(name, id)) throw new ConflictException("A role named \"" + name + "\" already exists");
         r.setName(name);
-        if (req.accessLevel() != null && !req.accessLevel().isBlank() && !req.accessLevel().equals(r.getAccessLevel())) {
+        // the built-in roles keep their access (admin / provider)
+        if (r.getSystemKey() == null && req.accessLevel() != null && !req.accessLevel().isBlank() && !req.accessLevel().equals(r.getAccessLevel())) {
             r.setAccessLevel(req.accessLevel());
             // users with this role follow the new access level
             userRepository.findAll().stream().filter(u -> id.equals(u.getUserRoleId())).forEach(u -> {
@@ -61,7 +62,7 @@ public class UserRoleService {
     /** The Administrator role (org admins) and the Provider role (provider logins) are used by Create Admin and
      *  the Providers module: they can be renamed but not deleted or disabled. */
     public boolean isBuiltIn(Long id) {
-        return id != null && (id.equals(repository.defaultFor("org_admin")) || id.equals(repository.defaultFor("provider")));
+        return id != null && repository.findById(id).map(r -> r.getSystemKey() != null).orElse(false);
     }
 
     @Transactional
@@ -89,6 +90,7 @@ public class UserRoleService {
                 throw new ConflictException("\"" + r.getName() + "\" is assigned to " + used + " user(s). Choose the role to move them to.");
             }
             if (moveTo.equals(id)) throw new com.zmartcredential.exception.BadRequestException("Choose a different role");
+            if (isBuiltIn(moveTo)) throw new com.zmartcredential.exception.BadRequestException("Users can only be moved to a staff role");
             UserRole target = load(moveTo);
             userRepository.findAll().stream().filter(u -> id.equals(u.getUserRoleId())).forEach(u -> {
                 u.setUserRoleId(target.getId());
@@ -112,6 +114,6 @@ public class UserRoleService {
 
     private UserRoleResponse toResponse(UserRole r) {
         return new UserRoleResponse(r.getId(), r.getName(), r.getAccessLevel(), !Boolean.FALSE.equals(r.getActive()),
-                userRepository.countByUserRoleId(r.getId()), r.getCreatedAt(), r.getUpdatedAt(), isBuiltIn(r.getId()));
+                userRepository.countByUserRoleId(r.getId()), r.getCreatedAt(), r.getUpdatedAt(), r.getSystemKey() != null);
     }
 }

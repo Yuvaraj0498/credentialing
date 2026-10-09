@@ -16,13 +16,14 @@ public final class UserRoleDtos {
             @Size(min = 2, max = 80, message = "2-80 characters")
             @Pattern(regexp = "^[A-Za-z][A-Za-z0-9 &/().,'-]*$", message = "Start with a letter; letters, digits, spaces and & / ( ) . , ' - only")
             String name,
-            /* optional (not shown in the UI): built-in role behind the role; new roles default to staff */
-            @Pattern(regexp = "^$|org_admin|clerk|auditor|provider", message = "Unknown access level")
+            /* optional (not shown in the UI): staff (clerk, default) or read-only (auditor); admin and provider access
+               belong to the built-in Admin and Provider roles only */
+            @Pattern(regexp = "^$|clerk|auditor", message = "Roles can be staff (clerk) or read-only (auditor)")
             String accessLevel) {
     }
 
     /** userCount: users that currently have this role (a role in use cannot be deleted). */
-    /** builtIn: the Administrator role (org admins, from Create Admin) or the Provider role (provider logins) — kept. */
+    /** builtIn: the Admin role (org admins, from Create Admin) or the Provider role (provider logins) — kept. */
     public record UserRoleResponse(Long id, String name, String accessLevel, boolean active, long userCount, LocalDateTime createdAt,
                                    LocalDateTime updatedAt, boolean builtIn) {
     }

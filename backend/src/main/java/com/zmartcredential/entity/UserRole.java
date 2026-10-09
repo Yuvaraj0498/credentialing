@@ -25,6 +25,9 @@ public class UserRole {
     /** org_admin | clerk | auditor | provider — what users with this role can open */
     private String accessLevel = "clerk";
 
+    /** org_admin = the built-in Admin role, provider = the built-in Provider role; null for every other role. */
+    private String systemKey;
+
     /** A disabled role's users cannot sign in. */
     private Boolean active = true;
 
