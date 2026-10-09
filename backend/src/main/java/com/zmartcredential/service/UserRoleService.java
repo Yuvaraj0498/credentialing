@@ -58,11 +58,19 @@ public class UserRoleService {
         return toResponse(repository.saveAndFlush(r));
     }
 
-    /** Enables or disables a role. Users with a disabled role cannot sign in (and are signed out on their next request). */
+    /** The Administrator role (org admins) and the Provider role (provider logins) are used by Create Admin and
+     *  the Providers module: they can be renamed but not deleted or disabled. */
+    public boolean isBuiltIn(Long id) {
+        return id != null && (id.equals(repository.defaultFor("org_admin")) || id.equals(repository.defaultFor("provider")));
+    }
+
     @Transactional
     public UserRoleResponse setActive(Long id, boolean active) {
         authContext.requireRole(Role.PLATFORM_ADMIN);
         UserRole r = load(id);
+        if (!active && isBuiltIn(id)) {
+            throw new com.zmartcredential.exception.BadRequestException("\"" + r.getName() + "\" is a built-in role and cannot be disabled");
+        }
         r.setActive(active);
         return toResponse(repository.saveAndFlush(r));
     }
@@ -71,6 +79,9 @@ public class UserRoleService {
     public void delete(Long id, Long moveTo) {
         authContext.requireRole(Role.PLATFORM_ADMIN);
         UserRole r = load(id);
+        if (isBuiltIn(id)) {
+            throw new com.zmartcredential.exception.BadRequestException("\"" + r.getName() + "\" is a built-in role and cannot be deleted");
+        }
         long used = userRepository.countByUserRoleId(id);
         if (used > 0) {
             // the role's users move to another role first (their access follows that role)
@@ -101,6 +112,6 @@ public class UserRoleService {
 
     private UserRoleResponse toResponse(UserRole r) {
         return new UserRoleResponse(r.getId(), r.getName(), r.getAccessLevel(), !Boolean.FALSE.equals(r.getActive()),
-                userRepository.countByUserRoleId(r.getId()), r.getCreatedAt(), r.getUpdatedAt());
+                userRepository.countByUserRoleId(r.getId()), r.getCreatedAt(), r.getUpdatedAt(), isBuiltIn(r.getId()));
     }
 }

@@ -132,6 +132,7 @@ public class PlatformOrgAdminService {
             u.setTitle(blankToNull(a.title()) == null ? "Org Admin" : a.title().trim());
             u.setPhone(blankToNull(a.phone()));
             u.setRole(Role.ORG_ADMIN.code());
+            u.setOrgOwner(true);
             u.setUserRoleId(userRoleRepository.defaultFor(Role.ORG_ADMIN.code()));
             adminId = userRepository.save(u).getId();
             notificationService.notifyUser(org.getId(), adminId, "Welcome to ZmartCredential!",

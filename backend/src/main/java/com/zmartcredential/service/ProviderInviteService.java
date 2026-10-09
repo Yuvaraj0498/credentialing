@@ -66,6 +66,8 @@ public class ProviderInviteService {
     private final PermissionService permissionService;
     private final ProviderModuleSupport support;
     private final ProviderService providerService;
+    private final com.zmartcredential.repository.AppUserRepository userRepository;
+    private final OrgUserService orgUserService;
     private final MailService mailService;
     private final CryptoService cryptoService;
     private final SecureLinkIssuer linkIssuer;
@@ -251,7 +253,8 @@ public class ProviderInviteService {
         String orgName = organizationRepository.findById(inv.getOrgId()).map(Organization::getName).orElse(null);
         PublicProfile profile = new PublicProfile(provider.getNpi(), provider.getCaqhId(), provider.getSuffix(),
                 provider.getSpecialty(), provider.getPhone(), provider.getDateOfBirth(), provider.getLicenseNumber(),
-                provider.getLicenseState(), provider.getLicenseExpires(), provider.getDeaNumber(), provider.getDeaExpires());
+                provider.getLicenseState(), provider.getLicenseExpires(), provider.getDeaNumber(), provider.getDeaExpires(),
+                userRepository.findByProviderId(provider.getId()).isPresent(), provider.getEmail());
         return new PublicInviteInfo(fullName(provider), orgName, inv.getEmail(), missing(provider), inv.getExpiresAt(),
                 provider.getFirstName(), provider.getLastName(), profile);
     }
@@ -301,6 +304,13 @@ public class ProviderInviteService {
         p.setDeaNumber(dea == null ? null : dea.toUpperCase());
         p.setDeaExpires(req.deaExpires());
         if ("draft".equals(p.getStatus()) || "pending".equals(p.getStatus())) p.setStatus("active");
+        // the provider's sign-in: their email + the password they chose (when they have no login yet)
+        if (userRepository.findByProviderId(p.getId()).isEmpty()) {
+            if (req.password() == null || req.password().length() < 8) {
+                throw com.zmartcredential.exception.BadRequestException.onField("password", "Choose a password of at least 8 characters");
+            }
+            orgUserService.createProviderLogin(p.getId(), req.password(), null);
+        }
         inv.setStatus("submitted");
         inv.setSubmittedAt(LocalDateTime.now());
         notificationService.notifyOrg(p.getOrgId(), "Provider profile submitted",

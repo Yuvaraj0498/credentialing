@@ -77,8 +77,8 @@ public class PlatformAdminService {
         Map<String, String> plans = packageRepository.findAll().stream()
                 .collect(Collectors.toMap(SubscriptionPackage::getCode, SubscriptionPackage::getName));
         return userRepository.findAll().stream()
-                .filter(u -> u.getOrgId() != null
-                        && (Role.ORG_ADMIN.code().equals(u.getRole()) || "admin".equals(u.getRole())))
+                // only each organization's own admin (created through Create Admin / sign-up)
+                .filter(u -> u.getOrgId() != null && Boolean.TRUE.equals(u.getOrgOwner()))
                 .sorted(Comparator.comparing(AppUser::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .map(u -> {
                     Organization o = orgs.get(u.getOrgId());

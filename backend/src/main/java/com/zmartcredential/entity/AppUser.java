@@ -52,6 +52,9 @@ public class AppUser {
     @Column(name = "is_test_data")
     private Boolean testData = false;
 
+    /** The organization's own admin (created by the super admin / at sign-up); listed in Create Admin. */
+    private Boolean orgOwner = false;
+
     private LocalDateTime lastLoginAt;
 
     @CreationTimestamp

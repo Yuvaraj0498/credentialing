@@ -328,6 +328,9 @@ export interface PublicProfile {
   licenseExpires: string | null;
   deaNumber: string | null;
   deaExpires: string | null;
+  /** false = the provider chooses a sign-in password on the profile step (their email is the username). */
+  hasLogin: boolean;
+  loginEmail: string | null;
 }
 
 /** GET /public/invites/{token}: link state before the PIN is entered. */

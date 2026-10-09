@@ -36,6 +36,9 @@ interface Profile {
   caqhPassword: string;
   pecosAccess: string;
   pecosUsername: string;
+  /** sign-in password, asked while the provider has no login */
+  password: string;
+  confirmPassword: string;
 }
 
 interface Uploaded {
@@ -91,6 +94,8 @@ export function SecureLinkPortal({ token }: { token: string }) {
         caqhPassword: "",
         pecosAccess: "",
         pecosUsername: "",
+        password: "",
+        confirmPassword: "",
       });
       setStep("profile");
     } catch (err) {
@@ -125,6 +130,7 @@ export function SecureLinkPortal({ token }: { token: string }) {
         caqhPassword: profile.caqhPassword,
         pecosAccessGranted: profile.pecosAccess === "yes",
         pecosUsername: profile.pecosAccess === "yes" ? profile.pecosUsername.trim() : undefined,
+        password: needsLogin ? profile.password : undefined,
       });
       statusQuery.setData(res);
       setStep("done");
@@ -143,8 +149,10 @@ export function SecureLinkPortal({ token }: { token: string }) {
   const requiredDocs = docs.filter((d) => d.critical);
   const uploadedRequired = requiredDocs.filter((d) => uploaded[d.docType]).length;
   // Same requirements as adding a provider in the admin app (staff already gave the name, email, practice and location).
+  const needsLogin = !!info && !info.profile.hasLogin;
   const profileValid =
     !!profile &&
+    (!needsLogin || (profile.password.length >= 8 && profile.password === profile.confirmPassword)) &&
     NPI_RE.test(profile.npi) &&
     (!profile.caqhId || /^[0-9]{6,10}$/.test(profile.caqhId)) &&
     !!profile.suffix &&
@@ -283,7 +291,7 @@ export function SecureLinkPortal({ token }: { token: string }) {
           <div className="card card-pad">
             <h2 className="font-display text-xl font-bold text-ink mb-1">Your Information</h2>
             <p className="text-sm text-ink-light mb-4">Confirm or update your professional details below.</p>
-            <ProfileForm profile={profile} errors={profileErrors} onChange={(p) => { setProfile(p); setProfileErrors({}); }} />
+            <ProfileForm profile={profile} errors={profileErrors} loginEmail={needsLogin ? info?.profile.loginEmail || info?.email || "" : null} onChange={(p) => { setProfile(p); setProfileErrors({}); }} />
             <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-line">
               <button onClick={() => setStep("docs")} disabled={!profileValid} className="btn btn-primary">
                 Continue to Documents <Icon name="ArrowRight" size={13} />
@@ -392,7 +400,7 @@ export function SecureLinkPortal({ token }: { token: string }) {
   );
 }
 
-function ProfileForm({ profile, errors, onChange }: { profile: Profile; errors: Record<string, string>; onChange: (p: Profile) => void }) {
+function ProfileForm({ profile, errors, loginEmail, onChange }: { profile: Profile; errors: Record<string, string>; loginEmail: string | null; onChange: (p: Profile) => void }) {
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => onChange({ ...profile, [k]: v });
   return (
     <div className="space-y-3">
@@ -474,6 +482,24 @@ function ProfileForm({ profile, errors, onChange }: { profile: Profile; errors: 
           <input value={profile.pecosUsername} onChange={(e) => set("pecosUsername", e.target.value.replace(/\s/g, ""))} className="input font-mono" maxLength={100} disabled={profile.pecosAccess !== "yes"} autoComplete="off" />
         </Field>
       </div>
+      {loginEmail != null && (
+        <div className="pt-3 border-t border-line space-y-3">
+          <div>
+            <div className="text-sm font-semibold text-ink">Your sign-in</div>
+            <div className="text-xs text-ink-light">
+              Sign in to the portal with your email <strong>{loginEmail}</strong> and the password you choose here.
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Password" required error={errors.password || (profile.password && profile.password.length < 8 ? "At least 8 characters" : undefined)}>
+              <PasswordInput value={profile.password} onChange={(e) => set("password", e.target.value)} className="input" maxLength={100} autoComplete="new-password" />
+            </Field>
+            <Field label="Confirm Password" required error={profile.confirmPassword && profile.confirmPassword !== profile.password ? "Passwords do not match" : undefined}>
+              <PasswordInput value={profile.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} className="input" maxLength={100} autoComplete="new-password" />
+            </Field>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

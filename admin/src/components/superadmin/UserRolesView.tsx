@@ -26,11 +26,18 @@ export function UserRolesView() {
   const [deleting, setDeleting] = useState<UserRoleItem | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [toggling, setToggling] = useState<number | null>(null);
+  const [disabling, setDisabling] = useState<UserRoleItem | null>(null);
   const list = roles.data || [];
   const [search, setSearch] = useState("");
   const shown = list.filter((r) => matchesSearch(search, r.name, r.active ? "enabled" : "disabled"));
 
   const toggleActive = async (r: UserRoleItem) => {
+    // disabling signs the role's users out: ask first when anybody has it
+    if (r.active && r.userCount > 0 && disabling?.id !== r.id) {
+      setDisabling(r);
+      return;
+    }
+    setDisabling(null);
     setToggling(r.id);
     try {
       await api.patch("/user-roles/" + r.id + "/active", { active: !r.active });
@@ -109,7 +116,18 @@ export function UserRolesView() {
                   )}
                   {shown.map((r) => (
                     <tr key={r.id}>
-                      <td className="font-medium text-ink">{r.name}</td>
+                      <td className="font-medium text-ink">
+                        {r.name}
+                        {r.builtIn && (
+                          <span
+                            className="ml-2 text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded"
+                            style={{ background: "var(--surface-muted, #f1f5f9)", color: "var(--ink-light)" }}
+                            title={r.accessLevel === "provider" ? "Given to providers added in the Providers module" : "Given to admins created in Create Admin"}
+                          >
+                            Built-in
+                          </span>
+                        )}
+                      </td>
                       <td className="text-right font-mono text-xs">{r.userCount}</td>
                       <td className="text-center">
                         <div className="inline-flex items-center gap-2">
@@ -118,9 +136,9 @@ export function UserRolesView() {
                             role="switch"
                             aria-checked={r.active}
                             aria-label={(r.active ? "Disable " : "Enable ") + r.name}
-                            title={r.active ? "Enabled — click to disable (its users cannot sign in)" : "Disabled — click to enable"}
+                            title={r.builtIn ? "Built-in role — always enabled" : r.active ? "Enabled — click to disable (its users cannot sign in)" : "Disabled — click to enable"}
                             onClick={() => toggleActive(r)}
-                            disabled={toggling === r.id}
+                            disabled={toggling === r.id || r.builtIn}
                             style={{
                               width: 36,
                               height: 20,
@@ -128,8 +146,8 @@ export function UserRolesView() {
                               position: "relative",
                               background: r.active ? "var(--success, #059669)" : "var(--line-strong, #cbd5e1)",
                               transition: "background .15s",
-                              opacity: toggling === r.id ? 0.6 : 1,
-                              cursor: toggling === r.id ? "wait" : "pointer",
+                              opacity: toggling === r.id || r.builtIn ? 0.6 : 1,
+                              cursor: r.builtIn ? "not-allowed" : toggling === r.id ? "wait" : "pointer",
                             }}
                           >
                             <span
@@ -158,8 +176,9 @@ export function UserRolesView() {
                         <button
                           onClick={() => startDelete(r)}
                           className="btn btn-ghost text-xs"
-                          style={{ color: "var(--danger)" }}
-                          title={r.userCount ? "Assigned to " + r.userCount + " user(s) — they move to another role" : "Delete"}
+                          style={{ color: "var(--danger)", opacity: r.builtIn ? 0.4 : 1, cursor: r.builtIn ? "not-allowed" : undefined }}
+                          disabled={r.builtIn}
+                          title={r.builtIn ? "Built-in role — cannot be deleted" : r.userCount ? "Assigned to " + r.userCount + " user(s) — they move to another role" : "Delete"}
                           aria-label={"Delete " + r.name}
                         >
                           <Icon name="Trash2" size={12} /> Delete
@@ -184,6 +203,21 @@ export function UserRolesView() {
           }}
         />
       )}
+      {disabling && (
+        <ConfirmDialog
+          title="Disable role"
+          message={
+            <>
+              <strong>{disabling.name}</strong> is assigned to {disabling.userCount} user(s). Disabled, they cannot sign in until the role is
+              enabled again (their accounts are kept).
+            </>
+          }
+          confirmLabel="Disable"
+          busy={toggling === disabling.id}
+          onConfirm={() => toggleActive(disabling)}
+          onClose={() => setDisabling(null)}
+        />
+      )}
       {deleting && (
         <ConfirmDialog
           title="Delete role"
@@ -205,7 +239,7 @@ export function UserRolesView() {
                     className={"input" + (moveError ? " input-error" : "")}
                   >
                     <option value="">— Select a role —</option>
-                    {list.filter((x) => x.id !== deleting.id).map((x) => (
+                    {list.filter((x) => x.id !== deleting.id && !x.builtIn).map((x) => (
                       <option key={x.id} value={x.id}>{x.name}{x.active ? "" : " (disabled)"}</option>
                     ))}
                   </select>
@@ -253,6 +287,11 @@ function RoleModal({ role, onClose, onSaved }: { role: UserRoleItem | null; onCl
   return (
     <Modal title={role ? "Edit Role" : "Add Role"} onClose={onClose} maxWidth={440}>
       <div className="space-y-3">
+        {role && role.userCount > 0 && (
+          <div className="text-xs text-ink-light">
+            {role.userCount} user(s) have this role — they keep it under the new name, with the same permissions.
+          </div>
+        )}
         <Field label="Role Name" required error={error}>
           <input
             value={name}

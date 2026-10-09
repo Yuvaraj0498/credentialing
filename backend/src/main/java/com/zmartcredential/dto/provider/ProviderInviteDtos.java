@@ -53,7 +53,9 @@ public final class ProviderInviteDtos {
     /** Current provider values, used to pre-fill the portal's profile step. */
     public record PublicProfile(String npi, String caqhId, String suffix, String specialty, String phone,
                                 LocalDate dateOfBirth, String licenseNumber, String licenseState,
-                                LocalDate licenseExpires, String deaNumber, LocalDate deaExpires) {
+                                LocalDate licenseExpires, String deaNumber, LocalDate deaExpires,
+                                /* false = the provider sets a password here to be able to sign in */
+                                boolean hasLogin, String loginEmail) {
     }
 
     public record PublicProfileRequest(
@@ -75,7 +77,9 @@ public final class ProviderInviteDtos {
             @Size(max = 100, message = "At most 100 characters") String caqhUsername,
             @Size(max = 200, message = "At most 200 characters") String caqhPassword,
             Boolean pecosAccessGranted,
-            @Size(max = 100, message = "At most 100 characters") String pecosUsername) {
+            @Size(max = 100, message = "At most 100 characters") String pecosUsername,
+            /* sign-in password (required while the provider has no login; their email is the username) */
+            @Size(max = 100, message = "At most 100 characters") String password) {
     }
 
     /** emailStatus: sent | failed (emailError says why) | queued (sending disabled, only logged). */

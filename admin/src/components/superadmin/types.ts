@@ -32,4 +32,6 @@ export interface UserRoleItem {
   userCount: number;
   createdAt: string;
   updatedAt: string;
+  /** The Administrator role (Create Admin) or the Provider role (Providers module): cannot be deleted or disabled. */
+  builtIn: boolean;
 }

@@ -22,7 +22,9 @@ public final class UserRoleDtos {
     }
 
     /** userCount: users that currently have this role (a role in use cannot be deleted). */
-    public record UserRoleResponse(Long id, String name, String accessLevel, boolean active, long userCount, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    /** builtIn: the Administrator role (org admins, from Create Admin) or the Provider role (provider logins) — kept. */
+    public record UserRoleResponse(Long id, String name, String accessLevel, boolean active, long userCount, LocalDateTime createdAt,
+                                   LocalDateTime updatedAt, boolean builtIn) {
     }
 
     public record UserRoleActiveRequest(@jakarta.validation.constraints.NotNull(message = "active is required") Boolean active) {

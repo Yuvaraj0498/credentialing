@@ -180,6 +180,7 @@ public class AuthService {
         user.setRole(Role.ORG_ADMIN.code());
         user.setUserRoleId(userRoleRepository.defaultFor(Role.ORG_ADMIN.code()));
         user.setSelfSignup(selfSignup);
+        user.setOrgOwner(true);
         user = userRepository.save(user);
 
         Subscription sub = new Subscription();
