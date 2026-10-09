@@ -1,3 +1,0 @@
-# Shell scripts run on the Linux server
-*.sh text eol=lf
-mvnw text eol=lf

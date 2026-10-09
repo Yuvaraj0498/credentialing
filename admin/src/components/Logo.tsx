@@ -4,7 +4,7 @@
 
 export function Logo() {
   return (
-    <div className="flex items-center justify-center px-3 py-3">
+    <div className="flex items-center justify-center px-3 py-3 border-b border-line">
       <div className="atano-logo text-ink whitespace-nowrap" style={{ fontSize: 22 }}>
         <span className="a-mark">▲</span>ZmartCredential
       </div>

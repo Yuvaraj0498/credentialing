@@ -1,0 +1,73 @@
+# =====================================================================================================
+# Backend settings. Every site has its OWN copy of this file:
+#     cp application.properties.example application.properties      (in backend/src/main/resources)
+# then fill in the SITE SETTINGS block. application.properties is git-ignored: it holds passwords and keys,
+# "git pull" never touches it, and it must never be committed. Rebuild (mvn clean package) after changing it.
+#
+#                      desssnext (testing)                    credentialingsjs (live)
+#   server.port        8085                                   9090
+#   database           credentialing                          zmartcredential
+#   flyway locations   classpath:db/migration,classpath:db/demo   classpath:db/migration
+#   site address       https://desssnext.desss-portfolio.com  https://credentialingsjs.desss-portfolio.com
+# =====================================================================================================
+spring.application.name=credentialing
+
+# ---------- SITE SETTINGS (change these on every site) ----------
+server.port=8080
+spring.datasource.url=jdbc:mysql://localhost:3306/credentialing?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+spring.datasource.username=root
+spring.datasource.password=
+# Schema + reference data (+ demo data). A live site uses only: classpath:db/migration
+spring.flyway.locations=classpath:db/migration,classpath:db/demo
+# Long random values (openssl rand -base64 48). NEVER change app.encryption-key after the first start:
+# stored payer / CAQH passwords would become unreadable.
+app.jwt.secret=dev-only-jwt-secret-change-me-in-production
+app.encryption-key=dev-only-encryption-key-change-me
+# The site's public address (browser origin) — CORS and links in emails
+app.cors.allowed-origins=http://localhost:3000
+app.public-url=http://localhost:3000
+# true on HTTPS sites
+app.cookie-secure=false
+# Super admin sign-in of this site (optional; left out = dev@desss.com / Admin@123)
+#app.super-admin.email=info@patriotmedbill.com
+#app.super-admin.password=CHANGE_ME
+# Email: false = emails are only written to the email log
+app.mail.enabled=false
+app.mail.from=
+app.mail.from-name=ZmartCredential
+spring.mail.host=smtp.ionos.com
+spring.mail.port=587
+spring.mail.username=
+spring.mail.password=
+spring.mail.properties.mail.smtp.auth=true
+spring.mail.properties.mail.smtp.starttls.enable=true
+spring.mail.properties.mail.smtp.ssl.enable=false
+
+# ---------- Fixed settings (same on every site) ----------
+# Flyway owns the schema; Hibernate never alters it.
+spring.jpa.hibernate.ddl-auto=none
+spring.jpa.open-in-view=false
+spring.jpa.properties.hibernate.jdbc.time_zone=UTC
+spring.flyway.enabled=true
+
+app.jwt.access-token-minutes=30
+app.jwt.refresh-token-days=14
+
+# Uploaded documents (relative to the folder the backend is started from)
+app.storage.path=./uploads
+spring.servlet.multipart.max-file-size=25MB
+spring.servlet.multipart.max-request-size=100MB
+
+springdoc.swagger-ui.path=/swagger-ui.html
+springdoc.api-docs.path=/v3/api-docs
+
+# A mail server that accepts the connection and then goes quiet must not hold the request for minutes
+spring.mail.properties.mail.smtp.connectiontimeout=10000
+spring.mail.properties.mail.smtp.timeout=10000
+spring.mail.properties.mail.smtp.writetimeout=10000
+
+# Payer portal auto-login (Payer Submissions): headless Chrome on the server (blank binary = auto-detect)
+app.portal-login.enabled=true
+app.portal-login.chrome-binary=
+app.portal-login.allow-private-hosts=false
+app.portal-login.timeout-seconds=60

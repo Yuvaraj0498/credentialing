@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Per-site super admin sign-in. When app.super-admin.email and app.super-admin.password are set in
- * backend/config/application.properties, the site's super admin signs in with them: the seeded super admin
+ * the site's application.properties, the site's super admin signs in with them: the seeded super admin
  * (dev@desss.com, migration V107) is renamed to that email and its password is set. Left out = unchanged.
  */
 @Slf4j
