@@ -57,7 +57,8 @@ public class CaqhLookupService {
     private static final JsonMapper JSON = JsonMapper.builder()
             .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
             .build();
-    private static final List<CaqhProfile> MOCK_PROFILES = loadMockProfiles();
+    /** Shown while no real CAQH API is configured (the built-in sample profiles were removed). */
+    private static final String NOT_SET_UP = "CAQH import is not set up yet. An admin can connect the real CAQH API in CAQH Config.";
     private static final Pattern CAQH_ID = Pattern.compile("^\\d{6,10}$");
     private static final Pattern NPI = Pattern.compile("^\\d{10}$");
     private static final Pattern STATE = Pattern.compile("^[A-Za-z]{2}$");
@@ -103,11 +104,10 @@ public class CaqhLookupService {
         authContext.requireRole(Role.PLATFORM_ADMIN, Role.ORG_ADMIN);
         CaqhConfig c = loadConfig(authContext.orgId());
         if (isMock(c)) {
-            return new CaqhLookupTestResponse(true, "mock",
-                    "Mock API responded. " + MOCK_PROFILES.size() + " provider profiles available.");
+            return new CaqhLookupTestResponse(false, "mock", NOT_SET_UP);
         }
         try {
-            fetchReal(c, MOCK_PROFILES.get(0).caqhId());
+            fetchReal(c, "10000001");
             return new CaqhLookupTestResponse(true, "real", "Real API connection succeeded.");
         } catch (NotFoundException e) {
             return new CaqhLookupTestResponse(true, "real", "Connection OK (test ID not in your CAQH roster, but the API responded).");
@@ -235,10 +235,7 @@ public class CaqhLookupService {
         CaqhProfile profile;
         String source;
         if (isMock(c)) {
-            profile = MOCK_PROFILES.stream().filter(m -> id.equals(m.caqhId())).findFirst()
-                    .orElseThrow(() -> new NotFoundException("CAQH ID " + id + " not found. In mock mode, valid IDs are "
-                            + MOCK_PROFILES.get(0).caqhId() + " through " + MOCK_PROFILES.get(MOCK_PROFILES.size() - 1).caqhId() + "."));
-            source = "mock";
+            throw new BadRequestException(NOT_SET_UP);
         } else {
             profile = fetchReal(c, id);
             source = "real";
@@ -331,15 +328,7 @@ public class CaqhLookupService {
 
     private static CaqhLookupConfigResponse toResponse(CaqhConfig c) {
         return new CaqhLookupConfigResponse(isMock(c) ? "mock" : "real", c.getLookupApiUrl(), c.getLookupApiKeyEnc() != null,
-                c.getLookupOrgId(), MOCK_PROFILES.stream().map(CaqhProfile::caqhId).toList());
-    }
-
-    private static List<CaqhProfile> loadMockProfiles() {
-        try (InputStream in = new ClassPathResource("caqh/mock-profiles.json").getInputStream()) {
-            return List.copyOf(JSON.readValue(in, new TypeReference<List<CaqhProfile>>() { }));
-        } catch (IOException e) {
-            throw new IllegalStateException("Could not load caqh/mock-profiles.json", e);
-        }
+                c.getLookupOrgId(), List.of());
     }
 
     private static LocalDate date(String s) {
