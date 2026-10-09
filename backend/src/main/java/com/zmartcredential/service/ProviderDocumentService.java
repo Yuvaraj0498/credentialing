@@ -108,7 +108,7 @@ public class ProviderDocumentService {
             if (exp != null && exp.isBefore(LocalDate.now())) {
                 throw new BadRequestException("Expiration date of " + f.getOriginalFilename() + " cannot be in the past");
             }
-            if (typeExpires && exp == null && !authContext.principal().isProvider()) {
+            if (typeExpires && exp == null) {
                 throw new BadRequestException("Enter the expiration date of " + f.getOriginalFilename());
             }
             expiries.add(exp);

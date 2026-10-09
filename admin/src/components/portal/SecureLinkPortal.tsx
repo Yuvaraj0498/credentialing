@@ -548,9 +548,20 @@ function DocUploadRow({ doc, uploaded, base, pin, onUploaded }: { doc: PublicMis
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
+  const needsDate = doc.expires;
+  /** Expiring documents (license, DEA, insurance, ...) need a current expiration date. */
+  const dateProblem = !needsDate ? "" : !expiresAt ? "Enter the expiration date first" : expiresAt < todayISO() ? "This date is in the past" : "";
+  const [dateTried, setDateTried] = useState(false);
+  const pick = () => {
+    setDateTried(true);
+    if (dateProblem) return;
+    ref.current?.click();
+  };
+
   const upload = async (file: File | undefined) => {
     setError("");
     if (!file) return;
+    if (dateProblem) return setError(dateProblem);
     if (!ALLOWED_EXT.includes(fileExt(file.name))) return setError("This file type is not allowed");
     if (file.size > MAX_FILE_BYTES) return setError("File exceeds 25 MB");
     if (file.size === 0) return setError("File is empty");
@@ -563,6 +574,8 @@ function DocUploadRow({ doc, uploaded, base, pin, onUploaded }: { doc: PublicMis
     try {
       await api.upload<PublicUploadResult>(base + "/upload", form);
       onUploaded({ fileName: file.name, size: file.size });
+      setExpiresAt("");
+      setDateTried(false);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -592,13 +605,25 @@ function DocUploadRow({ doc, uploaded, base, pin, onUploaded }: { doc: PublicMis
             <div className="text-xs text-ink-faint mt-0.5">No file uploaded</div>
           )}
         </div>
-        {doc.expires && !uploaded && (
+        {needsDate && (
           <div className="flex items-center gap-1">
-            <label className="text-[11px] text-ink-light" htmlFor={"exp-" + doc.docType}>Expires</label>
-            <input id={"exp-" + doc.docType} type="date" min={todayISO()} value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="input input-sm" style={{ width: 150 }} disabled={busy} />
+            <label className="text-[11px] text-ink-light" htmlFor={"exp-" + doc.docType}>
+              Expires <span style={{ color: "var(--danger)" }}>*</span>
+            </label>
+            <input
+              id={"exp-" + doc.docType}
+              type="date"
+              min={todayISO()}
+              value={expiresAt}
+              onChange={(e) => setExpiresAt(e.target.value)}
+              className={"input input-sm" + (dateTried && dateProblem ? " input-error" : "")}
+              style={{ width: 150 }}
+              disabled={busy}
+              aria-required="true"
+            />
           </div>
         )}
-        <button className="btn btn-secondary flex-shrink-0" onClick={() => ref.current?.click()} disabled={busy}>
+        <button className="btn btn-secondary flex-shrink-0" onClick={pick} disabled={busy}>
           {busy ? <span className="loader" /> : <Icon name="Upload" size={11} />} {uploaded ? "Replace" : "Upload"}
         </button>
         <input
@@ -612,7 +637,9 @@ function DocUploadRow({ doc, uploaded, base, pin, onUploaded }: { doc: PublicMis
           }}
         />
       </div>
-      {expiresAt && expiresAt < todayISO() && !uploaded && <div className="text-[11px] mt-1" style={{ color: "var(--danger)" }}>This date is in the past</div>}
+      {(dateTried || (expiresAt && expiresAt < todayISO())) && dateProblem && (
+        <div className="text-[11px] mt-1" style={{ color: "var(--danger)" }}>{dateProblem}</div>
+      )}
       {error && <div className="field-error">{error}</div>}
     </div>
   );

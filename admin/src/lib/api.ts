@@ -106,7 +106,7 @@ type RequestOpts = { query?: Query; body?: unknown; form?: FormData; raw?: boole
 
 /** Every API call; saving requests (and the refresh right after) show the full-screen "Please wait". */
 async function request<T>(method: string, path: string, opts: RequestOpts = {}): Promise<T> {
-  const done = trackRequest(method, path);
+  const done = trackRequest(method, path, !!opts.form);
   try {
     return await send<T>(method, path, opts, false);
   } finally {

@@ -341,6 +341,10 @@ public class ProviderInviteService {
         for (int i = 0; files != null && i < files.size(); i++) {
             LocalDate given = ProviderDocumentService.parseDate(expiresAts != null && i < expiresAts.size() ? expiresAts.get(i) : null);
             if (given != null && given.isBefore(LocalDate.now())) throw new BadRequestException("Expiration dates can't be in the past");
+            // documents that expire (licenses, DEA, insurance, ...) need their expiration date
+            if (given == null && Boolean.TRUE.equals(types.get(docTypes.get(i).trim()).getExpires())) {
+                throw new BadRequestException("Enter the expiration date of the " + types.get(docTypes.get(i).trim()).getLabel());
+            }
         }
         List<PublicUploadedFile> uploaded = new ArrayList<>();
         for (int i = 0; i < files.size(); i++) {

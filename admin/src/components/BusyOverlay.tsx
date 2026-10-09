@@ -27,6 +27,7 @@ export function BlurLoader({ show, label = "Please wait" }: { show: boolean; lab
 
 export function BusyOverlay() {
   const count = useSyncExternalStore(busyStore.subscribe, busyStore.count, () => 0);
+  const uploading = useSyncExternalStore(busyStore.subscribe, busyStore.uploading, () => false);
   const [shown, setShown] = useState(false);
   useEffect(() => {
     if (count === 0) {
@@ -40,7 +41,7 @@ export function BusyOverlay() {
   return createPortal(
     <div role="status" aria-live="polite" className="page-blur busy-blur text-sm text-ink-light">
       <span className="brand-loader" aria-hidden="true" />
-      <span className="loading-dots font-medium">Please wait</span>
+      <span className="loading-dots font-medium">{uploading ? "Uploading document, please wait" : "Please wait"}</span>
     </div>,
     document.body
   );
