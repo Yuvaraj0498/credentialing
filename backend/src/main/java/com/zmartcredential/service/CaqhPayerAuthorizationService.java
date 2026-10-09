@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 public class CaqhPayerAuthorizationService {
 
     private final CaqhPayerAuthorizationRepository repository;
+    private final OrgPayerAccess orgPayerAccess;
     private final PayerRepository payerRepository;
     private final ProviderRepository providerRepository;
     private final EnrollmentSupport support;
@@ -106,7 +107,8 @@ public class CaqhPayerAuthorizationService {
 
     private CaqhAuthorizationListResponse build(Provider provider) {
         // prototype v3: private payers only (Medicare/PECOS, state Medicaid and TRICARE/VA are not authorized via CAQH here)
-        List<Payer> active = payerRepository.findByActiveTrueOrderBySortOrderAsc().stream().filter(EnrollmentSupport::isPrivatePayer).toList();
+        List<Payer> active = orgPayerAccess.forOrg(payerRepository.findByActiveTrueOrderBySortOrderAsc(), provider.getOrgId()).stream()
+                .filter(EnrollmentSupport::isPrivatePayer).toList();
         Map<Long, CaqhPayerAuthorization> auths = repository.findByProviderId(provider.getId()).stream()
                 .collect(Collectors.toMap(CaqhPayerAuthorization::getPayerId, Function.identity(), (x, y) -> x));
         List<CaqhAuthorizationItem> items = active.stream().filter(p -> Boolean.TRUE.equals(p.getCaqhParticipating()))

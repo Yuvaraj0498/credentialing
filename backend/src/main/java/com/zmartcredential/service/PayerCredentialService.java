@@ -40,6 +40,7 @@ public class PayerCredentialService {
     private static final String ENTITY = "credential_vault";
 
     private final PayerCredentialRepository repository;
+    private final OrgPayerAccess orgPayerAccess;
     private final PayerRepository payerRepository;
     private final ProviderRepository providerRepository;
     private final CryptoService cryptoService;
@@ -135,7 +136,7 @@ public class PayerCredentialService {
         permissionService.require(ENTITY, "list");
         authContext.requireStaff();
         Long orgId = authContext.orgId();
-        List<Payer> payers = payerRepository.findByActiveTrueOrderBySortOrderAsc();
+        List<Payer> payers = orgPayerAccess.forOrg(payerRepository.findByActiveTrueOrderBySortOrderAsc(), orgId);
         List<PayerCredential> all = repository.findByOrgId(orgId);
         Map<Long, List<PayerCredential>> byProvider = all.stream().filter(c -> c.getProviderId() != null)
                 .collect(Collectors.groupingBy(PayerCredential::getProviderId));

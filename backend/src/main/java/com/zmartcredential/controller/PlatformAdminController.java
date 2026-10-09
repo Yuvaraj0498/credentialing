@@ -42,6 +42,22 @@ public class PlatformAdminController {
         return providerService.listAllOrganizations(q, status, page, size);
     }
 
+    @Operation(summary = "One organization's payers with their on/off switch")
+    @GetMapping("/organizations/{orgId}/payers")
+    public List<com.zmartcredential.service.PayerService.OrgPayerItem> orgPayers(@PathVariable Long orgId) {
+        return payerService.orgPayers(orgId);
+    }
+
+    public record OrgPayerSwitch(@jakarta.validation.constraints.NotNull(message = "enabled is required") Boolean enabled) {
+    }
+
+    @Operation(summary = "Switch a payer on / off for one organization")
+    @PatchMapping("/organizations/{orgId}/payers/{payerId}")
+    public com.zmartcredential.service.PayerService.OrgPayerItem setOrgPayer(@PathVariable Long orgId, @PathVariable Long payerId,
+                                                                             @Valid @RequestBody OrgPayerSwitch req) {
+        return payerService.setOrgPayer(orgId, payerId, req.enabled());
+    }
+
     @Operation(summary = "Every payer (super admin → Payers)")
     @GetMapping("/payers")
     public List<com.zmartcredential.dto.payer.PayerResponse> payers() {

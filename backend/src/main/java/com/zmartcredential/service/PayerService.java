@@ -43,12 +43,14 @@ public class PayerService {
     private final PayerCredentialRepository credentialRepository;
     private final PermissionService permissionService;
     private final AuthContext authContext;
+    private final OrgPayerAccess orgPayerAccess;
+    private final com.zmartcredential.repository.OrgPayerSettingRepository orgPayerSettingRepository;
 
     @Transactional(readOnly = true)
     public List<PayerResponse> list(boolean activeOnly) {
         permissionService.require("payer", "list");
-        List<Payer> payers = activeOnly ? payerRepository.findByActiveTrueOrderBySortOrderAsc()
-                : payerRepository.findAllByOrderBySortOrderAsc();
+        List<Payer> payers = orgPayerAccess.visible(activeOnly ? payerRepository.findByActiveTrueOrderBySortOrderAsc()
+                : payerRepository.findAllByOrderBySortOrderAsc());
         Map<Long, List<PayerForm>> forms = formsByPayer();
         return payers.stream().map(p -> EnrollmentSupport.toPayerResponse(p, forms.get(p.getId()))).toList();
     }
@@ -109,8 +111,8 @@ public class PayerService {
         permissionService.require("payer", "list");
         authContext.requireStaff();
         Long orgId = authContext.orgId();
-        List<Payer> payers = activeOnly ? payerRepository.findByActiveTrueOrderBySortOrderAsc()
-                : payerRepository.findAllByOrderBySortOrderAsc();
+        List<Payer> payers = orgPayerAccess.forOrg(activeOnly ? payerRepository.findByActiveTrueOrderBySortOrderAsc()
+                : payerRepository.findAllByOrderBySortOrderAsc(), orgId);
         Map<Long, List<PayerForm>> forms = formsByPayer();
         Map<Long, List<Enrollment>> byPayer = enrollmentRepository.findByOrgId(orgId).stream()
                 .collect(Collectors.groupingBy(Enrollment::getPayerId));
@@ -180,6 +182,37 @@ public class PayerService {
         p.setLogo(r.logo() == null || r.logo().isBlank() ? null : r.logo());
         p = payerRepository.save(p);
         return EnrollmentSupport.toPayerResponse(p, id == null ? List.of() : formRepository.findByPayerIdOrderBySortOrderAsc(p.getId()));
+    }
+
+    /** Super admin → Organizations → Payers: every active payer with whether it is on for this organization. */
+    @Transactional(readOnly = true)
+    public List<OrgPayerItem> orgPayers(Long orgId) {
+        authContext.requireRole(com.zmartcredential.security.Role.PLATFORM_ADMIN);
+        java.util.Set<Long> off = orgPayerAccess.disabledFor(orgId);
+        return payerRepository.findByActiveTrueOrderBySortOrderAsc().stream()
+                .sorted(java.util.Comparator.comparing(Payer::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(p -> new OrgPayerItem(p.getId(), p.getName(), p.getFullName(), p.getCategory(), p.getColor(), p.getLogo(),
+                        p.getIntegration(), !off.contains(p.getId())))
+                .toList();
+    }
+
+    @Transactional
+    public OrgPayerItem setOrgPayer(Long orgId, Long payerId, boolean enabled) {
+        authContext.requireRole(com.zmartcredential.security.Role.PLATFORM_ADMIN);
+        Payer p = load(payerId);
+        var setting = orgPayerSettingRepository.findByOrgIdAndPayerId(orgId, payerId).orElseGet(() -> {
+            var s = new com.zmartcredential.entity.OrgPayerSetting();
+            s.setOrgId(orgId);
+            s.setPayerId(payerId);
+            return s;
+        });
+        setting.setEnabled(enabled);
+        orgPayerSettingRepository.save(setting);
+        return new OrgPayerItem(p.getId(), p.getName(), p.getFullName(), p.getCategory(), p.getColor(), p.getLogo(), p.getIntegration(), enabled);
+    }
+
+    public record OrgPayerItem(Long id, String name, String fullName, String category, String color, String logo,
+                               String integration, boolean enabled) {
     }
 
     /** "BCBS TX" → "bcbs_tx" (made unique). */
