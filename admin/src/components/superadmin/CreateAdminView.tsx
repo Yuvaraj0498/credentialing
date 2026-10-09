@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Breadcrumbs } from "./Breadcrumbs";
+import { FitBox } from "@/components/FitBox";
 import { matchesSearch } from "@/lib/search";
 import { cleanSearch } from "@/lib/utils";
 import { AsyncBoundary } from "@/components/AsyncState";
@@ -32,16 +33,9 @@ export function CreateAdminView() {
   if (creating) {
     return (
       <div>
+        <FitBox>
         <Breadcrumbs items={[{ label: "Create Admin", href: "/create-admin" }, { label: "New Admin" }]} />
-        <PageHeader
-          title="New Admin"
-          subtitle="Set up a new organization and its admin — the same steps as organization sign-up."
-          actions={
-            <button onClick={() => setCreating(false)} className="btn btn-secondary">
-              <Icon name="ArrowLeft" size={14} /> Back to admins
-            </button>
-          }
-        />
+        <PageHeader title="New Admin" subtitle="Set up a new organization and its admin — the same steps as organization sign-up." />
         <OrgSignupFlow
           key={formKey}
           embedded={{
@@ -51,8 +45,10 @@ export function CreateAdminView() {
               admins.reload();
             },
             onCancel: () => setCreating(false),
+            back: { label: "Back to admins", onClick: () => setCreating(false) },
           }}
         />
+        </FitBox>
       </div>
     );
   }

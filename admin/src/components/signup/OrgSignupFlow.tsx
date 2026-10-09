@@ -48,6 +48,8 @@ const Err = ({ msg }: { msg?: string }) => (msg ? <div className="field-error">{
 export interface EmbeddedSignup {
   onCreated: (admin: { userId: number; name: string; email: string; orgName: string }) => void;
   onCancel: () => void;
+  /** a button at the left end of the step row (e.g. "Back to admins") */
+  back?: { label: string; onClick: () => void };
 }
 
 export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) {
@@ -183,7 +185,7 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
 
   return (
     <div className={embedded ? "" : "min-h-screen flex items-center justify-center p-4"} style={embedded ? undefined : { background: "linear-gradient(135deg, #fff7ed 0%, #ffffff 100%)" }}>
-      <div className={embedded ? "w-full max-w-3xl mx-auto" : "w-full max-w-2xl"}>
+      <div className={embedded ? "w-full" : "w-full max-w-2xl"}>
         {!embedded && (
           <div className="text-center mb-6">
             <div className="atano-logo text-2xl mb-2"><span className="a-mark">▲</span>ZmartCredential</div>
@@ -191,8 +193,14 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
           </div>
         )}
 
-        {/* Step indicator */}
-        <div className="flex items-center justify-center gap-2 mb-6 flex-wrap">
+        {/* Step indicator (embedded: with the back button at its left end) */}
+        <div className={embedded?.back ? "grid items-center gap-3 mb-6" : "flex items-center mb-6"} style={embedded?.back ? { gridTemplateColumns: "1fr auto 1fr" } : undefined}>
+        {embedded?.back && (
+          <button onClick={embedded.back.onClick} className="btn btn-secondary justify-self-start" disabled={submitting}>
+            <Icon name="ArrowLeft" size={14} /> {embedded.back.label}
+          </button>
+        )}
+        <div className="flex items-center justify-center gap-2 flex-wrap flex-1 min-w-0">
           {steps.map((s, i, arr) => (
             <Fragment key={s.n}>
               <div
@@ -215,8 +223,9 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
             </Fragment>
           ))}
         </div>
+        </div>
 
-        <div className="card card-pad">
+        <div className={"card card-pad" + (embedded ? " max-w-3xl mx-auto" : "")}>
           {errors.form && (
             <div className="mb-4 px-3 py-2 rounded-lg flex items-center gap-2" style={{ background: "var(--danger-soft)", color: "#991b1b", fontSize: 13 }}>
               <Icon name="AlertCircle" size={14} /> {errors.form}
