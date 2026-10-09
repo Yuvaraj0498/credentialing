@@ -29,6 +29,11 @@ app.cookie-secure=true
 # Uploaded documents (relative to the backend folder)
 app.storage.path=./uploads
 
+# Super admin sign-in of THIS site (optional). Set = the super admin signs in with these (applied on every start).
+# Left out = the default super admin dev@desss.com / Admin@123.
+#app.super-admin.email=info@patriotmedbill.com
+#app.super-admin.password=CHANGE_ME
+
 # ---------- Email (SMTP) ----------
 app.public-url=https://your-site.desss-portfolio.com
 app.mail.enabled=true
