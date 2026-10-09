@@ -132,8 +132,8 @@ export const api = {
   delete: <T>(path: string) => request<T>("DELETE", path),
   upload: <T>(path: string, form: FormData, method = "POST") => request<T>(method, path, { form }),
   /** Downloads a file endpoint and triggers a browser save. */
-  download: async (path: string, query?: Query, fallbackName = "download") => {
-    const res = await request<Response>("GET", path, { query, raw: true });
+  download: async (path: string, query?: Query, fallbackName = "download", opts?: { orgId?: number | string | null }) => {
+    const res = await request<Response>("GET", path, { query, raw: true, orgId: opts?.orgId });
     const blob = await res.blob();
     const cd = res.headers.get("Content-Disposition") || "";
     const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(cd);

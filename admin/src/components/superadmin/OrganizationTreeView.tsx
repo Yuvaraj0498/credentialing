@@ -9,26 +9,21 @@ import { useAsync, useDebounced } from "@/lib/hooks";
 import { useFitRows } from "@/lib/useFitRows";
 import { cleanSearch } from "@/lib/utils";
 import type { Location, OrgTree, TreeClient, TreePractice } from "@/types/organization";
-import { Breadcrumbs } from "./Breadcrumbs";
-import type { AdminSummary } from "./types";
 
 const ROW_H = 58;
 const plural = (n: number, word: string) => n + " " + word + (n === 1 ? "" : "s");
 
-/** Super admin → Organizations → one organization: its clients → practices → locations, read-only. */
-export function OrganizationTreeView({ orgId }: { orgId: number }) {
+/** One organization's clients → practices → locations, read-only, with search and paging (super admin). */
+export function OrgStructurePanel({ orgId }: { orgId: number }) {
   const [search, setSearch] = useState("");
   const q = useDebounced(search.trim());
   const tree = useAsync<OrgTree>(() => api.get<OrgTree>("/org-tree", { q }, { orgId }), [orgId, q]);
-  const admins = useAsync<AdminSummary[]>(() => api.get<AdminSummary[]>("/platform/admins"), []);
-  const admin = (admins.data || []).find((a) => a.orgId === orgId);
   const [open, setOpen] = useState<Set<string>>(() => new Set());
   const [page, setPage] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const size = useFitRows(listRef, ROW_H, 90);
 
   const data = tree.data;
-  const orgName = data?.organization?.name || admin?.orgName || "Organization";
   const searching = q.length > 0;
   const isOpen = (key: string) => searching || open.has(key);
   const toggle = (key: string) =>
@@ -40,8 +35,7 @@ export function OrganizationTreeView({ orgId }: { orgId: number }) {
     });
 
   // top-level rows: clients, then locations without a practice (one group)
-  const clients = data?.clients || [];
-  const groups: ({ kind: "client"; client: TreeClient } | { kind: "unassigned"; locations: Location[] })[] = clients.map((c) => ({ kind: "client" as const, client: c }));
+  const groups: ({ kind: "client"; client: TreeClient } | { kind: "unassigned"; locations: Location[] })[] = (data?.clients || []).map((c) => ({ kind: "client" as const, client: c }));
   if (data && data.unassignedLocations.length) groups.push({ kind: "unassigned", locations: data.unassignedLocations });
   const totalPages = Math.max(1, Math.ceil(groups.length / size));
   const current = Math.min(page, totalPages - 1);
@@ -49,13 +43,20 @@ export function OrganizationTreeView({ orgId }: { orgId: number }) {
 
   return (
     <div>
-      <Breadcrumbs items={[{ label: "Organizations", href: "/organizations" }, { label: orgName }]} />
-      <div className="flex items-start justify-between gap-4 mb-4 flex-wrap">
-        <div className="min-w-0">
-          <h1 className="font-display text-2xl font-bold text-ink truncate">{orgName}</h1>
-          <p className="text-sm text-ink-light mt-0.5">
-            {admin ? "Org admin: " + admin.name + " · " + admin.email : " "}
-          </p>
+      <div className="flex items-center gap-3 mb-3 flex-wrap">
+        <div className="relative flex-1" style={{ minWidth: 220 }}>
+          <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
+          <input
+            value={search}
+            onChange={(e) => {
+              setSearch(cleanSearch(e.target.value));
+              setPage(0);
+            }}
+            placeholder="Search client, practice, location, city..."
+            className="input"
+            style={{ paddingLeft: 32 }}
+            aria-label="Search organization structure"
+          />
         </div>
         {data && (
           <div className="flex gap-4 text-xs text-ink-light">
@@ -66,24 +67,10 @@ export function OrganizationTreeView({ orgId }: { orgId: number }) {
           </div>
         )}
       </div>
-      <div className="relative mb-4">
-        <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
-        <input
-          value={search}
-          onChange={(e) => {
-            setSearch(cleanSearch(e.target.value));
-            setPage(0);
-          }}
-          placeholder="Search client, practice, location, city..."
-          className="input"
-          style={{ paddingLeft: 32 }}
-          aria-label="Search organization structure"
-        />
-      </div>
       <div className="card overflow-hidden" ref={listRef}>
         <AsyncBoundary loading={tree.loading && !tree.data} error={tree.error} onRetry={tree.reload}>
           {pageGroups.length === 0 ? (
-            <div className="text-center text-sm text-ink-light py-8">{searching ? "Nothing matches “" + q + "”" : "This organization has no clients yet"}</div>
+            <div className="text-center text-sm text-ink-light py-8">{searching ? "Nothing matches “" + q + "”" : "This admin has no clients yet"}</div>
           ) : (
             <div className="divide-y divide-line">
               {pageGroups.map((g) =>
@@ -91,14 +78,7 @@ export function OrganizationTreeView({ orgId }: { orgId: number }) {
                   <ClientNode key={"c" + g.client.id} client={g.client} isOpen={isOpen} toggle={toggle} />
                 ) : (
                   <div key="unassigned">
-                    <Row
-                      depth={0}
-                      icon="MapPin"
-                      title="Locations without a practice"
-                      subtitle={plural(g.locations.length, "location")}
-                      open={isOpen("u")}
-                      onToggle={() => toggle("u")}
-                    />
+                    <Row depth={0} icon="MapPin" title="Locations without a practice" subtitle={plural(g.locations.length, "location")} open={isOpen("u")} onToggle={() => toggle("u")} />
                     {isOpen("u") && g.locations.map((l) => <LocationNode key={l.id} location={l} depth={1} />)}
                   </div>
                 )
