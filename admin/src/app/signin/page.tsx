@@ -6,6 +6,7 @@ import { PasswordInput } from "@/components/PasswordInput";
 import { ForgotPasswordModal } from "@/components/auth/ForgotPasswordModal";
 import { useRouter } from "next/navigation";
 import { Avatar } from "@/components/Avatar";
+import { BlurLoader } from "@/components/BusyOverlay";
 import { Icon } from "@/components/Icon";
 import { Pill } from "@/components/Pill";
 import { ROLE_PILL } from "@/lib/constants";
@@ -60,10 +61,10 @@ function SignInScreen() {
     setBusy(true);
     try {
       const me = await login(username.trim(), password);
+      // the loader stays until the dashboard replaces this page
       router.replace(destination(me.role));
     } catch (err) {
       setError(errorMessage(err));
-    } finally {
       setBusy(false);
     }
   };
@@ -75,6 +76,8 @@ function SignInScreen() {
   };
 
   return (
+    <>
+      <BlurLoader show={busy || (!loading && !!user)} label="Signing in" />
     <FitToScreen style={{ background: "linear-gradient(135deg, #fff7ed 0%, #f8f9fb 50%, #eff6ff 100%)" }}>
       <div className="card" style={{ width: "min(980px, calc(100vw - 32px))" }}>
         <div className="grid grid-cols-1 md:grid-cols-5" style={{ minHeight: 560 }}>
@@ -179,5 +182,6 @@ function SignInScreen() {
         </div>
       </div>
     </FitToScreen>
+    </>
   );
 }

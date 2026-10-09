@@ -150,23 +150,43 @@ export function SecureLinkPortal({ token }: { token: string }) {
   const uploadedRequired = requiredDocs.filter((d) => uploaded[d.docType]).length;
   // Same requirements as adding a provider in the admin app (staff already gave the name, email, practice and location).
   const needsLogin = !!info && !info.profile.hasLogin;
-  const profileValid =
-    !!profile &&
-    (!needsLogin || (profile.password.length >= 8 && profile.password === profile.confirmPassword)) &&
-    NPI_RE.test(profile.npi) &&
-    (!profile.caqhId || /^[0-9]{6,10}$/.test(profile.caqhId)) &&
-    !!profile.suffix &&
-    !!profile.specialty.trim() &&
-    PHONE_RE.test(profile.phone) &&
-    !!profile.licenseNumber.trim() &&
-    !!profile.licenseState &&
-    !!profile.licenseExpires &&
-    profile.licenseExpires >= todayISO() &&
-    (!profile.deaExpires || profile.deaExpires >= todayISO()) &&
-    !!profile.caqhUsername.trim() &&
-    !!profile.caqhPassword &&
-    !!profile.pecosAccess &&
-    (profile.pecosAccess !== "yes" || !!profile.pecosUsername.trim());
+  /** Every problem on the profile step, by field (shown under the fields when Continue is clicked). */
+  const profileProblems = (p: Profile): Record<string, string> => {
+    const e: Record<string, string> = {};
+    const today = todayISO();
+    if (!NPI_RE.test(p.npi)) e.npi = p.npi ? "NPI must be 10 digits" : "Required";
+    if (p.caqhId && !/^[0-9]{6,10}$/.test(p.caqhId)) e.caqhId = "CAQH ID must be 6–10 digits (or leave it empty)";
+    if (!p.suffix) e.suffix = "Required";
+    if (!p.specialty.trim()) e.specialty = "Required";
+    if (!PHONE_RE.test(p.phone)) e.phone = p.phone ? "Phone must be 10 digits" : "Required";
+    if (!p.licenseNumber.trim()) e.licenseNumber = "Required";
+    if (!p.licenseState) e.licenseState = "Required";
+    if (!p.licenseExpires) e.licenseExpires = "Required";
+    else if (p.licenseExpires < today) e.licenseExpires = "The license has expired — enter the current expiration date";
+    if (p.deaExpires && p.deaExpires < today) e.deaExpires = "The DEA registration has expired — enter the current date or leave it empty";
+    if (!p.caqhUsername.trim()) e.caqhUsername = "Required";
+    if (!p.caqhPassword) e.caqhPassword = "Required";
+    if (!p.pecosAccess) e.pecosAccess = "Required";
+    else if (p.pecosAccess === "yes" && !p.pecosUsername.trim()) e.pecosUsername = "Required when PECOS access is granted";
+    if (needsLogin) {
+      if (p.password.length < 8) e.password = p.password ? "At least 8 characters" : "Required";
+      if (!p.confirmPassword) e.confirmPassword = "Required";
+      else if (p.confirmPassword !== p.password) e.confirmPassword = "Passwords do not match";
+    }
+    return e;
+  };
+  const continueToDocs = () => {
+    if (!profile) return;
+    const problems = profileProblems(profile);
+    if (Object.keys(problems).length) {
+      setProfileErrors(problems);
+      // bring the first field to fix into view
+      setTimeout(() => document.querySelector(".field-error")?.closest(".field, label, div")?.scrollIntoView({ behavior: "smooth", block: "center" }), 0);
+      return;
+    }
+    setProfileErrors({});
+    setStep("docs");
+  };
   const authenticated = !!info;
   const blocked = status && !authenticated && status.state !== "active";
 
@@ -291,9 +311,26 @@ export function SecureLinkPortal({ token }: { token: string }) {
           <div className="card card-pad">
             <h2 className="font-display text-xl font-bold text-ink mb-1">Your Information</h2>
             <p className="text-sm text-ink-light mb-4">Confirm or update your professional details below.</p>
-            <ProfileForm profile={profile} errors={profileErrors} loginEmail={needsLogin ? info?.profile.loginEmail || info?.email || "" : null} onChange={(p) => { setProfile(p); setProfileErrors({}); }} />
+            <ProfileForm
+              profile={profile}
+              errors={profileErrors}
+              loginEmail={needsLogin ? info?.profile.loginEmail || info?.email || "" : null}
+              onChange={(p) => {
+                // a field's message goes away once that field is changed
+                setProfileErrors((er) => {
+                  const next = { ...er };
+                  (Object.keys(p) as (keyof Profile)[]).forEach((k) => p[k] !== profile[k] && delete next[k]);
+                  if (p.pecosAccess !== profile.pecosAccess) delete next.pecosAccessGranted;
+                  return next;
+                });
+                setProfile(p);
+              }}
+            />
+            {Object.keys(profileErrors).length > 0 && (
+              <div className="field-error mt-3">Please fix the highlighted fields above.</div>
+            )}
             <div className="flex justify-end gap-2 pt-3 mt-3 border-t border-line">
-              <button onClick={() => setStep("docs")} disabled={!profileValid} className="btn btn-primary">
+              <button onClick={continueToDocs} className="btn btn-primary">
                 Continue to Documents <Icon name="ArrowRight" size={13} />
               </button>
             </div>
@@ -471,7 +508,7 @@ function ProfileForm({ profile, errors, loginEmail, onChange }: { profile: Profi
         </Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="PECOS Access Granted" required error={errors.pecosAccessGranted}>
+        <Field label="PECOS Access Granted" required error={errors.pecosAccess || errors.pecosAccessGranted}>
           <select value={profile.pecosAccess} onChange={(e) => set("pecosAccess", e.target.value)} className="input">
             <option value="">— Select —</option>
             <option value="yes">Yes</option>
@@ -494,7 +531,7 @@ function ProfileForm({ profile, errors, loginEmail, onChange }: { profile: Profi
             <Field label="Password" required error={errors.password || (profile.password && profile.password.length < 8 ? "At least 8 characters" : undefined)}>
               <PasswordInput value={profile.password} onChange={(e) => set("password", e.target.value)} className="input" maxLength={100} autoComplete="new-password" />
             </Field>
-            <Field label="Confirm Password" required error={profile.confirmPassword && profile.confirmPassword !== profile.password ? "Passwords do not match" : undefined}>
+            <Field label="Confirm Password" required error={errors.confirmPassword || (profile.confirmPassword && profile.confirmPassword !== profile.password ? "Passwords do not match" : undefined)}>
               <PasswordInput value={profile.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} className="input" maxLength={100} autoComplete="new-password" />
             </Field>
           </div>
