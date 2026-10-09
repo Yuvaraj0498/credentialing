@@ -6,28 +6,16 @@ import { EmptyState } from "@/components/EmptyState";
 import { ErrorState, Loading } from "@/components/AsyncState";
 import { Icon } from "@/components/Icon";
 import { PageHeader } from "@/components/PageHeader";
-import { Pill } from "@/components/Pill";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/stores/auth";
 import { useAsync } from "@/lib/hooks";
 import { useShell } from "@/stores/shell";
 import { providerFirstName, providerName, usePayers, useProvidersLite } from "@/components/enrollments/shared";
-import type { ApiSupport, Payer } from "@/types/enrollments";
-import { PayerPortalLoginModal } from "@/components/modals/PayerPortalLoginModal";
-import { ProviderPayerLoginModal } from "@/components/modals/ProviderPayerLoginModal";
+import type { Payer } from "@/types/enrollments";
 import { PortalSubmissionModal } from "@/components/modals/PortalSubmissionModal";
-import type { CredentialMatrix, PayerCredential } from "@/types/payers";
+import type { CredentialMatrix } from "@/types/payers";
 import { SubmissionOutcomeModal } from "@/components/modals/SubmissionOutcomeModal";
 import { type PayerSubmission, type PortalLoginResult, type SubmitResponse } from "@/types/submissions";
-
-const methodConfig: Record<ApiSupport, { label: string; color: string; icon: string; desc: string }> = {
-  full: { label: "API", color: "var(--success)", icon: "Zap", desc: "Developer API available — enrollment still completed in the payer portal" },
-  partial: { label: "API (partial)", color: "var(--info)", icon: "Zap", desc: "Some workflows via API; enrollment completed in the payer portal" },
-  portal: { label: "Portal", color: "var(--warn)", icon: "Globe", desc: "Web form submission via provider portal" },
-  manual: { label: "Manual", color: "var(--danger)", icon: "FileText", desc: "PDF via email or fax — slowest" },
-};
-const methodPill = (a: ApiSupport) => (a === "full" ? "success" : a === "partial" ? "info" : a === "manual" ? "danger" : "warn");
-
 
 interface PortalLogin {
   credentialId: number;
@@ -46,7 +34,8 @@ interface PortalSession {
 }
 
 /**
- * Payer Submission Center (prototype v3). Every active payer is listed. "Submit for {provider}" needs a stored portal
+ * Payer Submission Center. The payers enabled for the organization (its Payers module) are listed, each with just its
+ * name and "Submit for {provider}" — clickable only when that provider has a portal login stored for the payer. "Submit for {provider}" needs a stored portal
  * login for that payer (the provider's own, else the organization's): it records the submission, opens the payer's
  * portal in a new tab and hands staff the login + provider details; the outcome is recorded afterwards.
  */
@@ -56,19 +45,15 @@ export function PayerSubmissionCenter() {
   const { publish } = useShell();
   const canSubmit = can("create", "payer_submission");
   const canCreds = can("list", "credential_vault");
-  const canEditCreds = can("update", "credential_vault") || can("create", "credential_vault");
 
   const [pickedProvider, setSelectedProvider] = useState<number | null>(null);
   const [submitting, setSubmitting] = useState<Set<number>>(new Set());
   const [recording, setRecording] = useState<PayerSubmission | null>(null);
   const [session, setSession] = useState<PortalSession | null>(null);
-  const [orgModal, setOrgModal] = useState<Payer | null>(null);
-  const [provModal, setProvModal] = useState<Payer | null>(null);
 
   const providers = useProvidersLite();
   const payersQ = usePayers(true);
   const matrix = useAsync<CredentialMatrix>(canCreds ? () => api.get("/payer-credentials/matrix") : null, [canCreds]);
-  const orgCreds = useAsync<PayerCredential[]>(canCreds ? () => api.get("/payer-credentials") : null, [canCreds]);
 
   // Nothing is pre-selected: the user chooses the provider first.
   const selectedProvider = pickedProvider;
@@ -86,11 +71,6 @@ export function PayerSubmissionCenter() {
     const org = orgLoginFor(payerId);
     if (org && selectedProvider != null && (org.providerIds || []).includes(selectedProvider)) return { credentialId: org.credentialId, username: org.username, level: "organization" };
     return null;
-  };
-
-  const reloadCreds = () => {
-    matrix.reload();
-    orgCreds.reload();
   };
 
   /** Runs the server-side portal sign-in for a submission and stores the result in the open session. */
@@ -179,122 +159,41 @@ export function PayerSubmissionCenter() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {payers.map((payer) => {
-            const method = methodConfig[payer.apiSupport] || methodConfig.portal;
             const login = loginFor(payer.id);
-            const orgLogin = orgLoginFor(payer.id);
-            const unassigned = !login && !!orgLogin;
             const busy = submitting.has(payer.id);
-            const blockedReason = !selectedProvider
-              ? "Pick a provider first"
-              : !canCreds
-                ? "You do not have access to portal logins"
-                : !login
-                  ? "Add the payer's portal login first"
-                  : "";
-            // Submit is offered only for a provider who can use a stored login.
-            const showSubmit = canSubmit && !!selectedProvider && (!!login || !canCreds || !credsLoaded);
+            // usable only for a chosen provider who has a portal login stored for this payer
+            const ready = !!selectedProvider && credsLoaded && (!!login || !canCreds);
+            const reason = !selectedProvider ? "Choose a provider first" : !ready ? "No portal login is stored for this provider and payer" : "";
             return (
               <div key={payer.id} className="card">
-                <div className="p-3 border-b border-line flex items-center gap-2">
+                <div className="p-3 flex items-center gap-2">
                   <div className="w-3 h-8 rounded" style={{ background: payer.color }}></div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm">{payer.name}</div>
+                    <div className="font-semibold text-sm truncate">{payer.name}</div>
                     <div className="text-[10px] text-ink-light truncate">{payer.payerType || payer.category}</div>
                   </div>
-                  <Pill type={methodPill(payer.apiSupport)}>
-                    <Icon name={method.icon} size={9} /> {method.label}
-                  </Pill>
                 </div>
-                <div className="p-3">
-                  <div className="text-xs text-ink-light mb-3" style={{ minHeight: 30 }}>
-                    {method.desc}
-                  </div>
-                  {canCreds && credsLoaded &&
-                    (!selectedProvider && orgLogin ? (
-                      // No provider chosen yet: show the payer's stored login and who uses it.
-                      <div className="mb-2 p-2 rounded text-[10px] flex items-center justify-between gap-2" style={{ background: "var(--success-soft)", color: "var(--success)" }}>
-                        <span className="min-w-0 truncate">
-                          <Icon name="KeyRound" size={9} className="inline mr-1" />
-                          <span className="font-mono">{orgLogin.username}</span>
-                          <span className="text-ink-light">
-                            {" "}
-                            · used by {(orgLogin.providerIds || []).length} provider{(orgLogin.providerIds || []).length === 1 ? "" : "s"}
-                          </span>
-                        </span>
-                        {canEditCreds && (
-                          <button onClick={() => setOrgModal(payer)} className="text-accent hover:underline flex-shrink-0">
-                            edit
-                          </button>
-                        )}
-                      </div>
-                    ) : login ? (
-                      <div className="mb-2 p-2 rounded text-[10px] flex items-center justify-between gap-2" style={{ background: "var(--success-soft)", color: "var(--success)" }}>
-                        <span className="min-w-0 truncate">
-                          <Icon name="KeyRound" size={9} className="inline mr-1" />
-                          <span className="font-mono">{login.username}</span>
-                          <span className="text-ink-light"> · {login.level === "provider" ? "provider login" : "organization login"}</span>
-                        </span>
-                        {canEditCreds && (
-                          <button onClick={() => (login.level === "provider" ? setProvModal(payer) : setOrgModal(payer))} className="text-accent hover:underline flex-shrink-0">
-                            edit
-                          </button>
-                        )}
-                      </div>
-                    ) : unassigned ? (
-                      <div className="mb-2 p-2 rounded text-[10px] flex items-center justify-between gap-2" style={{ background: "var(--warn-soft)", color: "#a16207" }}>
-                        <span className="min-w-0">
-                          <Icon name="Lock" size={9} className="inline mr-1" />
-                          No login for {provider ? providerFirstName(provider) : "this provider"}
-                        </span>
-                        {canEditCreds && (
-                          <span className="flex items-center gap-2 flex-shrink-0">
-                            <button onClick={() => setOrgModal(payer)} className="hover:underline" title="Let this provider use the organization's shared login">
-                              Assign shared
-                            </button>
-                            <button onClick={() => setProvModal(payer)} className="font-semibold hover:underline">
-                              Add
-                            </button>
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="mb-2 p-2 rounded text-[10px] flex items-center justify-between" style={{ background: "var(--warn-soft)", color: "#a16207" }}>
-                        <span>
-                          <Icon name="Lock" size={9} className="inline mr-1" />
-                          No portal login stored
-                        </span>
-                        {canEditCreds && (
-                          // Same as the Payers page: a chosen provider gets their own login; otherwise the organization login.
-                          <button onClick={() => (selectedProvider ? setProvModal(payer) : setOrgModal(payer))} className="font-semibold hover:underline">
-                            Add
-                          </button>
-                        )}
-                      </div>
-                    ))}
-                  {showSubmit && (
-                    <button onClick={() => submit(payer)} disabled={busy || !!blockedReason || !credsLoaded} title={blockedReason} className="btn btn-primary text-xs w-full">
+                {canSubmit && (
+                  <div className="px-3 pb-3">
+                    <button
+                      onClick={() => ready && submit(payer)}
+                      disabled={busy || !ready}
+                      title={reason || undefined}
+                      className="btn btn-primary text-xs w-full"
+                      style={!ready ? { cursor: "not-allowed" } : undefined}
+                    >
                       {busy ? (
                         <>
                           <span className="loader"></span> Signing in...
                         </>
                       ) : (
                         <>
-                          <Icon name={login ? "Send" : "Lock"} size={11} /> Submit {provider ? "for " + providerFirstName(provider) : ""}
+                          <Icon name={ready ? "Send" : "Lock"} size={11} /> Submit{provider ? " for " + providerFirstName(provider) : ""}
                         </>
                       )}
                     </button>
-                  )}
-                  <div className="mt-2 text-[10px] flex items-center justify-between text-ink-faint">
-                    {payer.portalUrl ? (
-                      <a href={payer.portalUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">
-                        <Icon name="ExternalLink" size={9} /> Open portal
-                      </a>
-                    ) : (
-                      <span>No portal address</span>
-                    )}
-                    <span>CAQH: {payer.caqhParticipating ? "✓" : "—"}</span>
                   </div>
-                </div>
+                )}
               </div>
             );
           })}
@@ -327,33 +226,6 @@ export function PayerSubmissionCenter() {
                   publish("enrollments");
           }}
           onClose={() => setRecording(null)}
-        />
-      )}
-      {orgModal && (
-        <PayerPortalLoginModal
-          payer={orgModal}
-          existing={(orgCreds.data || []).find((c) => c.payerId === orgModal.id && c.providerId == null) || null}
-          canEdit={canEditCreds}
-          canDelete={can("delete", "credential_vault")}
-          onSaved={() => {
-            setOrgModal(null);
-            reloadCreds();
-          }}
-          onClose={() => setOrgModal(null)}
-          presetProviderId={selectedProvider}
-        />
-      )}
-      {provModal && provider && (
-        <ProviderPayerLoginModal
-          providerId={provider.id}
-          providerName={providerName(provider)}
-          payer={provModal}
-          hasExisting
-          onSaved={() => {
-            setProvModal(null);
-            reloadCreds();
-          }}
-          onClose={() => setProvModal(null)}
         />
       )}
     </div>
