@@ -310,7 +310,9 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
   const roleSelect = (
     <select value={form.userRoleId} onChange={(e) => { setForm({ ...form, userRoleId: e.target.value }); setErrors((er) => ({ ...er, userRoleId: "" })); }} className="input" disabled={userRoles.loading || isSelf} title={isSelf ? "You cannot change your own role" : undefined}>
       <option value="">{userRoles.loading ? "Loading roles…" : "— Select role —"}</option>
-      {(userRoles.data || []).filter((r) => r.active !== false || r.id === user?.userRoleId).map((r) => <option key={r.id} value={r.id}>{r.name}{r.active === false ? " (disabled)" : ""}</option>)}
+      {(userRoles.data || [])
+        .filter((r) => r.id === user?.userRoleId || (r.active !== false && r.accessLevel !== "org_admin"))
+        .map((r) => <option key={r.id} value={r.id}>{r.name}{r.active === false ? " (disabled)" : ""}</option>)}
     </select>
   );
   if (newProvider) {
@@ -346,6 +348,16 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
   return (
     <Modal title={user ? "Edit User" : "Add User"} onClose={onClose} maxWidth={640}>
       <div className="space-y-3">
+        <Field label="Role *" error={errors.userRoleId} hint={!user && !form.userRoleId ? "Choose the role first — the form shows the fields for that role." : undefined}>
+          {roleSelect}
+          {userRoles.error && <div className="field-error">{userRoles.error}</div>}
+        </Field>
+        {!user && !form.userRoleId ? (
+          <div className="flex justify-end gap-2 pt-3 border-t border-line">
+            <button onClick={onClose} className="btn btn-secondary">Cancel</button>
+          </div>
+        ) : (
+        <>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="First Name *" error={errors.firstName}>
             <input value={form.firstName} onChange={(e) => { setForm({ ...form, firstName: e.target.value }); setErrors((er) => ({ ...er, firstName: "" })); }} className="input" maxLength={100} />
@@ -354,15 +366,9 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
             <input value={form.lastName} onChange={(e) => { setForm({ ...form, lastName: e.target.value }); setErrors((er) => ({ ...er, lastName: "" })); }} className="input" maxLength={100} />
           </Field>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Role *" error={errors.userRoleId}>
-            {roleSelect}
-            {userRoles.error && <div className="field-error">{userRoles.error}</div>}
-          </Field>
-          <Field label="Title" error={errors.title}>
-            <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input" placeholder="e.g. Credentialing Specialist" maxLength={120} />
-          </Field>
-        </div>
+        <Field label="Title" error={errors.title}>
+          <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} className="input" placeholder="e.g. Credentialing Specialist" maxLength={120} />
+        </Field>
         {access === "provider" && (
           <Field label="Linked Provider *" error={errors.providerId}>
             <select value={form.providerId} onChange={(e) => setForm({ ...form, providerId: e.target.value })} className="input" disabled={providers.loading}>
@@ -408,6 +414,8 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
             {busy ? <span className="loader" style={{ borderTopColor: "white" }} /> : <Icon name="Save" size={13} />} {user ? "Update" : "Create User"}
           </button>
         </div>
+        </>
+        )}
       </div>
     </Modal>
   );
