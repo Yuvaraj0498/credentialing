@@ -179,8 +179,8 @@ export function ProviderForm({
     req("suffix", form.suffix);
     if (!form.npi) e.npi = "Required";
     else if (!NPI_RE.test(form.npi)) e.npi = "10 digits required";
-    if (!form.caqhId) e.caqhId = "Required";
-    else if (!/^[0-9]{6,10}$/.test(form.caqhId)) e.caqhId = "6-10 digits";
+    // CAQH ID is optional; when entered it must be 6-10 digits
+    if (form.caqhId && !/^[0-9]{6,10}$/.test(form.caqhId)) e.caqhId = "6-10 digits";
     req("caqhUsername", form.caqhUsername);
     req("specialty", form.specialty);
     if (!form.email.trim()) e.email = "Required";
@@ -276,7 +276,7 @@ export function ProviderForm({
         <Field label="NPI *" error={err("npi")}>
           <input value={form.npi} onChange={(e) => set("npi", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="10 digits" inputMode="numeric" />
         </Field>
-        <Field label="CAQH ID *" error={err("caqhId")}>
+        <Field label="CAQH ID" error={err("caqhId")}>
           <input
             value={form.caqhId}
             onChange={(e) => set("caqhId", e.target.value.replace(/\D/g, "").slice(0, 10))}

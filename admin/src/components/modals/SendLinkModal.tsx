@@ -61,8 +61,7 @@ export function SendLinkModal({
     if (!assignment.practiceId) e.practiceId = "Pick a practice to continue";
     if (!provider) {
       if (!assignment.locationId) e.locationId = "Pick a location to continue";
-      if (!form.caqhId) e.caqhId = "Required";
-      else if (!/^[0-9]{6,10}$/.test(form.caqhId)) e.caqhId = "6-10 digits";
+      if (form.caqhId && !/^[0-9]{6,10}$/.test(form.caqhId)) e.caqhId = "6-10 digits";
     }
     setErrors(e);
     if (Object.keys(e).length) return;
@@ -169,7 +168,7 @@ export function SendLinkModal({
           <input value={form.email} onChange={(e) => set("email", e.target.value)} type="email" className="input" placeholder="provider@example.com" />
         </Field>
         {!provider && (
-          <Field label="CAQH ID *" error={errors.caqhId}>
+          <Field label="CAQH ID" error={errors.caqhId}>
             <input value={form.caqhId} onChange={(e) => set("caqhId", e.target.value.replace(/[^0-9]/g, "").slice(0, 10))} className="input font-mono" placeholder="8 digits" inputMode="numeric" />
           </Field>
         )}

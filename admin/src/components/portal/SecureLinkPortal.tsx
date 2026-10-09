@@ -146,7 +146,7 @@ export function SecureLinkPortal({ token }: { token: string }) {
   const profileValid =
     !!profile &&
     NPI_RE.test(profile.npi) &&
-    /^[0-9]{6,10}$/.test(profile.caqhId) &&
+    (!profile.caqhId || /^[0-9]{6,10}$/.test(profile.caqhId)) &&
     !!profile.suffix &&
     !!profile.specialty.trim() &&
     PHONE_RE.test(profile.phone) &&
@@ -400,7 +400,7 @@ function ProfileForm({ profile, errors, onChange }: { profile: Profile; errors: 
         <Field label="NPI Number" required error={errors.npi}>
           <input value={profile.npi} onChange={(e) => set("npi", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="10 digits" inputMode="numeric" />
         </Field>
-        <Field label="CAQH ID" required error={errors.caqhId}>
+        <Field label="CAQH ID" error={errors.caqhId}>
           <input value={profile.caqhId} onChange={(e) => set("caqhId", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="8 digits" inputMode="numeric" />
         </Field>
       </div>

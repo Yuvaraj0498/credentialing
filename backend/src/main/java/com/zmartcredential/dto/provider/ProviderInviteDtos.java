@@ -32,8 +32,8 @@ public final class ProviderInviteDtos {
             Long clientId,
             @NotNull(message = "Pick a practice to continue") Long practiceId,
             @NotNull(message = "Pick a location to continue") Long locationId,
-            @NotBlank(message = "CAQH ID is required")
-            @Pattern(regexp = "^\\d{6,10}$", message = "CAQH ID must be 6-10 digits") String caqhId) {
+            /* optional */
+            @Pattern(regexp = "^$|^\\d{6,10}$", message = "CAQH ID must be 6-10 digits") String caqhId) {
     }
 
     /**

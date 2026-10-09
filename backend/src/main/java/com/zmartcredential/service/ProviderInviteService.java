@@ -97,7 +97,7 @@ public class ProviderInviteService {
         p.setFirstName(req.firstName().trim());
         p.setLastName(req.lastName().trim());
         p.setEmail(req.email().trim().toLowerCase());
-        p.setCaqhId(req.caqhId().trim());
+        p.setCaqhId(blankToNull(req.caqhId()));
         p.setClientId(h.clientId());
         p.setPracticeId(h.practiceId());
         p.setLocationId(h.locationId());
@@ -278,7 +278,6 @@ public class ProviderInviteService {
         if (req.licenseExpires() == null) missing.add("License Expiration");
         else if (req.licenseExpires().isBefore(java.time.LocalDate.now())) throw new BadRequestException("License Expiration can't be in the past");
         if (req.deaExpires() != null && req.deaExpires().isBefore(java.time.LocalDate.now())) throw new BadRequestException("DEA Expiration can't be in the past");
-        if (blankToNull(req.caqhId()) == null && p.getCaqhId() == null) missing.add("CAQH ID");
         if (blankToNull(req.caqhUsername()) == null) missing.add("CAQH Username");
         if (blankToNull(req.caqhPassword()) == null && p.getCaqhPasswordEnc() == null) missing.add("CAQH Password");
         if (req.pecosAccessGranted() == null) missing.add("PECOS Access Granted");

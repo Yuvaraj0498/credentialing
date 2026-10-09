@@ -600,8 +600,10 @@ public class ProviderService {
         if (req.licenseExpires() == null) missing.add("License Expires");
         else if (req.licenseExpires().isBefore(LocalDate.now())) throw new BadRequestException("License Expires can't be in the past");
         if (blankToNull(req.status()) == null) missing.add("Status");
-        if (blankToNull(req.caqhId()) == null) missing.add("CAQH ID");
-        else if (!req.caqhId().trim().matches("[0-9]{6,10}")) throw new BadRequestException("CAQH ID must be 6-10 digits");
+        // CAQH ID is optional; when given it must be 6-10 digits
+        if (blankToNull(req.caqhId()) != null && !req.caqhId().trim().matches("[0-9]{6,10}")) {
+            throw BadRequestException.onField("caqhId", "CAQH ID must be 6-10 digits");
+        }
         if (blankToNull(req.caqhUsername()) == null) missing.add("CAQH Username");
         if (blankToNull(req.caqhPassword()) == null) missing.add("CAQH Password");
         if (req.pecosAccessGranted() == null) missing.add("PECOS Access Granted");

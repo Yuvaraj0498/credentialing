@@ -154,15 +154,6 @@ export function PayersView() {
                     <span className="text-right">{p.appForm || "—"}</span>
                   </div>
                 </div>
-                {selectedProvider && providerHasCreds && providerCred && (
-                  <div className="mb-3 p-2 rounded text-[11px] font-mono" style={{ background: "var(--bg-soft)" }}>
-                    <div className="flex items-center gap-1 text-ink">
-                      <Icon name="User" size={10} className="text-ink-faint" />
-                      <span className="truncate">{providerCred.username}</span>
-                    </div>
-                    {providerCred.updatedAt && <div className="text-[9px] text-ink-faint mt-0.5">Updated {new Date(providerCred.updatedAt).toLocaleDateString()}</div>}
-                  </div>
-                )}
                 <div className="pt-3 border-t border-line flex items-center justify-between">
                   <div className="text-xs">
                     {!selectedProvider && (
