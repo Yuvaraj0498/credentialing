@@ -4,10 +4,12 @@
 # The real file holds secrets: it is git-ignored and must never be committed.
 # ============================================================
 
-# API port (Apache proxies /api -> 127.0.0.1:8085)
+# API port — different for every site on the server (Apache proxies /api -> 127.0.0.1:<port>)
+#   desssnext (testing) = 8085   credentiallingjs (live) = 8086
 server.port=8085
 
-# Database. createDatabaseIfNotExist creates "credentialing" on the first start; Flyway then creates all tables.
+# Database — one per site: desssnext = credentialing, credentiallingjs = zmartcredential.
+# createDatabaseIfNotExist creates it on the first start; Flyway then creates all tables.
 spring.datasource.url=jdbc:mysql://localhost:3306/credentialing?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
 spring.datasource.username=CHANGE_ME
 spring.datasource.password=CHANGE_ME
@@ -21,14 +23,14 @@ app.jwt.secret=CHANGE_ME_LONG_RANDOM_VALUE
 app.encryption-key=CHANGE_ME_LONG_RANDOM_VALUE
 
 # The admin app's public origin (browser address) and HTTPS-only refresh cookie
-app.cors.allowed-origins=https://desssnext.desss-portfolio.com
+app.cors.allowed-origins=https://your-site.desss-portfolio.com
 app.cookie-secure=true
 
 # Uploaded documents (relative to the backend folder)
 app.storage.path=./uploads
 
 # ---------- Email (SMTP) ----------
-app.public-url=https://desssnext.desss-portfolio.com
+app.public-url=https://your-site.desss-portfolio.com
 app.mail.enabled=true
 app.mail.from=CHANGE_ME@your-domain.com
 app.mail.from-name=ZmartCredential

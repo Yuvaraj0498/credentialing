@@ -52,7 +52,8 @@ export function setSelectedOrgId(id: string | number | null) {
 type Query = Record<string, string | number | boolean | null | undefined>;
 
 export function buildUrl(path: string, query?: Query) {
-  const url = new URL(API_URL + (path.startsWith("/") ? path : "/" + path));
+  // API_URL may be relative ("/api" = the same site the page was opened from)
+  const url = new URL(API_URL + (path.startsWith("/") ? path : "/" + path), typeof window === "undefined" ? "http://localhost" : window.location.origin);
   if (query) {
     Object.entries(query).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v));

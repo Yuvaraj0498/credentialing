@@ -19,10 +19,14 @@ Thumbs.db
 # Local env files and logs
 .env
 .env.local
+.env*.local
 *.log
 
 # Uploaded documents (server data)
 backend/uploads/
+
+# Per-site deploy settings (pm2 names, ports, branch)
+deploy/site.env
 
 # Server-only settings (contain secrets). Copy the example to application.properties on the server.
 backend/config/*
