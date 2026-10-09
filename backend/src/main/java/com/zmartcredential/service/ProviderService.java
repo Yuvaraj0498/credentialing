@@ -66,6 +66,7 @@ public class ProviderService {
             "npi", "npi", "dateadded", "dateAdded", "createdat", "createdAt", "email", "email", "name", "lastName");
 
     private final ProviderRepository providerRepository;
+    private final com.zmartcredential.repository.OrganizationRepository organizationRepository;
     private final EmailRegistry emailRegistry;
     private final ProviderDocumentRepository documentRepository;
     private final EnrollmentRepository enrollmentRepository;
@@ -89,29 +90,7 @@ public class ProviderService {
         permissionService.require("provider", "list");
         authContext.requireStaff();
         Long orgId = authContext.orgId();
-        Specification<Provider> spec = (root, query, cb) -> {
-            List<Predicate> ps = new ArrayList<>();
-            ps.add(cb.equal(root.get("orgId"), orgId));
-            // Every word must match somewhere (name in any order, suffix, specialty, email, NPI, CAQH ID),
-            // so "Cahill John", "Cahill, John" and "John Cahill, MD" all find John Cahill. % and _ are literal.
-            for (String word : searchWords(q)) {
-                String like = "%" + likeEscape(word) + "%";
-                ps.add(cb.or(
-                        cb.like(cb.lower(root.get("firstName")), like, LIKE_ESCAPE),
-                        cb.like(cb.lower(root.get("lastName")), like, LIKE_ESCAPE),
-                        cb.like(cb.lower(root.get("suffix")), like, LIKE_ESCAPE),
-                        cb.like(cb.lower(root.get("specialty")), like, LIKE_ESCAPE),
-                        cb.like(cb.lower(root.get("email")), like, LIKE_ESCAPE),
-                        cb.like(root.get("npi"), like, LIKE_ESCAPE),
-                        cb.like(root.get("caqhId"), like, LIKE_ESCAPE)));
-            }
-            if (status != null && !status.isBlank() && !"all".equals(status)) ps.add(cb.equal(root.get("status"), status));
-            if (practiceId != null) ps.add(cb.equal(root.get("practiceId"), practiceId));
-            if (locationId != null) ps.add(cb.equal(root.get("locationId"), locationId));
-            if (clientId != null) ps.add(cb.equal(root.get("clientId"), clientId));
-            if (Boolean.TRUE.equals(unassigned)) ps.add(cb.isNull(root.get("locationId")));
-            return cb.and(ps.toArray(new Predicate[0]));
-        };
+        Specification<Provider> spec = searchSpec(orgId, q, status, practiceId, locationId, clientId, unassigned);
         int safeSize = Math.min(Math.max(size, 1), 200);
         Page<Provider> result = providerRepository.findAll(spec, PageRequest.of(Math.max(page, 0), safeSize, parseSort(sort)));
         List<Provider> providers = result.getContent();
@@ -139,6 +118,72 @@ public class ProviderService {
                 p.getTelemed(), p.getSource(), p.getDateAdded(),
                 support.progress(docsByProvider.getOrDefault(p.getId(), List.of()), types),
                 enrollmentCounts(enrByProvider.getOrDefault(p.getId(), List.of()))));
+    }
+
+    /** Provider search (orgId null = every organization). */
+    private static Specification<Provider> searchSpec(Long orgId, String q, String status, Long practiceId, Long locationId,
+                                                      Long clientId, Boolean unassigned) {
+        return (root, query, cb) -> {
+            List<Predicate> ps = new ArrayList<>();
+            if (orgId != null) ps.add(cb.equal(root.get("orgId"), orgId));
+            // Every word must match somewhere (name in any order, suffix, specialty, email, NPI, CAQH ID),
+            // so "Cahill John", "Cahill, John" and "John Cahill, MD" all find John Cahill. % and _ are literal.
+            // A single character matches the start of a word ("a" = names starting with A), longer text anywhere.
+            for (String word : searchWords(q)) {
+                boolean one = word.length() == 1;
+                String esc = likeEscape(word);
+                List<Predicate> any = new ArrayList<>();
+                for (String field : List.of("firstName", "lastName", "suffix", "specialty", "email", "npi", "caqhId")) {
+                    var col = cb.lower(root.get(field));
+                    if (one) {
+                        any.add(cb.like(col, esc + "%", LIKE_ESCAPE));
+                        any.add(cb.like(col, "% " + esc + "%", LIKE_ESCAPE));
+                    } else {
+                        any.add(cb.like(col, "%" + esc + "%", LIKE_ESCAPE));
+                    }
+                }
+                ps.add(cb.or(any.toArray(new Predicate[0])));
+            }
+            if (status != null && !status.isBlank() && !"all".equals(status)) ps.add(cb.equal(root.get("status"), status));
+            if (practiceId != null) ps.add(cb.equal(root.get("practiceId"), practiceId));
+            if (locationId != null) ps.add(cb.equal(root.get("locationId"), locationId));
+            if (clientId != null) ps.add(cb.equal(root.get("clientId"), clientId));
+            if (Boolean.TRUE.equals(unassigned)) ps.add(cb.isNull(root.get("locationId")));
+            return cb.and(ps.toArray(new Predicate[0]));
+        };
+    }
+
+    /** Super admin → Providers: every organization's providers, read-only (with the organization's name). */
+    @Transactional(readOnly = true)
+    public PageResponse<PlatformProviderItem> listAllOrganizations(String q, String status, int page, int size) {
+        authContext.requireRole(com.zmartcredential.security.Role.PLATFORM_ADMIN);
+        int safeSize = Math.min(Math.max(size, 1), 200);
+        Page<Provider> result = providerRepository.findAll(searchSpec(null, q, status, null, null, null, null),
+                PageRequest.of(Math.max(page, 0), safeSize, Sort.by("lastName").ascending().and(Sort.by("firstName"))));
+        List<Provider> providers = result.getContent();
+        List<Long> ids = providers.stream().map(Provider::getId).toList();
+        Map<String, DocumentType> types = support.docTypes();
+        Map<Long, List<ProviderDocument>> docsByProvider = new HashMap<>();
+        if (!ids.isEmpty()) {
+            for (ProviderDocument d : documentRepository.findByProviderIdIn(ids)) {
+                docsByProvider.computeIfAbsent(d.getProviderId(), k -> new ArrayList<>()).add(d);
+            }
+        }
+        Map<Long, String> orgNames = new HashMap<>();
+        organizationRepository.findAllById(providers.stream().map(Provider::getOrgId).filter(Objects::nonNull).distinct().toList())
+                .forEach(o -> orgNames.put(o.getId(), o.getName()));
+        Map<Long, String> practiceNames = practiceNames(providers.stream().map(Provider::getPracticeId).toList());
+        Map<Long, String> locationNames = locationNames(providers.stream().map(Provider::getLocationId).toList());
+        return PageResponse.of(result, p -> new PlatformProviderItem(p.getId(), p.getFirstName(), p.getLastName(), p.getSuffix(),
+                p.getSpecialty(), p.getStatus(), p.getEmail(), p.getNpi(), p.getOrgId(), orgNames.get(p.getOrgId()),
+                practiceNames.get(p.getPracticeId()), locationNames.get(p.getLocationId()),
+                support.progress(docsByProvider.getOrDefault(p.getId(), List.of()), types)));
+    }
+
+    public record PlatformProviderItem(Long id, String firstName, String lastName, String suffix, String specialty,
+                                       String status, String email, String npi, Long orgId, String orgName,
+                                       String practiceName, String locationName,
+                                       com.zmartcredential.dto.provider.ProviderDtos.ProviderDocProgress documents) {
     }
 
     @Transactional(readOnly = true)

@@ -326,6 +326,6 @@ public class OrgStructureService {
     }
 
     private static boolean has(String v, String needle) {
-        return needle == null || (v != null && v.toLowerCase(Locale.ROOT).contains(needle));
+        return needle == null || com.zmartcredential.util.SearchText.matches(needle, v);
     }
 }

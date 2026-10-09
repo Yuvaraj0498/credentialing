@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.*;
 public class PlatformAdminController {
 
     private final PlatformAdminService service;
+    private final com.zmartcredential.service.ProviderService providerService;
 
     @Operation(summary = "Super admin dashboard counts")
     @GetMapping("/summary")
@@ -30,6 +31,14 @@ public class PlatformAdminController {
     @GetMapping("/admins")
     public List<AdminSummary> admins() {
         return service.listAdmins();
+    }
+
+    @Operation(summary = "Every organization's providers (read-only)")
+    @GetMapping("/providers")
+    public com.zmartcredential.common.PageResponse<com.zmartcredential.service.ProviderService.PlatformProviderItem> providers(
+            @RequestParam(required = false) String q, @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+        return providerService.listAllOrganizations(q, status, page, size);
     }
 
     @Operation(summary = "Create an admin: the organization sign-up workflow (organization, admin, plan, payment)")

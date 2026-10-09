@@ -62,11 +62,12 @@ export function buildUrl(path: string, query?: Query) {
   return url.toString();
 }
 
-function headers(extra?: HeadersInit, json = true): Headers {
+function headers(extra?: HeadersInit, json = true, orgId?: number | string | null): Headers {
   const h = new Headers(extra);
   if (json && !h.has("Content-Type")) h.set("Content-Type", "application/json");
   if (accessToken) h.set("Authorization", "Bearer " + accessToken);
-  const org = getSelectedOrgId();
+  // super admin reading one organization's data: that organization for this request only
+  const org = orgId != null ? String(orgId) : getSelectedOrgId();
   if (org) h.set("X-Org-Id", org);
   return h;
 }
@@ -100,12 +101,12 @@ async function parseError(res: Response): Promise<ApiError> {
   }
 }
 
-async function request<T>(method: string, path: string, opts: { query?: Query; body?: unknown; form?: FormData; raw?: boolean } = {}, retried = false): Promise<T> {
+async function request<T>(method: string, path: string, opts: { query?: Query; body?: unknown; form?: FormData; raw?: boolean; orgId?: number | string | null } = {}, retried = false): Promise<T> {
   let res: Response;
   try {
     res = await fetch(buildUrl(path, opts.query), {
       method,
-      headers: headers(undefined, !opts.form),
+      headers: headers(undefined, !opts.form, opts.orgId),
       body: opts.form ? opts.form : opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
       credentials: "include",
     });
@@ -124,7 +125,7 @@ async function request<T>(method: string, path: string, opts: { query?: Query; b
 }
 
 export const api = {
-  get: <T>(path: string, query?: Query) => request<T>("GET", path, { query }),
+  get: <T>(path: string, query?: Query, opts?: { orgId?: number | string | null }) => request<T>("GET", path, { query, orgId: opts?.orgId }),
   post: <T>(path: string, body?: unknown, query?: Query) => request<T>("POST", path, { body, query }),
   put: <T>(path: string, body?: unknown) => request<T>("PUT", path, { body }),
   patch: <T>(path: string, body?: unknown) => request<T>("PATCH", path, { body }),

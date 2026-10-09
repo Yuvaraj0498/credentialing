@@ -73,7 +73,9 @@ export const SUPER_NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "LayoutDashboard", roles: ["platform_admin"] },
   { href: "/create-admin", label: "Create Admin", icon: "UserPlus", roles: ["platform_admin"] },
   { href: "/user-roles", label: "User Roles", icon: "BadgeCheck", roles: ["platform_admin"] },
+  { href: "/organizations", label: "Organizations", icon: "Building2", roles: ["platform_admin"] },
+  { href: "/all-providers", label: "Providers", icon: "Users", roles: ["platform_admin"] },
 ];
 
 /** Routes the super admin may open; everything else redirects to /dashboard. */
-export const SUPER_ROUTES = ["/dashboard", "/create-admin", "/user-roles"];
+export const SUPER_ROUTES = ["/dashboard", "/create-admin", "/user-roles", "/organizations", "/all-providers"];

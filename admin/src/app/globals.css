@@ -107,6 +107,8 @@ table.table-fit td { overflow-wrap: break-word; }
 table.table-fit td.nowrap { white-space: nowrap; }
 table.table-fit td.break-any { overflow-wrap: anywhere; }
 table.table-fit th:first-child, table.table-fit td:first-child { padding-left: 14px; }
+table.table-compact th { padding-top: 8px; padding-bottom: 8px; }
+table.table-compact td { padding-top: 6px; padding-bottom: 6px; }
 tr:hover td { background: var(--bg-soft); }
 tr.no-hover td { background: transparent; }
 
