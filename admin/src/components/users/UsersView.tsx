@@ -212,6 +212,8 @@ interface UserForm {
   disabled: boolean;
 }
 
+const ADMIN_ROLE_NAME = /^(org\s*)?admin(istrator)?$/i;
+
 export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User | null; isSelf: boolean; onSaved: () => void; onClose: () => void }) {
   const toast = useToast();
   const [form, setForm] = useState<UserForm>(
@@ -307,11 +309,14 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
     }
   };
 
+  // Every role the super admin created is offered except the Admin role itself (the organization's admin role:
+  // the first one with admin access, or one named Admin / Administrator / Org Admin).
+  const adminRoleId = (userRoles.data || []).filter((r) => r.accessLevel === "org_admin").reduce<number | null>((m, r) => (m == null || r.id < m ? r.id : m), null);
   const roleSelect = (
     <select value={form.userRoleId} onChange={(e) => { setForm({ ...form, userRoleId: e.target.value }); setErrors((er) => ({ ...er, userRoleId: "" })); }} className="input" disabled={userRoles.loading || isSelf} title={isSelf ? "You cannot change your own role" : undefined}>
       <option value="">{userRoles.loading ? "Loading roles…" : "— Select role —"}</option>
       {(userRoles.data || [])
-        .filter((r) => r.id === user?.userRoleId || (r.active !== false && r.accessLevel !== "org_admin"))
+        .filter((r) => r.id === user?.userRoleId || (r.active !== false && r.id !== adminRoleId && !ADMIN_ROLE_NAME.test(r.name.trim())))
         .map((r) => <option key={r.id} value={r.id}>{r.name}{r.active === false ? " (disabled)" : ""}</option>)}
     </select>
   );
