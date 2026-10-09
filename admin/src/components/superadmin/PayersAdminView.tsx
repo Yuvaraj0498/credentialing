@@ -1,18 +1,16 @@
 "use client";
 
-import { useLayoutEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { AsyncBoundary } from "@/components/AsyncState";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
 import { PageHeader } from "@/components/PageHeader";
-import { Pagination } from "@/components/Pagination";
 import { Pill } from "@/components/Pill";
 import { PayerLogo } from "@/components/payers/PayerLogo";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { useAsync } from "@/lib/hooks";
 import { matchesSearch } from "@/lib/search";
-import { useFitRows } from "@/lib/useFitRows";
 import { cleanSearch } from "@/lib/utils";
 import { useToast } from "@/stores/toast";
 import type { Payer } from "@/types/enrollments";
@@ -25,31 +23,22 @@ const INTEGRATIONS: { value: string; label: string }[] = [
   { value: "portal", label: "Portal" },
 ];
 const integrationLabel = (v: string) => INTEGRATIONS.find((i) => i.value === v)?.label || v;
-const CARD_H = 236; // card + grid gap
 const MAX_IMAGE_BYTES = 500 * 1024;
 
-/** Super admin → Payers: every payer as a card; add one with the popup, edit with the pencil on its card. */
+/** Super admin → Payers: every payer as a card on one page; add one with the popup, edit with the pencil on its card. */
 export function PayersAdminView() {
   const payers = useAsync<Payer[]>(() => api.get<Payer[]>("/platform/payers"), []);
   const [editing, setEditing] = useState<Payer | "new" | null>(null);
   const [search, setSearch] = useState("");
-  const [page, setPage] = useState(0);
-  const gridRef = useRef<HTMLDivElement>(null);
-  const rows = useFitRows(gridRef, CARD_H, 70, 1);
-  const cols = useColumns();
-  const size = rows * cols;
 
   const all = payers.data || [];
   const shown = all.filter((p) => matchesSearch(search, p.name, p.fullName, p.category, integrationLabel(p.integration), p.appForm));
-  const totalPages = Math.max(1, Math.ceil(shown.length / size));
-  const current = Math.min(page, totalPages - 1);
-  const cards = shown.slice(current * size, current * size + size);
 
   return (
     <div>
       <PageHeader
         title="Payers"
-        subtitle={payers.data ? all.length + " payer(s)" : "Loading…"}
+        subtitle={payers.data ? (search.trim() ? shown.length + " of " + all.length + " payer(s)" : all.length + " payer(s)") : "Loading…"}
         actions={
           <button onClick={() => setEditing("new")} className="btn btn-primary">
             <Icon name="Plus" size={14} /> Add Payer
@@ -60,26 +49,23 @@ export function PayersAdminView() {
         <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
         <input
           value={search}
-          onChange={(e) => {
-            setSearch(cleanSearch(e.target.value));
-            setPage(0);
-          }}
+          onChange={(e) => setSearch(cleanSearch(e.target.value))}
           placeholder="Search payer, insurance company, category, integration, form..."
           className="input"
           style={{ paddingLeft: 32 }}
           aria-label="Search payers"
         />
       </div>
-      <div ref={gridRef}>
+      <div>
         <AsyncBoundary loading={payers.loading && !payers.data} error={payers.error} onRetry={payers.reload}>
-          {cards.length === 0 ? (
+          {shown.length === 0 ? (
             <div className="card card-pad text-center text-sm text-ink-light py-10">
               {all.length === 0 ? "No payers yet — click “Add Payer”." : "No payers match “" + search.trim() + "”"}
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {cards.map((p) => (
-                <div key={p.id} className="card card-pad" style={{ height: CARD_H - 12 }}>
+              {shown.map((p) => (
+                <div key={p.id} className="card card-pad">
                   <div className="flex items-start justify-between mb-3 gap-2">
                     <PayerLogo name={p.name} color={p.color} logo={p.logo} />
                     <div className="flex items-center gap-1">
@@ -113,11 +99,6 @@ export function PayersAdminView() {
               ))}
             </div>
           )}
-          {shown.length > 0 && (
-            <div className="card mt-3">
-              <Pagination page={current} totalPages={totalPages} totalElements={shown.length} size={size} onChange={setPage} />
-            </div>
-          )}
         </AsyncBoundary>
       </div>
 
@@ -133,18 +114,6 @@ export function PayersAdminView() {
       )}
     </div>
   );
-}
-
-/** Cards per row (same breakpoints as the grid: 1 / md 2 / lg 3). */
-function useColumns(): number {
-  const [cols, setCols] = useState(3);
-  useLayoutEffect(() => {
-    const measure = () => setCols(window.innerWidth >= 1024 ? 3 : window.innerWidth >= 768 ? 2 : 1);
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-  return cols;
 }
 
 interface PayerForm {
