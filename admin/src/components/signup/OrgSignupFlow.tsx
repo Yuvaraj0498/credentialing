@@ -196,8 +196,12 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
           {steps.map((s, i, arr) => (
             <Fragment key={s.n}>
               <div
-                className={"flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium " + (step === s.n ? "bg-accent text-white" : step > s.n ? "" : "text-ink-faint")}
+                className={"flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium " + (step === s.n ? "bg-accent text-white" : step > s.n ? "cursor-pointer hover:opacity-80" : "text-ink-faint")}
                 style={step > s.n ? { background: "var(--success-soft)", color: "var(--success)" } : {}}
+                // a completed step can be opened again
+                onClick={() => step > s.n && !submitting && setStep(s.n)}
+                role={step > s.n ? "button" : undefined}
+                title={step > s.n ? "Back to " + s.label : undefined}
               >
                 <div
                   className={"w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold " + (step === s.n ? "bg-paper text-accent" : step > s.n ? "" : "bg-soft-2")}

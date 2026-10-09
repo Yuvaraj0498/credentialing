@@ -45,10 +45,10 @@ public class UserRoleController {
         return service.setActive(id, req.active());
     }
 
-    @Operation(summary = "Delete a role that no user has (super admin)")
+    @Operation(summary = "Delete a role (its users move to the role given in moveTo) — super admin")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable Long id) {
-        service.delete(id);
+    public void delete(@PathVariable Long id, @RequestParam(required = false) Long moveTo) {
+        service.delete(id, moveTo);
     }
 }

@@ -68,12 +68,23 @@ public class UserRoleService {
     }
 
     @Transactional
-    public void delete(Long id) {
+    public void delete(Long id, Long moveTo) {
         authContext.requireRole(Role.PLATFORM_ADMIN);
         UserRole r = load(id);
         long used = userRepository.countByUserRoleId(id);
         if (used > 0) {
-            throw new ConflictException("\"" + r.getName() + "\" is assigned to " + used + " user(s). Change their role first.");
+            // the role's users move to another role first (their access follows that role)
+            if (moveTo == null) {
+                throw new ConflictException("\"" + r.getName() + "\" is assigned to " + used + " user(s). Choose the role to move them to.");
+            }
+            if (moveTo.equals(id)) throw new com.zmartcredential.exception.BadRequestException("Choose a different role");
+            UserRole target = load(moveTo);
+            userRepository.findAll().stream().filter(u -> id.equals(u.getUserRoleId())).forEach(u -> {
+                u.setUserRoleId(target.getId());
+                String level = target.getAccessLevel();
+                if (level != null && (!"provider".equals(level) || u.getProviderId() != null)) u.setRole(level);
+                userRepository.save(u);
+            });
         }
         rolePermissionRepository.deleteByRole(com.zmartcredential.security.PermissionService.userRoleKey(id));
         repository.delete(r);

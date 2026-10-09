@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Breadcrumbs } from "./Breadcrumbs";
 import { matchesSearch } from "@/lib/search";
 import { cleanSearch } from "@/lib/utils";
 import { AsyncBoundary } from "@/components/AsyncState";
@@ -19,7 +21,10 @@ import type { AdminSummary } from "./types";
  */
 export function CreateAdminView() {
   const [search, setSearch] = useState("");
-  const [creating, setCreating] = useState(false);
+  const router = useRouter();
+  const params = useSearchParams();
+  const creating = params.get("new") === "1";
+  const setCreating = (on: boolean) => (on ? router.push("/create-admin?new=1") : router.push("/create-admin"));
   // remount the form after each admin so the next one starts empty
   const [formKey, setFormKey] = useState(0);
   const admins = useAsync<AdminSummary[]>(() => api.get<AdminSummary[]>("/platform/admins"), []);
@@ -27,7 +32,16 @@ export function CreateAdminView() {
   if (creating) {
     return (
       <div>
-        <PageHeader title="Create Admin" subtitle="Set up a new organization and its admin — the same steps as organization sign-up." />
+        <Breadcrumbs items={[{ label: "Create Admin", href: "/create-admin" }, { label: "New Admin" }]} />
+        <PageHeader
+          title="New Admin"
+          subtitle="Set up a new organization and its admin — the same steps as organization sign-up."
+          actions={
+            <button onClick={() => setCreating(false)} className="btn btn-secondary">
+              <Icon name="ArrowLeft" size={14} /> Back to admins
+            </button>
+          }
+        />
         <OrgSignupFlow
           key={formKey}
           embedded={{

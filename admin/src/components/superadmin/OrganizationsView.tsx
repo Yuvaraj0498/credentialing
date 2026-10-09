@@ -27,7 +27,7 @@ export function OrganizationsView() {
       <PageHeader title="Organizations" subtitle="Choose an org admin to see their clients, practices and locations." />
       <div className="mb-4">
         <label className="label" htmlFor="sa-admin">Org Admin</label>
-        <select id="sa-admin" value={adminId} onChange={(e) => choose(e.target.value)} className="input" disabled={admins.loading}>
+        <select id="sa-admin" value={adminId} onChange={(e) => choose(e.target.value)} className="input w-full" style={{ width: "100%" }} disabled={admins.loading}>
           <option value="">{admins.loading ? "Loading admins…" : "— Select an org admin —"}</option>
           {list.map((a) => (
             <option key={a.userId} value={a.userId}>{adminLabel(a)}</option>
