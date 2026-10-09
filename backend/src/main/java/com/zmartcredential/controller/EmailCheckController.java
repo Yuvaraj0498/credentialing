@@ -4,6 +4,7 @@ import com.zmartcredential.exception.BadRequestException;
 import com.zmartcredential.exception.ConflictException;
 import com.zmartcredential.security.AuthContext;
 import com.zmartcredential.service.EmailRegistry;
+import com.zmartcredential.service.OrgNames;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,8 +22,17 @@ public class EmailCheckController {
 
     private final EmailRegistry emailRegistry;
     private final AuthContext authContext;
+    private final OrgNames orgNames;
 
     public record EmailCheckResponse(boolean available, String message) {
+    }
+
+    /** Create Admin: is this organization name free? (id: the organization being edited) */
+    @Operation(summary = "Is this organization name free?")
+    @GetMapping("/org-name")
+    public EmailCheckResponse orgName(@RequestParam String name, @RequestParam(required = false) Long id) {
+        authContext.principal();
+        return orgNames.taken(name, id) ? new EmailCheckResponse(false, OrgNames.TAKEN) : new EmailCheckResponse(true, null);
     }
 
     /**

@@ -47,6 +47,7 @@ import static com.zmartcredential.service.OrgLocationService.countMap;
 public class OrgStructureService {
 
     private final OrganizationRepository organizationRepository;
+    private final OrgNames orgNames;
     private final EmailRegistry emailRegistry;
     private final ClientRepository clientRepository;
     private final PracticeRepository practiceRepository;
@@ -120,6 +121,8 @@ public class OrgStructureService {
     public OrganizationResponse updateOrganization(OrganizationUpdateRequest req) {
         authContext.requireRole(Role.PLATFORM_ADMIN, Role.ORG_ADMIN);
         Organization o = loadOrg(authContext.orgId());
+        // a renamed organization must not take another organization's name
+        if (!OrgNames.normalize(req.name()).equals(OrgNames.normalize(o.getName()))) orgNames.requireFree(req.name(), o.getId(), "name");
         o.setName(req.name().trim());
         if (req.orgType() != null) o.setOrgType(blankToNull(req.orgType()));
         o.setTaxId(blankToNull(req.taxId()));

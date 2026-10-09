@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
 import { useEmailCheck } from "@/lib/useEmailCheck";
 import { cardExpProblem, PHONE_RE } from "@/lib/validation";
@@ -12,7 +12,7 @@ import { ErrorState, Loading } from "@/components/AsyncState";
 import { Icon } from "@/components/Icon";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { useAuth } from "@/stores/auth";
-import { useAsync } from "@/lib/hooks";
+import { useAsync, useDebounced } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
 import type { AuthResponse } from "@/types";
 import { ORG_TYPES } from "@/types/admin";
@@ -74,6 +74,8 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
   });
   // Create Admin (super admin signed in): warn about an email that already belongs to someone
   const emailTaken = useEmailCheck(data.email, { kind: "organization" }, !!embedded);
+  // Create Admin: warn while typing when another organization already has this name (the save checks again)
+  const nameTaken = useOrgNameCheck(data.orgName, !!embedded);
   const [errors, setErrors] = useState<Errors>({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -105,6 +107,7 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
     const e: Errors = {};
     if (s === 1) {
       if (!data.orgName.trim()) e.orgName = "Required";
+      else if (nameTaken) e.orgName = nameTaken;
       if (!data.taxId || !/^\d{9}$/.test(data.taxId.replace(/\D/g, ""))) e.taxId = "9 digits required";
       if (!data.city.trim()) e.city = "Required";
       if (!data.zip || !/^\d{5}$/.test(data.zip)) e.zip = "5 digits required";
@@ -239,8 +242,8 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
               <div className="space-y-3">
                 <div>
                   <label className="label">Organization Name *</label>
-                  <input value={data.orgName} onChange={(e) => set("orgName", e.target.value)} className={"input" + (errors.orgName ? " input-error" : "")} placeholder="ACME Medical Group, P.A." />
-                  <Err msg={errors.orgName} />
+                  <input value={data.orgName} onChange={(e) => { set("orgName", e.target.value); setErrors((er) => ({ ...er, orgName: undefined })); }} className={"input" + (errors.orgName || nameTaken ? " input-error" : "")} placeholder="ACME Medical Group, P.A." maxLength={200} />
+                  <Err msg={errors.orgName || nameTaken} />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
@@ -480,4 +483,27 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
       </div>
     </div>
   );
+}
+
+/** "" when the organization name is free (or not checked yet), otherwise the message to show. */
+function useOrgNameCheck(name: string, enabled: boolean): string {
+  const value = name.trim().replace(/\s+/g, " ");
+  const debounced = useDebounced(value, 400);
+  const [result, setResult] = useState<{ name: string; message: string }>({ name: "", message: "" });
+  useEffect(() => {
+    if (!enabled || !debounced) return;
+    let cancelled = false;
+    api
+      .get<{ available: boolean; message: string | null }>("/email-check/org-name", { name: debounced })
+      .then((r) => {
+        if (!cancelled) setResult({ name: debounced, message: r.available ? "" : r.message || "This organization name is already in use" });
+      })
+      .catch(() => {
+        /* the save reports it */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [debounced, enabled]);
+  return enabled && value && result.name === value ? result.message : "";
 }

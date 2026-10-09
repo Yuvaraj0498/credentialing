@@ -45,6 +45,7 @@ import static com.zmartcredential.service.OrgLocationService.countMap;
 public class PlatformOrgAdminService {
 
     private final OrganizationRepository organizationRepository;
+    private final OrgNames orgNames;
     private final EmailRegistry emailRegistry;
     private final com.zmartcredential.repository.UserRoleRepository userRoleRepository;
     private final AppUserRepository userRepository;
@@ -92,6 +93,7 @@ public class PlatformOrgAdminService {
         emailRegistry.requireFreeForOrganization(orgEmail, null);
         if (adminEmail != null && !adminEmail.equals(orgEmail)) emailRegistry.requireFreeForOrganization(adminEmail, null);
 
+        orgNames.requireFree(req.name(), null, "name");
         Organization org = new Organization();
         org.setName(req.name().trim());
         org.setOrgType(blankToNull(req.orgType()));

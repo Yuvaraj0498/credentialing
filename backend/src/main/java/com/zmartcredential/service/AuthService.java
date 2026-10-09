@@ -52,6 +52,7 @@ public class AuthService {
     private final AppUserRepository userRepository;
     private final com.zmartcredential.repository.UserRoleRepository userRoleRepository;
     private final OrganizationRepository organizationRepository;
+    private final OrgNames orgNames;
     private final ProviderRepository providerRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final EmailRegistry emailRegistry;
@@ -152,6 +153,7 @@ public class AuthService {
                     + " providers. Choose a larger plan.");
         }
 
+        orgNames.requireFree(req.org().name(), null, "org.name");
         Organization org = new Organization();
         org.setName(req.org().name().trim());
         org.setOrgType(req.org().type());
