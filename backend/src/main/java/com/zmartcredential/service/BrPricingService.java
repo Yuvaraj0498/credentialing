@@ -121,8 +121,7 @@ public class BrPricingService {
         List<MatrixRow> rows = new ArrayList<>();
         for (PricingState st : t.states().values()) {
             if (region != null && !region.isBlank() && !"all".equals(region) && !region.equals(st.getRegion())) continue;
-            if (!s.isEmpty() && !st.getCode().toLowerCase(Locale.ROOT).contains(s)
-                    && !st.getName().toLowerCase(Locale.ROOT).contains(s)) continue;
+            if (!s.isEmpty() && !com.zmartcredential.util.SearchText.matches(s, st.getCode(), st.getName(), st.getRegion())) continue;
             List<PriceCell> cells = payers.stream().map(p -> new PriceCell(p.getId(), t.price(st.getCode(), p, serviceType))).toList();
             BigDecimal min = cells.stream().map(PriceCell::price).min(Comparator.naturalOrder()).orElse(null);
             BigDecimal max = cells.stream().map(PriceCell::price).max(Comparator.naturalOrder()).orElse(null);

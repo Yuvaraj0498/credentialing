@@ -57,9 +57,8 @@ public class OpsTaskService {
             if (providerId != null && !providerId.equals(t.getProviderId())) continue;
             if (assigneeId != null && !assigneeId.equals(t.getAssigneeUserId())) continue;
             if (needle != null) {
-                String hay = (t.getTitle() + " " + nz(t.getDescription()) + " "
-                        + nz(OpsLookupService.plainName(providers.get(t.getProviderId())))).toLowerCase(Locale.ROOT);
-                if (!hay.contains(needle)) continue;
+                if (!com.zmartcredential.util.SearchText.matches(needle, t.getTitle(), t.getDescription(),
+                        OpsLookupService.plainName(providers.get(t.getProviderId())))) continue;
             }
             base.add(t);
         }

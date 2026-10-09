@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { matchesSearch } from "@/lib/search";
 import { cleanSearch } from "@/lib/utils";
 import { useRouter } from "next/navigation";
 import { AlertBox } from "@/components/AlertBox";
@@ -60,8 +61,8 @@ export function PayerApplicationsView() {
   const payers = usePayers(true);
   const providers = useProvidersLite();
 
-  const filteredPayers = (payers.data || []).filter((p) => p.name.toLowerCase().includes(payerSearch.toLowerCase()));
-  const filteredProviders = (providers.data || []).filter((p) => providerName(p).toLowerCase().includes(providerSearch.toLowerCase()));
+  const filteredPayers = (payers.data || []).filter((p) => matchesSearch(payerSearch, p.name, p.fullName, p.code));
+  const filteredProviders = (providers.data || []).filter((p) => matchesSearch(providerSearch, providerName(p), p.npi));
 
   const reset = () => {
     setStep(1);

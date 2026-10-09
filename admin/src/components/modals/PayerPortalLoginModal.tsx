@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { matchesSearch } from "@/lib/search";
 import { cleanSearch } from "@/lib/utils";
 import { AlertBox } from "@/components/AlertBox";
 import { ConfirmDialog, Modal } from "@/components/Modal";
@@ -43,8 +44,7 @@ export function PayerPortalLoginModal({
   });
   const [providerSearch, setProviderSearch] = useState("");
   const shownProviders = useMemo(() => {
-    const q = providerSearch.trim().toLowerCase();
-    return (providers.data || []).filter((p) => !q || providerName(p).toLowerCase().includes(q) || (p.npi || "").includes(q));
+    return (providers.data || []).filter((p) => matchesSearch(providerSearch, providerName(p), p.npi));
   }, [providers.data, providerSearch]);
   const toggleProvider = (id: number) => setAssigned((a) => (a.includes(id) ? a.filter((x) => x !== id) : [...a, id]));
   const [form, setForm] = useState({

@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { matchesSearch } from "@/lib/search";
 import { cleanSearch } from "@/lib/utils";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState, Loading } from "@/components/AsyncState";
@@ -55,7 +56,7 @@ export function PayersView() {
   }, [selectedProviderId, matrix.data]);
 
   const filteredRows = (rows.data || []).filter(
-    ({ payer: p }) => !search || p.name.toLowerCase().includes(search.toLowerCase()) || (p.fullName || "").toLowerCase().includes(search.toLowerCase())
+    ({ payer: p }) => matchesSearch(search, p.name, p.fullName, p.code)
   );
   const configuredCount = selectedProvider && perProvider ? Object.keys(perProvider).filter((k) => perProvider[Number(k)]?.username).length : 0;
 

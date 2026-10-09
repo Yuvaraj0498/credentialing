@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useRef, useState } from "react";
+import { matchesSearch } from "@/lib/search";
 import { useRouter } from "next/navigation";
 import { ConfirmDialog } from "@/components/Modal";
 import { EmptyState } from "@/components/EmptyState";
@@ -89,10 +90,7 @@ export function ProviderEnrollmentsTab({ providerId, onUploadDocs }: { providerI
 
   let filtered = enrollments;
   if (tab !== "all") filtered = filtered.filter((e) => e.status === tab);
-  if (search) {
-    const q = search.toLowerCase();
-    filtered = filtered.filter((e) => [e.payerName, e.formLabel, e.practiceName].some((v) => (v || "").toLowerCase().includes(q)));
-  }
+  if (search.trim()) filtered = filtered.filter((e) => matchesSearch(search, e.payerName, e.formLabel, e.practiceName, e.status));
 
   const toggle = (id: number) =>
     setExpanded((s) => {

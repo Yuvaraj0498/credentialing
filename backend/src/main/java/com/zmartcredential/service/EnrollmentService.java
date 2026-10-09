@@ -415,10 +415,10 @@ public class EnrollmentService {
 
     private static boolean matches(Enrollment e, Ctx ctx, String q) {
         Payer payer = ctx.payers().get(e.getPayerId());
-        return contains(ctx.providerName(e.getProviderId()), q)
-                || (payer != null && (contains(payer.getName(), q) || contains(payer.getFullName(), q)))
-                || contains(ctx.practices().get(e.getPracticeId()), q)
-                || (ctx.providers().get(e.getProviderId()) != null && contains(ctx.providers().get(e.getProviderId()).getNpi(), q));
+        var provider = ctx.providers().get(e.getProviderId());
+        return com.zmartcredential.util.SearchText.matches(q, ctx.providerName(e.getProviderId()), payer == null ? null : payer.getName(),
+                payer == null ? null : payer.getFullName(), ctx.practices().get(e.getPracticeId()),
+                provider == null ? null : provider.getNpi(), e.getStatus());
     }
 
     private static boolean contains(String s, String q) {

@@ -20,7 +20,6 @@ import { FollowUpWidget, TimeTrackerWidget } from "@/components/widgets/Activity
 import { ProviderEditModal } from "@/components/modals/ProviderEditModal";
 import { ProviderInfo } from "./ProviderInfo";
 import { ProviderOverview } from "./ProviderOverview";
-import { SendLinkModal } from "@/components/modals/SendLinkModal";
 import { providerStatusLabel, StatusDropdown } from "./shared";
 import type { ProviderDetail, ProviderStatus } from "@/types/providers";
 
@@ -41,7 +40,7 @@ export function ProviderDetailView({ providerId }: { providerId: number }) {
   useTopic("providers", reload);
   useTopic("enrollments", reload);
 
-  const [modal, setModal] = useState<null | "link" | "letter" | "assign" | "edit">(null);
+  const [modal, setModal] = useState<null | "letter" | "assign" | "edit">(null);
   const [statusBusy, setStatusBusy] = useState(false);
 
   const setTab = (t: Tab) => router.replace("/providers/" + providerId + (t === "overview" ? "" : "?tab=" + t), { scroll: false });
@@ -85,7 +84,6 @@ export function ProviderDetailView({ providerId }: { providerId: number }) {
               )}
               {canUpdate && (
                 <>
-                  <button onClick={() => setModal("link")} className="btn btn-secondary"><Icon name="Send" size={14} /> Send Link</button>
                   <button onClick={() => setModal("letter")} className="btn btn-secondary"><Icon name="FileText" size={14} /> Generate Letter</button>
                   <button onClick={() => setModal("assign")} className="btn btn-secondary"><Icon name="MapPin" size={14} /> Assign Location</button>
                   <button onClick={() => setModal("edit")} className="btn btn-secondary"><Icon name="Pencil" size={14} /> Edit Provider</button>
@@ -142,18 +140,6 @@ export function ProviderDetailView({ providerId }: { providerId: number }) {
           )}
           {tab === "info" && <ProviderInfo provider={provider} />}
 
-          {modal === "link" && (
-            <SendLinkModal
-              provider={provider}
-              onClose={() => setModal(null)}
-              onSent={(inv) => {
-                toast("Link sent to " + inv.email);
-                setModal(null);
-                publish("notifications");
-                publish("providers");
-              }}
-            />
-          )}
           {modal === "letter" && <AppointmentLetterModal provider={provider} onClose={() => setModal(null)} />}
           {modal === "assign" && (
             <AssignProviderToLocationModal

@@ -58,12 +58,14 @@ public class OrgUserService {
             users.addAll(userRepository.findByRoleOrderByDisplayNameAsc(Role.PLATFORM_ADMIN.code()));
         }
         String needle = q == null || q.isBlank() ? null : q.trim().toLowerCase(Locale.ROOT);
+        Map<Long, String> roleNames = userRoleRepository.findAll().stream()
+                .collect(Collectors.toMap(com.zmartcredential.entity.UserRole::getId, com.zmartcredential.entity.UserRole::getName));
         String roleFilter = role == null || role.isBlank() || "all".equals(role) ? null
                 : ("admin".equals(role) ? "org_admin" : role);
         List<AppUser> filtered = users.stream()
                 .filter(u -> roleFilter == null || roleFilter.equals(normalizeRole(u.getRole())))
-                .filter(u -> needle == null || contains(u.getDisplayName(), needle) || contains(u.getEmail(), needle)
-                        || contains(u.getUsername(), needle))
+                .filter(u -> needle == null || com.zmartcredential.util.SearchText.matches(needle, u.getDisplayName(), u.getEmail(), u.getUsername(),
+                        u.getTitle(), u.getPhone(), roleNames.get(u.getUserRoleId())))
                 .sorted(Comparator.comparing(u -> u.getDisplayName() == null ? "" : u.getDisplayName().toLowerCase(Locale.ROOT)))
                 .toList();
         return toResponses(filtered);

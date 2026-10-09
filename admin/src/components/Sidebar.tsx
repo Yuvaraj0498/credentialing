@@ -111,12 +111,20 @@ function SidebarUserCard() {
   return (
     <div className="px-2 py-1 border-t border-line">
       <div className="flex items-center gap-2 px-1.5 py-0.5">
-        <Avatar name={user.displayName} size={26} />
-        <div className="flex-1 min-w-0 leading-tight">
-          <div className="text-[10px] text-ink-light truncate">{user.orgName || "ZmartCredential"}</div>
-          <div className="font-medium text-xs text-ink truncate">{user.displayName}</div>
-          <div className="text-[10px] text-ink-faint">{SIGNED_IN_ROLE[user.role] || user.role}</div>
-        </div>
+        {user.role === "platform_admin" ? (
+          <>
+            <Avatar name="Super Admin" size={26} />
+            <div className="flex-1 min-w-0 font-medium text-xs text-ink truncate">Super Admin</div>
+          </>
+        ) : (
+          <>
+            <Avatar name={user.displayName} size={26} />
+            <div className="flex-1 min-w-0 leading-tight">
+              <div className="font-medium text-xs text-ink truncate">{user.displayName}</div>
+              <div className="text-[10px] text-ink-faint">{SIGNED_IN_ROLE[user.role] || user.role}</div>
+            </div>
+          </>
+        )}
         <button onClick={signOut} disabled={signingOut} className="btn-ghost p-1.5 rounded-md hover:text-danger" title="Sign out" aria-label="Sign out">
           <Icon name="LogOut" size={15} />
         </button>

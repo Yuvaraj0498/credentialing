@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { matchesSearch } from "@/lib/search";
 import { cleanSearch } from "@/lib/utils";
 import { AsyncBoundary } from "@/components/AsyncState";
 import { EmptyState } from "@/components/EmptyState";
@@ -43,13 +44,9 @@ export function CreateAdminView() {
   }
 
   const list = admins.data || [];
-  const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const shown = terms.length
-    ? list.filter((a) => {
-        const hay = [a.name, a.email, a.phone, a.orgName, a.planName, a.disabled ? "disabled" : a.orgStatus === "suspended" ? "suspended" : "active"].join(" ").toLowerCase();
-        return terms.every((t) => hay.includes(t));
-      })
-    : list;
+  const shown = list.filter((a) =>
+    matchesSearch(search, a.name, a.email, a.phone, a.orgName, a.planName, a.disabled ? "disabled" : a.orgStatus === "suspended" ? "suspended" : "active")
+  );
   return (
     <div>
       <PageHeader

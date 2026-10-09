@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { matchesSearch } from "@/lib/search";
 import { cleanSearch } from "@/lib/utils";
 import { AsyncBoundary } from "@/components/AsyncState";
 import { EmptyState } from "@/components/EmptyState";
@@ -27,8 +28,7 @@ export function UserRolesView() {
   const [toggling, setToggling] = useState<number | null>(null);
   const list = roles.data || [];
   const [search, setSearch] = useState("");
-  const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
-  const shown = terms.length ? list.filter((r) => terms.every((t) => [r.name, r.active ? "enabled" : "disabled"].join(" ").toLowerCase().includes(t))) : list;
+  const shown = list.filter((r) => matchesSearch(search, r.name, r.active ? "enabled" : "disabled"));
 
   const toggleActive = async (r: UserRoleItem) => {
     setToggling(r.id);

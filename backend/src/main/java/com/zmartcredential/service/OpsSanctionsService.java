@@ -59,8 +59,7 @@ public class OpsSanctionsService {
         List<SanctionsRow> rows = new ArrayList<>();
         for (Provider p : lookup.providersById(orgId).values()) {
             if (needle != null) {
-                String hay = (OpsLookupService.plainName(p) + " " + (p.getNpi() == null ? "" : p.getNpi())).toLowerCase(Locale.ROOT);
-                if (!hay.contains(needle)) continue;
+                if (!com.zmartcredential.util.SearchText.matches(needle, OpsLookupService.plainName(p), p.getNpi(), p.getSpecialty())) continue;
             }
             Map<String, VerificationCheck> m = latest.getOrDefault(p.getId(), Map.of());
             Map<String, SourceCheck> checks = new LinkedHashMap<>();

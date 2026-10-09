@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { matchesSearch } from "@/lib/search";
 import Link from "next/link";
 import { AsyncBoundary } from "@/components/AsyncState";
 import { Avatar } from "@/components/Avatar";
@@ -48,10 +49,7 @@ export function SecureLinksView() {
 
   const filtered = useMemo(() => {
     let list = filter === "all" ? all : all.filter((l) => l.status === filter);
-    if (search) {
-      const q = search.toLowerCase();
-      list = list.filter((l) => l.providerName.toLowerCase().includes(q) || l.email.toLowerCase().includes(q) || ("#" + l.id).includes(q));
-    }
+    if (search.trim()) list = list.filter((l) => matchesSearch(search, l.providerName, l.email, "#" + l.id, l.id, l.status));
     return list;
   }, [all, filter, search]);
 

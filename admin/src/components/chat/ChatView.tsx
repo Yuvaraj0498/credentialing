@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { matchesSearch } from "@/lib/search";
 import { cleanSearch } from "@/lib/utils";
 import { Avatar } from "@/components/Avatar";
 import { ConfirmDialog } from "@/components/Modal";
@@ -226,9 +227,8 @@ export function ChatView() {
     [messages]
   );
 
-  const s = search.toLowerCase();
-  const filteredChannels = (chat?.channels ?? []).filter((ch) => !search || ch.name.toLowerCase().includes(s));
-  const filteredDMs = (chat?.directMessages ?? []).filter((u) => !search || (u.displayName || u.username).toLowerCase().includes(s) || u.username.toLowerCase().includes(s));
+  const filteredChannels = (chat?.channels ?? []).filter((ch) => matchesSearch(search, ch.name));
+  const filteredDMs = (chat?.directMessages ?? []).filter((u) => matchesSearch(search, u.displayName, u.username));
 
   if (!chat && stateError) return <ErrorState message={stateError} onRetry={loadState} />;
   if (!chat) return <Loading />;

@@ -49,10 +49,9 @@ public class BrReportService {
         Long orgId = authContext.orgId();
         List<Provider> providers = providerRepository.findByOrgIdOrderByLastNameAsc(orgId);
         if (q != null && !q.isBlank()) {
-            String s = q.trim().toLowerCase(Locale.ROOT);
-            providers = providers.stream().filter(p -> BrSupport.providerName(p).toLowerCase(Locale.ROOT).contains(s)
-                    || (p.getNpi() != null && p.getNpi().contains(s))
-                    || (p.getSpecialty() != null && p.getSpecialty().toLowerCase(Locale.ROOT).contains(s))).toList();
+            var words = com.zmartcredential.util.SearchText.words(q);
+            providers = providers.stream().filter(p -> com.zmartcredential.util.SearchText.matches(words, BrSupport.providerName(p), p.getFirstName(),
+                    p.getLastName(), p.getNpi(), p.getSpecialty(), p.getEmail(), p.getCaqhId())).toList();
         }
         Set<Long> ids = providers.stream().map(Provider::getId).collect(Collectors.toSet());
         Map<Long, List<ProviderDocument>> docs = ids.isEmpty() ? Map.of()

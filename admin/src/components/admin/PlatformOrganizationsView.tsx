@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { matchesSearch } from "@/lib/search";
 import { AccessDenied } from "@/components/AlertBox";
 import { ConfirmDialog, Modal } from "@/components/Modal";
 import { EmptyState } from "@/components/EmptyState";
@@ -34,11 +35,8 @@ export function PlatformOrganizationsView() {
   if (!allowed) return <AccessDenied action="manage" entity="organizations" role={ROLE_LABEL[user.role] || user.role} />;
 
   const list = orgs.data || [];
-  const term = search.trim().toLowerCase();
   const filtered = list.filter(
-    (o) =>
-      (statusFilter === "all" || o.status === statusFilter) &&
-      (!term || [o.name, o.city, o.state, o.email, o.inviteCode].some((v) => (v || "").toLowerCase().includes(term)))
+    (o) => (statusFilter === "all" || o.status === statusFilter) && matchesSearch(search, o.name, o.city, o.state, o.email, o.inviteCode, o.status)
   );
 
   const changeStatus = async () => {

@@ -105,8 +105,7 @@ public class OpsEmailReminderService {
         List<ReminderRow> rows = new ArrayList<>();
         for (Provider p : providers.values()) {
             if (needle != null) {
-                String hay = (OpsLookupService.plainName(p) + " " + (p.getEmail() == null ? "" : p.getEmail())).toLowerCase(Locale.ROOT);
-                if (!hay.contains(needle)) continue;
+                if (!com.zmartcredential.util.SearchText.matches(needle, OpsLookupService.plainName(p), p.getEmail(), p.getNpi())) continue;
             }
             DocState s = states.getOrDefault(p.getId(), new DocState(List.of(), List.of(), 0, 0));
             int missing = s.missing().size();

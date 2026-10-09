@@ -91,7 +91,7 @@ body { margin: 0; }
 /* Fixed to the screen height (menu scrolls inside), so a long menu never stretches short pages with empty space. */
 .sidebar { width: 220px; height: 100vh; flex-shrink: 0; background: var(--bg); border-right: 1px solid var(--border); display: flex; flex-direction: column; position: sticky; top: 0; overflow: hidden; }
 .sidebar > nav { min-height: 0; overflow-y: auto; }
-.nav-item { display: flex; align-items: center; gap: 10px; padding: 4px 14px; margin: 0.5px 8px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--ink-light); cursor: pointer; position: relative; }
+.nav-item { display: flex; align-items: center; gap: 10px; padding: clamp(5px, 0.65vh, 7px) 14px; margin: 0.5px 8px; border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--ink-light); cursor: pointer; position: relative; }
 .nav-item:hover { background: var(--bg-soft); color: var(--ink); }
 .nav-item.active { background: var(--accent-soft); color: var(--accent-strong); }
 .nav-item.active::before { content: ''; position: absolute; left: -8px; top: 4px; bottom: 4px; width: 3px; background: var(--accent); border-radius: 0 3px 3px 0; }
@@ -168,6 +168,8 @@ tr.no-hover td { background: transparent; }
 .brand-loader.sm::before { border-width: 4px; }
 .brand-loader.sm::after { -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 4.5px), #000 calc(100% - 4px)); mask: radial-gradient(farthest-side, transparent calc(100% - 4.5px), #000 calc(100% - 4px)); }
 .page-loader { min-height: calc(100vh - 260px); }
+/* While a page loads the whole screen (sidebar included) is blurred, with the loader on top */
+.page-blur { position: fixed; inset: 0; z-index: 45; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: rgba(248, 249, 251, 0.55); backdrop-filter: blur(4px); }
 .modal-card .page-loader { min-height: 0; padding: 40px 0; }
 .loading-dots::after { content: ""; display: inline-block; width: 1.2em; text-align: left; animation: dots 1.2s steps(4, end) infinite; }
 @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75%, 100% { content: "..."; } }

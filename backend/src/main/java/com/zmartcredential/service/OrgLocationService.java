@@ -143,8 +143,7 @@ public class OrgLocationService {
     }
 
     private static boolean matches(Location l, String needle) {
-        return contains(l.getName(), needle) || contains(l.getLegalName(), needle) || contains(l.getCity(), needle)
-                || contains(l.getAddress(), needle) || contains(l.getNpi(), needle) || contains(l.getZip(), needle);
+        return com.zmartcredential.util.SearchText.matches(needle, l.getName(), l.getLegalName(), l.getCity(), l.getState(), l.getAddress(), l.getNpi(), l.getZip());
     }
 
     private static boolean contains(String v, String needle) {

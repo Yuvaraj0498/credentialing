@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useMemo, useState } from "react";
+import { matchesSearch } from "@/lib/search";
 import { cleanSearch } from "@/lib/utils";
 import { AlertBox } from "@/components/AlertBox";
 import { Avatar } from "@/components/Avatar";
@@ -33,7 +34,7 @@ export function EmailRemindersWizard({ onClose, onCreated }: { onClose: () => vo
   const selectedTemplate = typeTemplates.find((t) => t.id === templateId) || typeTemplates[0];
 
   const rows = recipients.data?.items ?? [];
-  const filteredRows = rows.filter((r) => !search || r.name.toLowerCase().includes(search.toLowerCase()) || (r.email || "").toLowerCase().includes(search.toLowerCase()));
+  const filteredRows = rows.filter((r) => matchesSearch(search, r.name, r.email));
   const allFilteredSelected = filteredRows.length > 0 && filteredRows.every((r) => whoSend.includes(r.providerId));
 
   const toggleAll = () => {
