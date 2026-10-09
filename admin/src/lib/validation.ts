@@ -14,7 +14,10 @@ export const cityChars = (v: string) => v.replace(/[^A-Za-z .'-]/g, "").slice(0,
 /** Address: letters (incl. accented), digits, spaces and # , . : - / ' & ( ). */
 export const addressChars = (v: string) => v.replace(/[^\p{L}0-9 #,.:'/&()-]/gu, "").slice(0, 255);
 
-export const PHONE_RE = /^\d{10}$/;
+/** Phone / mobile: country code (+91 or +1) and exactly 10 digits, e.g. "+91 9876543210". */
+export const PHONE_RE = /^\+(1|91) \d{10}$/;
+export const PHONE_CODES = ["+91", "+1"] as const;
+export const DEFAULT_PHONE_CODE = "+91";
 export const NPI_RE = /^\d{10}$/;
 export const ZIP_RE = /^\d{5}$/;
 export const TAX_ID_RE = /^[A-Za-z0-9-]{5,20}$/;
@@ -72,8 +75,22 @@ export function validate(rules: Record<string, [string, Rule]>): Record<string, 
   return errors;
 }
 
-/** Existing phones may be stored formatted ("(313) 555-1000"); forms edit the digits only. */
-export const phoneDigits = (v: string | null | undefined) => (v ? v.replace(/\D/g, "").slice(-10) : "");
+/** Splits a stored phone into its country code and 10 digits (older values without a code get +91). */
+export function splitPhone(v: string | null | undefined): { code: string; digits: string } {
+  const t = (v || "").trim();
+  const m = /^\+(1|91)\s*(.*)$/.exec(t);
+  const code = m ? "+" + m[1] : DEFAULT_PHONE_CODE;
+  return { code, digits: (m ? m[2] : t).replace(/\D/g, "").slice(-10) };
+}
+
+/** "+91 9876543210" — empty when no digits were entered. */
+export const joinPhone = (code: string, digits: string) => (digits ? code + " " + digits : "");
+
+/** A stored phone in the form value format ("+91 9876543210"; "" when none). */
+export const phoneDigits = (v: string | null | undefined) => {
+  const { code, digits } = splitPhone(v);
+  return joinPhone(code, digits);
+};
 
 /** Card expiry "MM/YY": a real month, and this month or later. */
 export const cardExpProblem = (exp: string): string | null => {

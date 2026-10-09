@@ -173,6 +173,8 @@ tr.no-hover td { background: transparent; }
 /* While a page loads the whole screen (sidebar included) is blurred, with the loader on top */
 .page-blur { position: fixed; inset: 0; z-index: 45; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; background: rgba(248, 249, 251, 0.55); backdrop-filter: blur(4px); }
 .modal-card .page-loader { min-height: 0; padding: 40px 0; }
+/* saving: above popups too */
+.busy-blur { z-index: 70; }
 .loading-dots::after { content: ""; display: inline-block; width: 1.2em; text-align: left; animation: dots 1.2s steps(4, end) infinite; }
 @keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75%, 100% { content: "..."; } }
 @media (prefers-reduced-motion: reduce) { .loader, .brand-loader::after, .loading-dots::after { animation-duration: 2.4s; } }

@@ -28,7 +28,7 @@ public final class OrgStructureDtos {
             @Pattern(regexp = "^$|(?=.*[A-Za-z0-9])[A-Za-z0-9-]{5,20}", message = "Tax ID must be 5-20 letters or digits") String taxId,
             @Size(max = 255, message = "Max 255 characters")
             @Pattern(regexp = "^$|[\\p{L}0-9 #,.:'/&()-]*\\p{L}[\\p{L}0-9 #,.:'/&()-]*", message = "Address may contain letters, digits and # , . : - / ' & ( ) and must include a street name") String address,
-            @Pattern(regexp = "^$|[0-9]{10}", message = "Phone must be 10 digits") String phone,
+            @Pattern(regexp = com.zmartcredential.util.PhoneNumber.OPTIONAL_PATTERN, message = com.zmartcredential.util.PhoneNumber.MESSAGE) String phone,
             @Email(message = "Valid email required") @Size(max = 255) String email,
             Long clientId) {
     }

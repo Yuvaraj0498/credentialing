@@ -594,7 +594,7 @@ public class ProviderService {
         if (blankToNull(req.specialty()) == null) missing.add("Specialty");
         if (blankToNull(req.email()) == null) missing.add("Email");
         if (blankToNull(req.phone()) == null) missing.add("Phone");
-        else if (!req.phone().trim().matches("[0-9]{10}")) throw new BadRequestException("Phone must be 10 digits");
+        else if (!com.zmartcredential.util.PhoneNumber.isValid(req.phone())) throw BadRequestException.onField("phone", com.zmartcredential.util.PhoneNumber.MESSAGE);
         if (blankToNull(req.licenseNumber()) == null) missing.add("License #");
         if (blankToNull(req.licenseState()) == null) missing.add("License State");
         if (req.licenseExpires() == null) missing.add("License Expires");

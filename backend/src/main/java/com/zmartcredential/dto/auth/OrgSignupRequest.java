@@ -29,7 +29,8 @@ public record OrgSignupRequest(
             @NotBlank(message = "First name is required") String firstName,
             @NotBlank(message = "Last name is required") String lastName,
             @NotBlank @Email(message = "Valid email required") String email,
-            String phone,
+            @NotBlank(message = "Phone is required")
+            @Pattern(regexp = com.zmartcredential.util.PhoneNumber.OPTIONAL_PATTERN, message = com.zmartcredential.util.PhoneNumber.MESSAGE) String phone,
             @NotBlank @Size(min = 8, message = "At least 8 characters") String password) {}
 
     public record Plan(

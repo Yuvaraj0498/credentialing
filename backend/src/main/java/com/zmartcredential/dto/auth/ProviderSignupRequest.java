@@ -10,7 +10,7 @@ public record ProviderSignupRequest(
         @NotBlank(message = "First name is required") String firstName,
         @NotBlank(message = "Last name is required") String lastName,
         @NotBlank @Email(message = "Valid email required") String email,
-        String phone,
+        @Pattern(regexp = com.zmartcredential.util.PhoneNumber.OPTIONAL_PATTERN, message = com.zmartcredential.util.PhoneNumber.MESSAGE) String phone,
         @NotBlank @Size(min = 8, message = "At least 8 characters") String password,
         @NotBlank @Pattern(regexp = "[0-9]{10}", message = "10 digits required") String npi,
         @NotBlank(message = "Specialty is required") String specialty,

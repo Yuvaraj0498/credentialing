@@ -113,8 +113,11 @@ function SidebarUserCard() {
       <div className="flex items-center gap-2 px-1.5 py-0.5">
         {user.role === "platform_admin" ? (
           <>
-            <Avatar name="Super Admin" size={26} />
-            <div className="flex-1 min-w-0 font-medium text-xs text-ink truncate">Super Admin</div>
+            <Avatar name="Patriotmedbill" size={26} />
+            <div className="flex-1 min-w-0 leading-tight">
+              <div className="font-medium text-xs text-ink truncate">Patriotmedbill</div>
+              <div className="text-[10px] text-ink-faint">Super Admin</div>
+            </div>
           </>
         ) : (
           <>

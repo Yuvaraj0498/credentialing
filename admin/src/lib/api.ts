@@ -1,3 +1,4 @@
+import { trackRequest } from "./busy";
 /**
  * REST client for the Spring Boot API.
  * - Access token lives in memory only; the refresh token is an httpOnly cookie set by the API.
@@ -101,7 +102,19 @@ async function parseError(res: Response): Promise<ApiError> {
   }
 }
 
-async function request<T>(method: string, path: string, opts: { query?: Query; body?: unknown; form?: FormData; raw?: boolean; orgId?: number | string | null } = {}, retried = false): Promise<T> {
+type RequestOpts = { query?: Query; body?: unknown; form?: FormData; raw?: boolean; orgId?: number | string | null };
+
+/** Every API call; saving requests (and the refresh right after) show the full-screen "Please wait". */
+async function request<T>(method: string, path: string, opts: RequestOpts = {}): Promise<T> {
+  const done = trackRequest(method, path);
+  try {
+    return await send<T>(method, path, opts, false);
+  } finally {
+    done?.();
+  }
+}
+
+async function send<T>(method: string, path: string, opts: RequestOpts, retried: boolean): Promise<T> {
   let res: Response;
   try {
     res = await fetch(buildUrl(path, opts.query), {
@@ -114,7 +127,7 @@ async function request<T>(method: string, path: string, opts: { query?: Query; b
     throw new ApiError(0, "Cannot reach the server. Check that the API is running and try again.");
   }
   if (res.status === 401 && !retried && !path.startsWith("/auth/")) {
-    if (await refreshAccessToken()) return request<T>(method, path, opts, true);
+    if (await refreshAccessToken()) return send<T>(method, path, opts, true);
     onAuthLost?.();
   }
   if (!res.ok) throw await parseError(res);

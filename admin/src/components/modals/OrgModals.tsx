@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PhoneInput } from "@/components/PhoneInput";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
@@ -242,7 +243,7 @@ function PracticeContactFields({
       </Field>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <Field label="Phone" error={errors.phone}>
-          <input value={phone} onChange={(e) => onChange("phone", digitsOnly(e.target.value, 10))} className="input font-mono" inputMode="numeric" placeholder="10 digits" />
+          <PhoneInput value={phone} onChange={(v) => onChange("phone", v)} invalid={!!errors.phone} />
         </Field>
         <Field label="Email" error={errors.email}>
           <input type="email" value={email} onChange={(e) => onChange("email", e.target.value.trim())} className="input" maxLength={255} placeholder="info@practice.com" />
@@ -308,7 +309,7 @@ export function EditLocationModal({ location, onClose, onSaved }: { location: Lo
           <input value={form.address} onChange={(e) => setForm({ ...form, address: addressChars(e.target.value) })} className="input" placeholder="e.g. 30 Pearly Lane, Gardner, MA 01440" />
         </Field>
         <Field label="Phone" error={errors.phone}>
-          <input value={form.phone} onChange={(e) => setForm({ ...form, phone: digitsOnly(e.target.value, 10) })} className="input font-mono" inputMode="numeric" placeholder="10 digits" />
+          <PhoneInput value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} invalid={!!errors.phone} />
         </Field>
         <FormError message={formError} />
         <div className="flex justify-end gap-2 pt-3 border-t border-line">

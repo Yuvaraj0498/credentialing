@@ -1,6 +1,8 @@
 "use client";
 
 import { Fragment, useEffect, useState } from "react";
+import { PhoneInput } from "@/components/PhoneInput";
+import { PHONE_RE } from "@/lib/validation";
 import { PasswordInput } from "@/components/PasswordInput";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -95,6 +97,7 @@ export function ProviderSignupFlow() {
       if (!data.firstName.trim()) e.firstName = "Required";
       if (!data.lastName.trim()) e.lastName = "Required";
       if (!data.email || !EMAIL_RE.test(data.email)) e.email = "Valid email required";
+      if (data.phone && !PHONE_RE.test(data.phone)) e.phone = "Phone must be 10 digits";
       if (!data.password || data.password.length < 8) e.password = "At least 8 characters";
       if (data.password !== data.confirmPassword) e.confirmPassword = "Passwords don't match";
     } else if (s === 2) {
@@ -126,7 +129,7 @@ export function ProviderSignupFlow() {
         firstName: data.firstName.trim(),
         lastName: data.lastName.trim(),
         email: data.email.trim(),
-        phone: data.phone.trim(),
+        phone: data.phone || undefined,
         password: data.password,
         npi: data.npi,
         specialty: data.specialty,
@@ -225,7 +228,7 @@ export function ProviderSignupFlow() {
                 </div>
                 <div>
                   <label className="label">Phone</label>
-                  <input value={data.phone} onChange={(e) => set("phone", e.target.value)} className="input" autoComplete="tel" />
+                  <PhoneInput value={data.phone} onChange={(v) => set("phone", v)} invalid={!!errors.phone} />
                   <Err msg={errors.phone} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">

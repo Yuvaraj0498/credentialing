@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useRef, useState } from "react";
+import { PhoneInput } from "@/components/PhoneInput";
 import { SPECIALTIES } from "@/lib/constants";
 import { PasswordInput } from "@/components/PasswordInput";
 import { Loading } from "@/components/AsyncState";
@@ -12,7 +13,7 @@ import { US_STATES } from "@/lib/constants";
 import { fmtDate, fmtTs, todayISO } from "@/lib/utils";
 import { ALLOWED_EXT, fileExt, MAX_FILE_BYTES, NPI_RE } from "@/components/providers/shared";
 import { useAsync } from "@/lib/hooks";
-import { digitsOnly, PHONE_RE, phoneDigits } from "@/lib/validation";
+import { PHONE_RE, phoneDigits } from "@/lib/validation";
 import type { PublicInviteInfo, PublicLinkStatus, PublicMissingDoc, PublicUploadResult } from "@/types/providers";
 
 type Step = "profile" | "docs" | "review" | "done";
@@ -423,7 +424,7 @@ function ProfileForm({ profile, errors, onChange }: { profile: Profile; errors: 
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="Phone" required error={errors.phone || (profile.phone && !PHONE_RE.test(profile.phone) ? "Phone must be 10 digits" : undefined)}>
-          <input value={profile.phone} onChange={(e) => set("phone", digitsOnly(e.target.value, 10))} className="input font-mono" inputMode="numeric" placeholder="10 digits" />
+          <PhoneInput value={profile.phone} onChange={(v) => set("phone", v)} invalid={!!errors.phone} />
         </Field>
         <Field label="Date of Birth" error={errors.dateOfBirth}>
           <input type="date" value={profile.dateOfBirth} onChange={(e) => set("dateOfBirth", e.target.value)} className="input" />

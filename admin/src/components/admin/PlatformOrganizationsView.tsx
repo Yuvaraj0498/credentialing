@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { PHONE_RE } from "@/lib/validation";
+import { PhoneInput } from "@/components/PhoneInput";
 import { matchesSearch } from "@/lib/search";
 import { AccessDenied } from "@/components/AlertBox";
 import { ConfirmDialog, Modal } from "@/components/Modal";
@@ -247,6 +249,7 @@ function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
     if (form.taxId && !/^\d{9}$/.test(form.taxId)) e.taxId = "9 digits required";
     if (form.zip && !/^\d{5}$/.test(form.zip)) e.zip = "5 digits required";
     if (form.email && !/^[^@]+@[^@]+\.[^@]+$/.test(form.email)) e.email = "Valid email required";
+    if (form.phone && !PHONE_RE.test(form.phone)) e.phone = "Phone must be 10 digits";
     if (form.packageCode) {
       const n = Number(form.estimatedProviders);
       if (!Number.isInteger(n) || n < 1) e.estimatedProviders = "Whole number, at least 1";
@@ -256,6 +259,7 @@ function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
       if (!form.adminLastName.trim()) e.adminLastName = "Required";
       if (!/^[^@]+@[^@]+\.[^@]+$/.test(form.adminEmail)) e.adminEmail = "Valid email required";
       if (form.adminPassword.length < 8) e.adminPassword = "At least 8 characters";
+      if (form.adminPhone && !PHONE_RE.test(form.adminPhone)) e.adminPhone = "Phone must be 10 digits";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -319,7 +323,7 @@ function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
             <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="input" />
           </Field>
           <Field label="Phone" error={errors.phone}>
-            <input value={form.phone} onChange={(e) => set("phone", e.target.value)} className="input" />
+            <PhoneInput value={form.phone} onChange={(v) => set("phone", v)} invalid={!!errors.phone} />
           </Field>
         </div>
         <Field label="Website" error={errors.website}>
@@ -387,7 +391,7 @@ function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
                   <input value={form.adminTitle} onChange={(e) => set("adminTitle", e.target.value)} className="input" />
                 </Field>
                 <Field label="Phone" error={errors.adminPhone}>
-                  <input value={form.adminPhone} onChange={(e) => set("adminPhone", e.target.value)} className="input" />
+                  <PhoneInput value={form.adminPhone} onChange={(v) => set("adminPhone", v)} invalid={!!errors.adminPhone} />
                 </Field>
               </div>
             </div>

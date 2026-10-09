@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { PhoneInput } from "@/components/PhoneInput";
 import { useEmailCheck } from "@/lib/useEmailCheck";
 import { todayISO } from "@/lib/utils";
 import { PasswordInput } from "@/components/PasswordInput";
@@ -9,7 +10,7 @@ import { Icon } from "@/components/Icon";
 import { ApiError, errorMessage } from "@/lib/api";
 import { SPECIALTIES, SUFFIXES } from "@/lib/constants";
 import { useToast } from "@/stores/toast";
-import { digitsOnly, PHONE_RE, phoneDigits } from "@/lib/validation";
+import { PHONE_RE, phoneDigits } from "@/lib/validation";
 import { EDIT_LICENSE_STATES, EMAIL_RE, NPI_RE, PROVIDER_STATUS_OPTIONS, type OrgStructure } from "@/components/providers/shared";
 import type { ProviderStatus } from "@/types/providers";
 
@@ -302,7 +303,7 @@ export function ProviderForm({
           <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="input" />
         </Field>
         <Field label="Phone *" error={err("phone")}>
-          <input value={form.phone} onChange={(e) => set("phone", digitsOnly(e.target.value, 10))} className="input font-mono" inputMode="numeric" placeholder="10 digits" />
+          <PhoneInput value={form.phone} onChange={(v) => set("phone", v)} invalid={!!err("phone")} />
         </Field>
         {withLogin && (
           <Field label="Password *" error={err("password")} hint="Sign-in: the email + this password">

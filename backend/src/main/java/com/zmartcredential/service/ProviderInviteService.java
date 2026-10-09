@@ -273,7 +273,7 @@ public class ProviderInviteService {
         if (blankToNull(req.suffix()) == null) missing.add("Suffix");
         if (blankToNull(req.specialty()) == null) missing.add("Specialty");
         if (blankToNull(req.phone()) == null) missing.add("Phone");
-        else if (!req.phone().trim().matches("[0-9]{10}")) throw new BadRequestException("Phone must be 10 digits");
+        else if (!com.zmartcredential.util.PhoneNumber.isValid(req.phone())) throw BadRequestException.onField("phone", com.zmartcredential.util.PhoneNumber.MESSAGE);
         if (blankToNull(req.licenseState()) == null) missing.add("License State");
         if (req.licenseExpires() == null) missing.add("License Expiration");
         else if (req.licenseExpires().isBefore(java.time.LocalDate.now())) throw new BadRequestException("License Expiration can't be in the past");

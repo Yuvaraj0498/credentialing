@@ -1,8 +1,9 @@
 "use client";
 
 import { Fragment, useState } from "react";
+import { PhoneInput } from "@/components/PhoneInput";
 import { useEmailCheck } from "@/lib/useEmailCheck";
-import { cardExpProblem } from "@/lib/validation";
+import { cardExpProblem, PHONE_RE } from "@/lib/validation";
 import { PasswordInput } from "@/components/PasswordInput";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -110,6 +111,8 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
       if (!data.lastName.trim()) e.lastName = "Required";
       if (!data.email || !EMAIL_RE.test(data.email)) e.email = "Valid email required";
       else if (emailTaken) e.email = emailTaken;
+      if (!data.phone) e.phone = "Phone is required";
+      else if (!PHONE_RE.test(data.phone)) e.phone = "Phone must be 10 digits";
       if (!data.password || data.password.length < 8) e.password = "At least 8 characters";
       if (data.password !== data.confirmPassword) e.confirmPassword = "Passwords don't match";
     } else if (s === 3) {
@@ -140,7 +143,7 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
       // The card number and CVC never leave the browser: only brand, last 4, expiry and billing details are sent.
       const body = {
         org: { name: data.orgName.trim(), type: data.orgType, taxId: data.taxId, website: data.website.trim(), address: data.address.trim(), city: data.city.trim(), state: data.state, zip: data.zip },
-        admin: { firstName: data.firstName.trim(), lastName: data.lastName.trim(), email: data.email.trim(), phone: data.phone.trim(), password: data.password },
+        admin: { firstName: data.firstName.trim(), lastName: data.lastName.trim(), email: data.email.trim(), phone: data.phone, password: data.password },
         plan: { packageId: data.packageId, estimatedProviders: data.estimatedProviders },
         paymentMethod: { brand: detectCardBrand(digits), last4: digits.slice(-4), exp: data.cardExp, billingName: data.cardName.trim(), billingZip: data.cardZip },
       };
@@ -297,8 +300,8 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
                   <Err msg={errors.email || emailTaken} />
                 </div>
                 <div>
-                  <label className="label">Phone</label>
-                  <input value={data.phone} onChange={(e) => set("phone", e.target.value)} className="input" placeholder="(555) 123-4567" autoComplete="tel" />
+                  <label className="label">Phone *</label>
+                  <PhoneInput value={data.phone} onChange={(v) => set("phone", v)} invalid={!!errors.phone} />
                   <Err msg={errors.phone} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">

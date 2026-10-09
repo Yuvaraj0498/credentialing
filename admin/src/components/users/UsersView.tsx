@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { PhoneInput } from "@/components/PhoneInput";
 import { PasswordInput } from "@/components/PasswordInput";
-import { digitsOnly, PHONE_RE, phoneDigits } from "@/lib/validation";
+import { PHONE_RE, phoneDigits } from "@/lib/validation";
 import { useEmailCheck } from "@/lib/useEmailCheck";
 import { cleanSearch } from "@/lib/utils";
 import { AccessDenied } from "@/components/AlertBox";
@@ -381,7 +382,7 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
             <input type="email" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setErrors((er) => ({ ...er, email: "" })); }} className="input" autoComplete="off" />
           </Field>
           <Field label="Phone *" error={errors.phone}>
-            <input value={form.phone} onChange={(e) => { setForm({ ...form, phone: digitsOnly(e.target.value, 10) }); setErrors((er) => ({ ...er, phone: "" })); }} className="input" inputMode="numeric" placeholder="10 digits" />
+            <PhoneInput value={form.phone} onChange={(v) => { setForm({ ...form, phone: v }); setErrors((er) => ({ ...er, phone: "" })); }} invalid={!!errors.phone} />
           </Field>
           <Field label={user ? "New Password" : "Password *"} error={errors.password} hint={user ? "Blank = keep the current one" : undefined}>
             <PasswordInput value={form.password} onChange={(e) => { setForm({ ...form, password: e.target.value }); setErrors((er) => ({ ...er, password: "" })); }} className="input" placeholder="At least 8 characters" autoComplete="new-password" />

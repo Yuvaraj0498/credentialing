@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PhoneInput } from "@/components/PhoneInput";
 import { AccessDenied } from "@/components/AlertBox";
 import { ConfirmDialog, Modal } from "@/components/Modal";
 import { EmptyState } from "@/components/EmptyState";
@@ -290,7 +291,7 @@ export function LocationFormModal({ location, practices, onSaved, onClose }: { l
           </Field>
         </div>
         <Field label="Phone" error={errors.phone}>
-          <input value={form.phone} onChange={(e) => setForm({ ...form, phone: digitsOnly(e.target.value, 10) })} className="input font-mono" inputMode="numeric" placeholder="10 digits" />
+          <PhoneInput value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} invalid={!!errors.phone} />
         </Field>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={form.active} onChange={(e) => setForm({ ...form, active: e.target.checked })} />

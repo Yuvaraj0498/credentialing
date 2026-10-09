@@ -1,0 +1,30 @@
+"use client";
+
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
+import { busyStore } from "@/lib/busy";
+
+/**
+ * While something is being saved (create / edit / delete / upload) and the list refreshes after it, the whole
+ * screen — sidebar and popups included — is blurred with the loader on top. Quick saves (< 0.2 s) don't flash it.
+ */
+export function BusyOverlay() {
+  const count = useSyncExternalStore(busyStore.subscribe, busyStore.count, () => 0);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    if (count === 0) {
+      const t = setTimeout(() => setShown(false), 0);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => setShown(true), 200);
+    return () => clearTimeout(t);
+  }, [count]);
+  if (!shown || count === 0) return null;
+  return createPortal(
+    <div role="status" aria-live="polite" className="page-blur busy-blur text-sm text-ink-light">
+      <span className="brand-loader" aria-hidden="true" />
+      <span className="loading-dots font-medium">Please wait</span>
+    </div>,
+    document.body
+  );
+}

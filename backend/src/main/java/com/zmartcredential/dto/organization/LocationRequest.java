@@ -22,7 +22,7 @@ public record LocationRequest(
         @Pattern(regexp = "^$|[A-Za-z .'-]{2,100}", message = "City may contain letters, spaces, . ' - only") String city,
         @Pattern(regexp = "^$|[A-Z]{2}", message = "Select a state") String state,
         @Pattern(regexp = "^$|[0-9]{5}", message = "ZIP must be 5 digits") String zip,
-        @Pattern(regexp = "^$|[0-9]{10}", message = "Phone must be 10 digits") String phone,
+        @Pattern(regexp = com.zmartcredential.util.PhoneNumber.OPTIONAL_PATTERN, message = com.zmartcredential.util.PhoneNumber.MESSAGE) String phone,
         @DecimalMin(value = "-90", message = "Invalid latitude") @DecimalMax(value = "90", message = "Invalid latitude") BigDecimal lat,
         @DecimalMin(value = "-180", message = "Invalid longitude") @DecimalMax(value = "180", message = "Invalid longitude") BigDecimal lng,
         Boolean active) {

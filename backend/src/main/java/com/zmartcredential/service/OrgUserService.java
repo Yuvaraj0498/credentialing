@@ -138,9 +138,8 @@ public class OrgUserService {
 
     /** Phone is required for a new user: 10 digits (formatting characters are ignored). */
     private static void requirePhone(String phone) {
-        String digits = phone == null ? "" : phone.replaceAll("\\D", "");
-        if (digits.isEmpty()) throw BadRequestException.onField("phone", "Phone is required");
-        if (digits.length() != 10) throw BadRequestException.onField("phone", "Phone must be 10 digits");
+        if (phone == null || phone.isBlank()) throw BadRequestException.onField("phone", "Phone is required");
+        if (!com.zmartcredential.util.PhoneNumber.isValid(phone)) throw BadRequestException.onField("phone", com.zmartcredential.util.PhoneNumber.MESSAGE);
     }
 
     /**
@@ -212,6 +211,9 @@ public class OrgUserService {
         if (req.password() != null && !req.password().isBlank()) {
             if (req.password().length() < 8) throw new BadRequestException("Password must be at least 8 characters");
             u.setPasswordHash(passwordEncoder.encode(req.password()));
+        }
+        if (req.phone() != null && !req.phone().isBlank() && !com.zmartcredential.util.PhoneNumber.isValid(req.phone())) {
+            throw BadRequestException.onField("phone", com.zmartcredential.util.PhoneNumber.MESSAGE);
         }
         apply(u, orgId, role, req.displayName(), req.firstName(), req.lastName(), req.title(), req.phone(),
                 req.providerId());
