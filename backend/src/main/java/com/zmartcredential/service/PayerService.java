@@ -142,6 +142,56 @@ public class PayerService {
         return payerRepository.findById(id).orElseThrow(() -> NotFoundException.of("Payer", id));
     }
 
+    // ---------- super admin → Payers ----------
+
+    private static final String[] CARD_COLORS = {"#1d4ed8", "#0f766e", "#7c3aed", "#b45309", "#be123c", "#0369a1", "#15803d", "#c2410c"};
+
+    /** Every payer (newest first), for the super admin's Payers page. */
+    @Transactional(readOnly = true)
+    public List<PayerResponse> platformList() {
+        authContext.requireRole(com.zmartcredential.security.Role.PLATFORM_ADMIN);
+        return payerRepository.findAll().stream()
+                .sorted(java.util.Comparator.comparing(Payer::getName, String.CASE_INSENSITIVE_ORDER))
+                .map(p -> EnrollmentSupport.toPayerResponse(p, List.of())).toList();
+    }
+
+    /** Adds (id null) or updates a payer from the super admin's popup. */
+    @Transactional
+    public PayerResponse platformSave(Long id, com.zmartcredential.dto.payer.PlatformPayerRequest r) {
+        authContext.requireRole(com.zmartcredential.security.Role.PLATFORM_ADMIN);
+        String name = r.name().trim().replaceAll("\\s+", " ");
+        payerRepository.findAll().stream()
+                .filter(o -> o.getName() != null && o.getName().equalsIgnoreCase(name) && !o.getId().equals(id))
+                .findFirst().ifPresent(o -> {
+                    throw com.zmartcredential.exception.ConflictException.onField("name", "A payer named \"" + name + "\" already exists");
+                });
+        Payer p = id == null ? new Payer() : load(id);
+        if (id == null) {
+            p.setCode(uniqueCode(name));
+            p.setColor(CARD_COLORS[Math.floorMod(name.toLowerCase().hashCode(), CARD_COLORS.length)]);
+        }
+        p.setName(name);
+        p.setFullName(r.fullName().trim());
+        p.setCategory(r.category().trim());
+        p.setAvgTatDays(r.avgTatDays());
+        p.setIntegration(r.integration());
+        p.setAppForm(r.appForm().trim());
+        p.setPortalAvailable(r.portalAvailable());
+        p.setLogo(r.logo() == null || r.logo().isBlank() ? null : r.logo());
+        p = payerRepository.save(p);
+        return EnrollmentSupport.toPayerResponse(p, id == null ? List.of() : formRepository.findByPayerIdOrderBySortOrderAsc(p.getId()));
+    }
+
+    /** "BCBS TX" → "bcbs_tx" (made unique). */
+    private String uniqueCode(String name) {
+        String base = name.toLowerCase().replaceAll("[^a-z0-9]+", "_").replaceAll("^_+|_+$", "");
+        if (base.isEmpty()) base = "payer";
+        if (base.length() > 34) base = base.substring(0, 34);
+        String code = base;
+        for (int n = 2; payerRepository.findByCode(code).isPresent(); n++) code = base + "_" + n;
+        return code;
+    }
+
     private static void apply(Payer p, PayerRequest r) {
         p.setCode(r.code().trim());
         p.setName(r.name().trim());

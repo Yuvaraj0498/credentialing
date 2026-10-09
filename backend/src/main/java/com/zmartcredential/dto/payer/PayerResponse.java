@@ -30,5 +30,7 @@ public record PayerResponse(
         Boolean active,
         List<PayerFormResponse> forms,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt) {
+        LocalDateTime updatedAt,
+        String logo,
+        Boolean portalAvailable) {
 }

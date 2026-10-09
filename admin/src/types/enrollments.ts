@@ -138,6 +138,9 @@ export interface Payer {
   forms: PayerForm[];
   createdAt: string;
   updatedAt: string;
+  /** Card image (data: URL) set by the super admin; the name's letters are shown without it. */
+  logo: string | null;
+  portalAvailable: boolean;
 }
 
 // ---------- Providers (owned by the providers module; only the lite list is used here) ----------

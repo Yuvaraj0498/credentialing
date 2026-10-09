@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { PayerLogo } from "./PayerLogo";
 import { matchesSearch } from "@/lib/search";
 import { cleanSearch } from "@/lib/utils";
 import { EmptyState } from "@/components/EmptyState";
@@ -134,9 +135,7 @@ export function PayersView() {
             return (
               <div key={p.id} className="card card-pad card-hover">
                 <div className="flex items-start justify-between mb-3">
-                  <div className="w-12 h-12 rounded-lg flex items-center justify-center text-white font-bold text-sm" style={{ background: p.color }}>
-                    {p.name.slice(0, 2)}
-                  </div>
+                  <PayerLogo name={p.name} color={p.color} logo={p.logo} />
                   <Pill type="neutral">{p.category}</Pill>
                 </div>
                 <h3 className="font-display font-semibold text-ink">{p.name}</h3>

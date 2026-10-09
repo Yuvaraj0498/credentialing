@@ -20,6 +20,7 @@ public class PlatformAdminController {
 
     private final PlatformAdminService service;
     private final com.zmartcredential.service.ProviderService providerService;
+    private final com.zmartcredential.service.PayerService payerService;
 
     @Operation(summary = "Super admin dashboard counts")
     @GetMapping("/summary")
@@ -39,6 +40,25 @@ public class PlatformAdminController {
             @RequestParam(required = false) String q, @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
         return providerService.listAllOrganizations(q, status, page, size);
+    }
+
+    @Operation(summary = "Every payer (super admin → Payers)")
+    @GetMapping("/payers")
+    public List<com.zmartcredential.dto.payer.PayerResponse> payers() {
+        return payerService.platformList();
+    }
+
+    @Operation(summary = "Add a payer")
+    @PostMapping("/payers")
+    @ResponseStatus(HttpStatus.CREATED)
+    public com.zmartcredential.dto.payer.PayerResponse addPayer(@Valid @RequestBody com.zmartcredential.dto.payer.PlatformPayerRequest req) {
+        return payerService.platformSave(null, req);
+    }
+
+    @Operation(summary = "Update a payer")
+    @PutMapping("/payers/{id}")
+    public com.zmartcredential.dto.payer.PayerResponse updatePayer(@PathVariable Long id, @Valid @RequestBody com.zmartcredential.dto.payer.PlatformPayerRequest req) {
+        return payerService.platformSave(id, req);
     }
 
     @Operation(summary = "Create an admin: the organization sign-up workflow (organization, admin, plan, payment)")

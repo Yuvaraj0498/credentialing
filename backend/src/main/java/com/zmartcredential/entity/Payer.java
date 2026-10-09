@@ -65,6 +65,13 @@ public class Payer {
 
     private Boolean active = true;
 
+    /** Optional card image (a data: URL), set by the super admin; the name's letters are shown without it. */
+    @Column(columnDefinition = "MEDIUMTEXT")
+    private String logo;
+
+    /** Whether the payer has a provider portal. */
+    private Boolean portalAvailable = true;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

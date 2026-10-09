@@ -25,7 +25,7 @@ export function OrganizationsView() {
   return (
     <div>
       <PageHeader title="Organizations" subtitle="Choose an org admin to see their clients, practices and locations." />
-      <div className="mb-4" style={{ maxWidth: 520 }}>
+      <div className="mb-4">
         <label className="label" htmlFor="sa-admin">Org Admin</label>
         <select id="sa-admin" value={adminId} onChange={(e) => choose(e.target.value)} className="input" disabled={admins.loading}>
           <option value="">{admins.loading ? "Loading admins…" : "— Select an org admin —"}</option>
