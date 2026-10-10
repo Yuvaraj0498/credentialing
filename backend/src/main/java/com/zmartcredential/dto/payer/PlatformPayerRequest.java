@@ -24,7 +24,7 @@ public record PlatformPayerRequest(
         String appForm,
         @NotNull(message = "Choose whether a portal is available")
         Boolean portalAvailable,
-        /* the payer's provider portal login page; required when a portal is available */
+        /* the payer's provider portal login page (required; checked in PayerService) */
         @Size(max = 500, message = "At most 500 characters")
         @Pattern(regexp = "^$|^https?://\\S+$", message = "Enter a full address starting with https://")
         String portalUrl,

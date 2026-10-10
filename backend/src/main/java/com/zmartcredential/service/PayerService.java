@@ -179,8 +179,8 @@ public class PayerService {
         p.setIntegration(r.integration());
         p.setAppForm(r.appForm().trim());
         String portalUrl = r.portalUrl() == null || r.portalUrl().isBlank() ? null : r.portalUrl().trim();
-        if (Boolean.TRUE.equals(r.portalAvailable()) && portalUrl == null) {
-            throw com.zmartcredential.exception.BadRequestException.onField("portalUrl", "Portal login URL is required when a portal is available");
+        if (portalUrl == null) {
+            throw com.zmartcredential.exception.BadRequestException.onField("portalUrl", "Portal login URL is required");
         }
         p.setPortalAvailable(r.portalAvailable());
         p.setPortalUrl(portalUrl);

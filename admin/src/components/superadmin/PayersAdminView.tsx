@@ -178,8 +178,8 @@ function PayerModal({ payer, onClose, onSaved }: { payer: Payer | null; onClose:
     if (!form.integration) e.integration = "Integration is required";
     if (!form.appForm.trim()) e.appForm = "Form is required";
     const url = form.portalUrl.trim();
-    if (form.portalAvailable && !url) e.portalUrl = "Portal login URL is required when a portal is available";
-    else if (url && !URL_RE.test(url)) e.portalUrl = "Enter a full address starting with https://";
+    if (!url) e.portalUrl = "Portal login URL is required";
+    else if (!URL_RE.test(url)) e.portalUrl = "Enter a full address starting with https://";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -254,7 +254,7 @@ function PayerModal({ payer, onClose, onSaved }: { payer: Payer | null; onClose:
           <Field label="Insurance Company Name" required error={errors.fullName}>
             <input value={form.fullName} onChange={(e) => set("fullName", e.target.value.replace(/^\s+/, ""))} className={"input" + (errors.fullName ? " input-error" : "")} maxLength={200} placeholder="e.g. Blue Cross Blue Shield of Texas" />
           </Field>
-          <Field label="Portal Login URL" required={form.portalAvailable} error={errors.portalUrl}>
+          <Field label="Portal Login URL" required error={errors.portalUrl}>
             <input
               value={form.portalUrl}
               onChange={(e) => set("portalUrl", e.target.value.replace(/\s/g, ""))}
@@ -286,10 +286,7 @@ function PayerModal({ payer, onClose, onSaved }: { payer: Payer | null; onClose:
           <input
             type="checkbox"
             checked={form.portalAvailable}
-            onChange={(e) => {
-              set("portalAvailable", e.target.checked);
-              if (!e.target.checked) setErrors((er) => ({ ...er, portalUrl: "" }));
-            }}
+            onChange={(e) => set("portalAvailable", e.target.checked)}
           />{" "}
           Is portal available
         </label>
