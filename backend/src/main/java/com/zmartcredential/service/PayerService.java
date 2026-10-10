@@ -178,7 +178,12 @@ public class PayerService {
         p.setAvgTatDays(r.avgTatDays());
         p.setIntegration(r.integration());
         p.setAppForm(r.appForm().trim());
+        String portalUrl = r.portalUrl() == null || r.portalUrl().isBlank() ? null : r.portalUrl().trim();
+        if (Boolean.TRUE.equals(r.portalAvailable()) && portalUrl == null) {
+            throw com.zmartcredential.exception.BadRequestException.onField("portalUrl", "Portal login URL is required when a portal is available");
+        }
         p.setPortalAvailable(r.portalAvailable());
+        p.setPortalUrl(portalUrl);
         p.setLogo(r.logo() == null || r.logo().isBlank() ? null : r.logo());
         p = payerRepository.save(p);
         return EnrollmentSupport.toPayerResponse(p, id == null ? List.of() : formRepository.findByPayerIdOrderBySortOrderAsc(p.getId()));

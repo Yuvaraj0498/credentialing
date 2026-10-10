@@ -24,6 +24,10 @@ public record PlatformPayerRequest(
         String appForm,
         @NotNull(message = "Choose whether a portal is available")
         Boolean portalAvailable,
+        /* the payer's provider portal login page; required when a portal is available */
+        @Size(max = 500, message = "At most 500 characters")
+        @Pattern(regexp = "^$|^https?://\\S+$", message = "Enter a full address starting with https://")
+        String portalUrl,
         /* optional: data:image/png|jpeg|webp|svg+xml;base64,… (about 500 KB at most) */
         @Size(max = 700000, message = "The image must be 500 KB or smaller")
         @Pattern(regexp = "^$|^data:image/(png|jpeg|webp|svg\\+xml);base64,[A-Za-z0-9+/=]+$", message = "Choose a PNG, JPG, WEBP or SVG image")

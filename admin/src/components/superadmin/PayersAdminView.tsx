@@ -92,7 +92,13 @@ export function PayersAdminView() {
                     </div>
                     <div className="flex justify-between gap-3">
                       <span className="text-ink-faint">Portal</span>
-                      <span>{p.portalAvailable ? "Available" : "Not available"}</span>
+                      {p.portalAvailable && p.portalUrl ? (
+                        <a href={p.portalUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline truncate" title={p.portalUrl}>
+                          Login page
+                        </a>
+                      ) : (
+                        <span>{p.portalAvailable ? "Available" : "Not available"}</span>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -124,8 +130,11 @@ interface PayerForm {
   integration: string;
   appForm: string;
   portalAvailable: boolean;
+  portalUrl: string;
   logo: string;
 }
+
+const URL_RE = /^https?:\/\/[^\s/$.?#][^\s]*$/i;
 
 function PayerModal({ payer, onClose, onSaved }: { payer: Payer | null; onClose: () => void; onSaved: () => void }) {
   const toast = useToast();
@@ -136,7 +145,8 @@ function PayerModal({ payer, onClose, onSaved }: { payer: Payer | null; onClose:
     avgTatDays: payer?.avgTatDays != null ? String(payer.avgTatDays) : "",
     integration: payer?.integration || "",
     appForm: payer?.appForm || "",
-    portalAvailable: payer ? payer.portalAvailable : true,
+    portalAvailable: payer ? payer.portalAvailable : false,
+    portalUrl: payer?.portalUrl || "",
     logo: payer?.logo || "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -167,6 +177,9 @@ function PayerModal({ payer, onClose, onSaved }: { payer: Payer | null; onClose:
     else if (!Number.isInteger(tat) || tat < 1 || tat > 365) e.avgTatDays = "1-365 days";
     if (!form.integration) e.integration = "Integration is required";
     if (!form.appForm.trim()) e.appForm = "Form is required";
+    const url = form.portalUrl.trim();
+    if (form.portalAvailable && !url) e.portalUrl = "Portal login URL is required when a portal is available";
+    else if (url && !URL_RE.test(url)) e.portalUrl = "Enter a full address starting with https://";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -182,6 +195,7 @@ function PayerModal({ payer, onClose, onSaved }: { payer: Payer | null; onClose:
       integration: form.integration,
       appForm: form.appForm.trim(),
       portalAvailable: form.portalAvailable,
+      portalUrl: form.portalUrl.trim() || null,
       logo: form.logo || null,
     };
     try {
@@ -256,8 +270,27 @@ function PayerModal({ payer, onClose, onSaved }: { payer: Payer | null; onClose:
           <input value={form.appForm} onChange={(e) => set("appForm", e.target.value.replace(/^\s+/, ""))} className={"input" + (errors.appForm ? " input-error" : "")} maxLength={150} placeholder="e.g. Ambetter Provider Set-up Form" />
         </Field>
         <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={form.portalAvailable} onChange={(e) => set("portalAvailable", e.target.checked)} /> Is portal available
+          <input
+            type="checkbox"
+            checked={form.portalAvailable}
+            onChange={(e) => {
+              set("portalAvailable", e.target.checked);
+              if (!e.target.checked) setErrors((er) => ({ ...er, portalUrl: "" }));
+            }}
+          />{" "}
+          Is portal available
         </label>
+        <Field label="Portal Login URL" required={form.portalAvailable} error={errors.portalUrl}>
+          <input
+            value={form.portalUrl}
+            onChange={(e) => set("portalUrl", e.target.value.replace(/\s/g, ""))}
+            className={"input font-mono" + (errors.portalUrl ? " input-error" : "")}
+            maxLength={500}
+            placeholder="https://provider.payer.com/login"
+            inputMode="url"
+            autoComplete="off"
+          />
+        </Field>
         <div className="flex justify-end gap-2 pt-3 border-t border-line">
           <button onClick={onClose} className="btn btn-secondary" disabled={busy}>Cancel</button>
           <button onClick={save} className="btn btn-primary" disabled={busy}>

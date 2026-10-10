@@ -93,11 +93,13 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
                       <td className="text-right">
                         <button
                           className="btn-ghost p-1"
-                          title="Details"
+                          title={hasFile ? "Details" : "No file uploaded"}
                           aria-label={"Details for " + doc.label}
+                          disabled={!hasFile}
+                          style={hasFile ? undefined : { opacity: 0.35, cursor: "not-allowed" }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedDocId(doc.id);
+                            if (hasFile) setSelectedDocId(doc.id);
                           }}
                         >
                           <Icon name="Eye" size={13} />
@@ -134,6 +136,7 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
                               >
                                 <Icon name="Eye" size={13} />
                               </button>
+                              <ViewFileButton doc={doc} />
                               <DownloadButton doc={doc} />
                             </div>
                           </div>
@@ -200,6 +203,35 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
         </div>
       </div>
     </div>
+  );
+}
+
+/** Opens the uploaded file in a new browser tab (any status, as long as a file is stored). */
+function ViewFileButton({ doc, label }: { doc: DocumentRow; label?: boolean }) {
+  const toast = useToast();
+  const [busy, setBusy] = useState(false);
+  if (!doc.hasFile) return null;
+  return (
+    <button
+      className={label ? "btn btn-secondary" : "btn-ghost p-1"}
+      style={label ? { fontSize: 11, padding: "5px 10px" } : undefined}
+      title="View file in a new tab"
+      aria-label={"View file " + (doc.fileName || doc.label)}
+      disabled={busy}
+      onClick={async (e) => {
+        e.stopPropagation();
+        setBusy(true);
+        try {
+          await api.openInNewTab("/documents/" + doc.id + "/download", { inline: true });
+        } catch (err) {
+          toast(errorMessage(err), "error");
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      {busy ? <span className="loader" style={{ width: 11, height: 11 }} /> : <Icon name="ExternalLink" size={label ? 11 : 13} />} {label && "View File"}
+    </button>
   );
 }
 
@@ -324,6 +356,7 @@ function DocumentDetails({ doc, onClose, onChanged }: { doc: DocumentRow; onClos
       )}
 
       <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-line">
+        <ViewFileButton doc={doc} label />
         <DownloadButton doc={doc} label />
         {canReview && doc.status !== "approved" && (
           <button className="btn btn-primary" style={{ fontSize: 11, padding: "5px 10px" }} disabled={busy !== null} onClick={() => patch("approve", { status: "approved" }, doc.label + " approved")}>

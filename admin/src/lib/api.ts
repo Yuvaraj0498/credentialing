@@ -160,6 +160,23 @@ export const api = {
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
+  /** Opens a stored file in a new tab (PDFs and images show in the browser). The tab is opened right away so
+   *  popup blockers allow it, then the file is loaded into it. */
+  openInNewTab: async (path: string, query?: Query) => {
+    const win = window.open("", "_blank");
+    if (win) win.document.write("<p style=\"font-family:sans-serif;color:#64748b;padding:24px\">Opening the document…</p>");
+    try {
+      const res = await request<Response>("GET", path, { query, raw: true });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      if (win) win.location.href = url;
+      else window.location.assign(url);
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      win?.close();
+      throw e;
+    }
+  },
 };
 
 export function errorMessage(e: unknown): string {
