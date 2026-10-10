@@ -250,9 +250,22 @@ function PayerModal({ payer, onClose, onSaved }: { payer: Payer | null; onClose:
             </select>
           </Field>
         </div>
-        <Field label="Insurance Company Name" required error={errors.fullName}>
-          <input value={form.fullName} onChange={(e) => set("fullName", e.target.value.replace(/^\s+/, ""))} className={"input" + (errors.fullName ? " input-error" : "")} maxLength={200} placeholder="e.g. Blue Cross Blue Shield of Texas" />
-        </Field>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Insurance Company Name" required error={errors.fullName}>
+            <input value={form.fullName} onChange={(e) => set("fullName", e.target.value.replace(/^\s+/, ""))} className={"input" + (errors.fullName ? " input-error" : "")} maxLength={200} placeholder="e.g. Blue Cross Blue Shield of Texas" />
+          </Field>
+          <Field label="Portal Login URL" required={form.portalAvailable} error={errors.portalUrl}>
+            <input
+              value={form.portalUrl}
+              onChange={(e) => set("portalUrl", e.target.value.replace(/\s/g, ""))}
+              className={"input font-mono" + (errors.portalUrl ? " input-error" : "")}
+              maxLength={500}
+              placeholder="https://provider.payer.com/login"
+              inputMode="url"
+              autoComplete="off"
+            />
+          </Field>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Avg TAT (days)" required error={errors.avgTatDays}>
             <input value={form.avgTatDays} onChange={(e) => set("avgTatDays", e.target.value.replace(/\D/g, "").slice(0, 3))} className={"input font-mono" + (errors.avgTatDays ? " input-error" : "")} inputMode="numeric" placeholder="e.g. 49" />
@@ -280,17 +293,6 @@ function PayerModal({ payer, onClose, onSaved }: { payer: Payer | null; onClose:
           />{" "}
           Is portal available
         </label>
-        <Field label="Portal Login URL" required={form.portalAvailable} error={errors.portalUrl}>
-          <input
-            value={form.portalUrl}
-            onChange={(e) => set("portalUrl", e.target.value.replace(/\s/g, ""))}
-            className={"input font-mono" + (errors.portalUrl ? " input-error" : "")}
-            maxLength={500}
-            placeholder="https://provider.payer.com/login"
-            inputMode="url"
-            autoComplete="off"
-          />
-        </Field>
         <div className="flex justify-end gap-2 pt-3 border-t border-line">
           <button onClick={onClose} className="btn btn-secondary" disabled={busy}>Cancel</button>
           <button onClick={save} className="btn btn-primary" disabled={busy}>
