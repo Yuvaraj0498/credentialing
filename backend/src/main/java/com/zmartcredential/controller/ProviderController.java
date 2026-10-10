@@ -94,6 +94,13 @@ public class ProviderController {
         return providerService.update(id, req);
     }
 
+    @Operation(summary = "Set the provider's sign-in password (creates the sign-in when there is none)")
+    @PutMapping("/{id:\\d+}/login-password")
+    public com.zmartcredential.dto.provider.ProviderDtos.ProviderPasswordResult loginPassword(
+            @PathVariable Long id, @Valid @RequestBody com.zmartcredential.dto.provider.ProviderDtos.ProviderPasswordRequest req) {
+        return orgUserService.setProviderPassword(id, req.password());
+    }
+
     @Operation(summary = "Change provider status")
     @PatchMapping("/{id:\\d+}/status")
     public ProviderDetail status(@PathVariable Long id, @Valid @RequestBody ProviderStatusRequest req) {

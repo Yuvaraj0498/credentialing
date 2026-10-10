@@ -53,7 +53,20 @@ public final class ProviderDtos {
             ProviderDocProgress documentProgress, ProviderEnrollmentCounts enrollments,
             List<ProviderDocumentDtos.ProviderDocumentRow> documents,
             /* Credentials block: whether a CAQH password is stored (never the password itself), PECOS access */
-            boolean hasCaqhPassword, Boolean pecosAccessGranted, String pecosUsername) {
+            boolean hasCaqhPassword, Boolean pecosAccessGranted, String pecosUsername,
+            /* the provider has a sign-in (username = their email) */
+            boolean hasLogin) {
+    }
+
+    /** Edit Provider → Change Password: the provider's sign-in password (8-100 characters). */
+    public record ProviderPasswordRequest(
+            @jakarta.validation.constraints.NotBlank(message = "Enter the new password")
+            @jakarta.validation.constraints.Size(min = 8, max = 100, message = "8-100 characters")
+            String password) {
+    }
+
+    /** created: the provider had no sign-in, so one was created (username = their email). */
+    public record ProviderPasswordResult(boolean created, String username) {
     }
 
     /** Manual add (ManualAddModal) - also used by API clients for a full create. */

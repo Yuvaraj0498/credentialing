@@ -38,6 +38,8 @@ export interface DocumentRow {
 }
 
 export interface ProviderDetail {
+  /** the provider has a sign-in (username = their email) */
+  hasLogin?: boolean;
   id: number;
   firstName: string;
   lastName: string;

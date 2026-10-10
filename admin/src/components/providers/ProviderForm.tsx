@@ -61,6 +61,8 @@ export interface ProviderFormPayload {
   locationId: number | null;
   /** withLogin: the provider's sign-in password (their email is the username) */
   password?: string;
+  /** Edit Provider → Change Password: a new sign-in password (only when one was typed) */
+  newPassword?: string;
 }
 
 const idStr = (v: number | null | undefined) => (v == null ? "" : String(v));
@@ -77,6 +79,7 @@ export function ProviderForm({
   hasStoredPassword = false,
   providerId,
   withLogin = false,
+  changePassword,
   lockCaqhId = false,
   lockPlacement = false,
   submitLabel,
@@ -94,6 +97,8 @@ export function ProviderForm({
   providerId?: number;
   /** adding a provider: also ask for a sign-in password (the provider signs in with their email) */
   withLogin?: boolean;
+  /** editing a provider: an optional Change Password field; hasLogin = the provider already has a sign-in */
+  changePassword?: { hasLogin: boolean };
   /** CAQH import: the CAQH ID comes from the lookup and can't change */
   lockCaqhId?: boolean;
   /** Organization screen: the client / practice / location are fixed */
@@ -174,6 +179,8 @@ export function ProviderForm({
       if (!form.password) e.password = "Required";
       else if (form.password.length < 8) e.password = "At least 8 characters";
     }
+    // Change Password is optional: checked only when something was typed
+    if (changePassword && form.password && form.password.length < 8) e.password = "At least 8 characters";
     req("firstName", form.firstName);
     req("lastName", form.lastName);
     req("suffix", form.suffix);
@@ -231,6 +238,7 @@ export function ProviderForm({
         practiceId: num(form.practiceId),
         locationId: num(form.locationId),
         ...(withLogin ? { password: form.password } : {}),
+        ...(changePassword && form.password ? { newPassword: form.password } : {}),
       });
     } catch (err) {
       if (err instanceof ApiError) {
@@ -298,10 +306,19 @@ export function ProviderForm({
           ))}
         </select>
       </Field>
-      <div className={"grid grid-cols-1 gap-3 " + (withLogin ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
+      <div className={"grid grid-cols-1 gap-3 " + (withLogin || changePassword ? "sm:grid-cols-3" : "sm:grid-cols-2")}>
         <Field label="Email *" error={err("email") || emailTaken}>
           <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="input" />
         </Field>
+        {changePassword && (
+          <Field
+            label="Change Password"
+            error={err("password")}
+            hint={changePassword.hasLogin ? "Leave blank to keep the current password" : "No sign-in yet — a password lets the provider sign in with their email"}
+          >
+            <PasswordInput value={form.password} onChange={(e) => set("password", e.target.value)} className="input" autoComplete="new-password" placeholder="New password" />
+          </Field>
+        )}
         <Field label="Phone *" error={err("phone")}>
           <PhoneInput value={form.phone} onChange={(v) => set("phone", v)} invalid={!!err("phone")} />
         </Field>

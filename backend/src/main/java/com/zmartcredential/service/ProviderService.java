@@ -81,6 +81,7 @@ public class ProviderService {
     private final ProviderModuleSupport support;
     private final AuthContext authContext;
     private final CryptoService cryptoService;
+    private final com.zmartcredential.repository.AppUserRepository userRepository;
 
     // ---------- list / read ----------
 
@@ -282,7 +283,20 @@ public class ProviderService {
         if (req.pecosUsername() != null && !Boolean.FALSE.equals(p.getPecosAccessGranted())) p.setPecosUsername(blankToNull(req.pecosUsername()));
         p.setSpecialty(blankToNull(req.specialty()));
         emailRegistry.requireFreeForProvider(req.email(), p.getId());
+        String oldEmail = p.getEmail();
         p.setEmail(lower(req.email()));
+        // the provider signs in with their email: a changed email changes the sign-in username too
+        String newEmail = p.getEmail();
+        userRepository.findByProviderId(p.getId()).ifPresent(u -> {
+            if (newEmail == null || newEmail.equalsIgnoreCase(u.getUsername())) return;
+            if (oldEmail != null && !oldEmail.equalsIgnoreCase(u.getUsername())) return; // custom username: kept
+            if (userRepository.existsByUsername(newEmail)) {
+                throw ConflictException.onField("email", "An account with this email already exists");
+            }
+            u.setUsername(newEmail);
+            u.setEmail(newEmail);
+            userRepository.save(u);
+        });
         p.setPhone(blankToNull(req.phone()));
         p.setLicenseNumber(blankToNull(req.licenseNumber()));
         p.setLicenseState(upper(req.licenseState()));
@@ -462,7 +476,8 @@ public class ProviderService {
                 p.getStatus(), p.getTelemed(), p.getSource(), p.getDateAdded(), p.getSelfSignup(),
                 p.getCreatedAt(), p.getUpdatedAt(),
                 support.progressFromRows(rows), enrollmentCounts(enrollments), rows,
-                p.getCaqhPasswordEnc() != null, p.getPecosAccessGranted(), p.getPecosUsername());
+                p.getCaqhPasswordEnc() != null, p.getPecosAccessGranted(), p.getPecosUsername(),
+                userRepository.findByProviderId(p.getId()).isPresent());
     }
 
     record Hierarchy(Long clientId, Long practiceId, Long locationId) {

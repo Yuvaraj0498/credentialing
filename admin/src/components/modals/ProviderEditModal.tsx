@@ -32,11 +32,17 @@ export function ProviderEditModal({ provider, onSaved, onClose }: { provider: Pr
           org={org.data}
           initial={provider}
           hasStoredPassword={!!provider.hasCaqhPassword}
+          changePassword={{ hasLogin: !!provider.hasLogin }}
           providerId={provider.id}
           submitLabel="Update"
           onCancel={onClose}
-          onSubmit={async (body) => {
-            const p = await api.put<ProviderDetail>("/providers/" + provider.id, body);
+          onSubmit={async ({ newPassword, ...body }) => {
+            let p = await api.put<ProviderDetail>("/providers/" + provider.id, body);
+            if (newPassword) {
+              // the provider's sign-in password (creates the sign-in when the provider has none yet)
+              await api.put("/providers/" + provider.id + "/login-password", { password: newPassword });
+              p = await api.get<ProviderDetail>("/providers/" + provider.id);
+            }
             onSaved(p);
           }}
         />

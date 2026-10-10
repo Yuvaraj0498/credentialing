@@ -157,6 +157,28 @@ public class OrgUserService {
         if (password.length() > 100) throw BadRequestException.onField("password", "At most 100 characters");
     }
 
+    /**
+     * Edit Provider → Change Password: sets the provider's sign-in password, or creates their sign-in
+     * (username = their email) when they have none yet, e.g. providers added by secure link before it asked
+     * for a password.
+     */
+    @Transactional
+    public com.zmartcredential.dto.provider.ProviderDtos.ProviderPasswordResult setProviderPassword(Long providerId, String password) {
+        permissionService.require("provider", "update");
+        providerService.get(providerId); // the provider must be one this user can open
+        if (password == null || password.length() < 8) throw BadRequestException.onField("password", "At least 8 characters");
+        if (password.length() > 100) throw BadRequestException.onField("password", "At most 100 characters");
+        java.util.Optional<AppUser> existing = userRepository.findByProviderId(providerId);
+        if (existing.isPresent()) {
+            AppUser u = existing.get();
+            u.setPasswordHash(passwordEncoder.encode(password));
+            userRepository.save(u);
+            return new com.zmartcredential.dto.provider.ProviderDtos.ProviderPasswordResult(false, u.getUsername());
+        }
+        UserResponse created = createProviderLogin(providerId, password, null);
+        return new com.zmartcredential.dto.provider.ProviderDtos.ProviderPasswordResult(true, created.username());
+    }
+
     /** The sign-in of a provider that was just added; username = the provider's email (the caller checked the permissions). */
     @Transactional
     public UserResponse createProviderLogin(Long providerId, String password, Long userRoleId) {
