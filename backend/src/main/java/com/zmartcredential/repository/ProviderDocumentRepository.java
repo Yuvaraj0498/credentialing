@@ -16,6 +16,9 @@ public interface ProviderDocumentRepository extends JpaRepository<ProviderDocume
 
     List<ProviderDocument> findByProviderId(Long providerId);
 
+    /** Documents (with a file) whose expiration date is in [from, to]. */
+    List<ProviderDocument> findByExpiresAtBetweenAndStorageKeyIsNotNull(java.time.LocalDate from, java.time.LocalDate to);
+
     Optional<ProviderDocument> findByProviderIdAndDocType(Long providerId, String docType);
 
     // enrollments module
