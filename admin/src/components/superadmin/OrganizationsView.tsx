@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { Icon } from "@/components/Icon";
 import { PageHeader } from "@/components/PageHeader";
 import { api } from "@/lib/api";
 import { useAsync } from "@/lib/hooks";
@@ -41,9 +42,32 @@ export function OrganizationsView() {
       </div>
       {admin ? (
         <>
-          <div className="tabs mb-4">
-            <div className={"tab " + (tab === "structure" ? "active" : "")} onClick={() => setTab("structure")}>Clients &amp; Locations</div>
-            <div className={"tab " + (tab === "payers" ? "active" : "")} onClick={() => setTab("payers")}>Payers</div>
+          {/* two bordered tabs; the selected one is highlighted */}
+          <div className="flex gap-2 mb-4" role="tablist">
+            {([
+              { id: "structure", label: "Clients & Locations", icon: "Building2" },
+              { id: "payers", label: "Payers", icon: "CreditCard" },
+            ] as const).map((t) => {
+              const active = tab === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setTab(t.id)}
+                  className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors"
+                  style={{
+                    border: "1.5px solid " + (active ? "var(--accent)" : "var(--line-strong, #cbd5e1)"),
+                    background: active ? "var(--accent)" : "var(--paper)",
+                    color: active ? "white" : "var(--ink-light)",
+                    boxShadow: active ? "0 2px 8px rgba(249, 115, 22, 0.25)" : "none",
+                  }}
+                >
+                  <Icon name={t.icon} size={15} /> {t.label}
+                </button>
+              );
+            })}
           </div>
           {tab === "structure" ? (
             <OrgStructurePanel key={admin.orgId} orgId={admin.orgId} />
