@@ -313,7 +313,7 @@ public class ProviderInviteService {
             if (req.password() == null || req.password().length() < 8) {
                 throw com.zmartcredential.exception.BadRequestException.onField("password", "Choose a password of at least 8 characters");
             }
-            orgUserService.createProviderLogin(p.getId(), req.password(), null, false);
+            orgUserService.createProviderLogin(p.getId(), req.password(), null, true);
         }
         inv.setStatus("submitted");
         inv.setSubmittedAt(LocalDateTime.now());
