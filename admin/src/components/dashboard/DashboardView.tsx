@@ -59,7 +59,18 @@ export function DashboardView() {
           <StatCard label="Avg Turnaround" value={avgTat} sub="Approved applications" icon="Clock" color="var(--info)" />
         </Link>
         <Link href="/enrollments" className="block">
-          <StatCard label="Active Enrollments" value={stats.activeEnrollments} sub={stats.approvedEnrollments + " approved"} icon="Activity" color="var(--success)" />
+          {/* active = in progress + submitted (as in the prototype); approved ones are counted separately */}
+          <StatCard
+            label="Active Enrollments"
+            value={stats.activeEnrollments}
+            sub={
+              <span title="Active = enrollments In Progress + Submitted. Approved enrollments are finished and counted separately.">
+                {(data.enrollmentsByStatus.in_progress || 0) + " in progress + " + (data.enrollmentsByStatus.submitted || 0) + " submitted · " + stats.approvedEnrollments + " approved"}
+              </span>
+            }
+            icon="Activity"
+            color="var(--success)"
+          />
         </Link>
       </div>
 

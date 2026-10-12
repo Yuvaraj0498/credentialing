@@ -44,6 +44,8 @@ interface Profile {
 interface Uploaded {
   fileName: string;
   size: number;
+  /** the expiration date sent with the file (expiring documents) */
+  expiresAt?: string;
 }
 
 /**
@@ -392,6 +394,7 @@ export function SecureLinkPortal({ token }: { token: string }) {
                       <Icon name="CheckCircle2" size={11} style={{ color: "var(--success)" }} />
                       <span className="font-medium">{docs.find((d) => d.docType === docType)?.label || docType}:</span>
                       <span className="text-ink-light font-mono truncate">{u.fileName}</span>
+                      {u.expiresAt && <span className="text-ink-faint">· expires {fmtDate(u.expiresAt)}</span>}
                     </div>
                   ))}
                   {Object.keys(uploaded).length === 0 && <div className="text-ink-faint">No new documents uploaded.</div>}
@@ -544,7 +547,8 @@ function ProfileForm({ profile, errors, loginEmail, onChange }: { profile: Profi
 /** One requested document: pick a file (+ expiration for expiring documents) and it is uploaded right away. */
 function DocUploadRow({ doc, uploaded, base, pin, onUploaded }: { doc: PublicMissingDoc; uploaded?: Uploaded; base: string; pin: string; onUploaded: (u: Uploaded) => void }) {
   const ref = useRef<HTMLInputElement>(null);
-  const [expiresAt, setExpiresAt] = useState("");
+  // the date stays with the uploaded file (also when coming back to this step)
+  const [expiresAt, setExpiresAt] = useState(uploaded?.expiresAt || "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -573,8 +577,7 @@ function DocUploadRow({ doc, uploaded, base, pin, onUploaded }: { doc: PublicMis
     setBusy(true);
     try {
       await api.upload<PublicUploadResult>(base + "/upload", form);
-      onUploaded({ fileName: file.name, size: file.size });
-      setExpiresAt("");
+      onUploaded({ fileName: file.name, size: file.size, expiresAt: needsDate ? expiresAt : undefined });
       setDateTried(false);
     } catch (err) {
       setError(errorMessage(err));
@@ -600,6 +603,7 @@ function DocUploadRow({ doc, uploaded, base, pin, onUploaded }: { doc: PublicMis
           {uploaded ? (
             <div className="text-xs font-mono mt-0.5" style={{ color: "var(--success)" }}>
               {uploaded.fileName} ({Math.max(1, Math.round(uploaded.size / 1024))} KB)
+              {uploaded.expiresAt && <span className="text-ink-light"> · expires {fmtDate(uploaded.expiresAt)}</span>}
             </div>
           ) : (
             <div className="text-xs text-ink-faint mt-0.5">No file uploaded</div>
@@ -637,6 +641,9 @@ function DocUploadRow({ doc, uploaded, base, pin, onUploaded }: { doc: PublicMis
           }}
         />
       </div>
+      {uploaded && needsDate && expiresAt && uploaded.expiresAt && expiresAt !== uploaded.expiresAt && !dateProblem && (
+        <div className="text-[11px] mt-1 text-ink-light">The saved date is {fmtDate(uploaded.expiresAt)} — click Replace and choose the file again to save the new date.</div>
+      )}
       {(dateTried || (expiresAt && expiresAt < todayISO())) && dateProblem && (
         <div className="text-[11px] mt-1" style={{ color: "var(--danger)" }}>{dateProblem}</div>
       )}
