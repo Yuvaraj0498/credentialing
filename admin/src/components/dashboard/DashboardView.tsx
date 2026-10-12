@@ -9,7 +9,6 @@ import { Icon } from "@/components/Icon";
 import { PageHeader } from "@/components/PageHeader";
 import { Pill } from "@/components/Pill";
 import { StatCard } from "@/components/StatCard";
-import { HorizontalBars } from "@/components/Charts";
 import { useTopic } from "@/stores/shell";
 import { api } from "@/lib/api";
 import { fmtDate } from "@/lib/utils";
@@ -70,7 +69,7 @@ export function DashboardView() {
           <div className="flex items-baseline justify-between mb-4">
             <div>
               <h3 className="font-display text-lg font-semibold text-ink">Enrollments by Payer</h3>
-              <p className="text-xs text-ink-light">Top payers by volume</p>
+              <p className="text-xs text-ink-light">Every payer with enrollments · count at the end of each row</p>
             </div>
           </div>
           <EnrollmentsByPayerChart items={data.enrollmentsByPayer} />
@@ -154,6 +153,31 @@ export function DashboardView() {
 /** Prototype EnrollmentsByPayerChart: top 6 payers by enrollment volume. */
 export function EnrollmentsByPayerChart({ items }: { items: DashboardPayerCount[] }) {
   if (items.length === 0) return <div className="text-xs text-ink-faint py-6 text-center">No enrollments yet.</div>;
-  const top = [...items].sort((a, b) => b.total - a.total).slice(0, 6);
-  return <HorizontalBars items={top.map((p) => ({ name: p.payerName, color: p.color, count: p.total }))} />;
+  // every payer that has enrollments, most enrollments first; the list scrolls inside the card
+  const all = [...items].sort((a, b) => b.total - a.total || a.payerName.localeCompare(b.payerName));
+  const max = Math.max(...all.map((p) => p.total), 1);
+  return (
+    <div className="space-y-2.5 pr-1" style={{ maxHeight: 320, overflowY: "auto" }}>
+      {all.map((p) => (
+        <div key={p.payerId}>
+          <div className="flex items-center justify-between gap-2 text-xs mb-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: p.color }}></div>
+              <span className="text-ink font-medium truncate" title={p.payerName}>{p.payerName}</span>
+            </div>
+            <span
+              className="font-mono font-semibold text-[11px] rounded-full px-2 py-0.5 flex-shrink-0"
+              style={{ background: "var(--bg-soft-2)", color: "var(--ink)" }}
+              title={p.total + " enrollment(s): " + p.approved + " approved, " + p.inProgress + " in progress, " + p.submitted + " submitted"}
+            >
+              {p.total}
+            </span>
+          </div>
+          <div className="progress">
+            <div className="progress-bar" style={{ width: (p.total / max) * 100 + "%", background: p.color }}></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }

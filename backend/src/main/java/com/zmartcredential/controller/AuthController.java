@@ -93,6 +93,13 @@ public class AuthController {
 
     private static final String SIGNUP_CLOSED = "Sign-up is closed. Your administrator creates accounts.";
 
+    @Operation(summary = "Provider: change your own password")
+    @PostMapping("/change-password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changePassword(@Valid @RequestBody com.zmartcredential.dto.auth.PasswordResetDtos.ChangePasswordRequest req) {
+        authService.changePassword(req.currentPassword(), req.newPassword());
+    }
+
     @Operation(summary = "Forgot password: email a 6-digit code (never reveals whether the email has an account)")
     @PostMapping("/forgot-password")
     public com.zmartcredential.dto.auth.PasswordResetDtos.MessageResponse forgotPassword(

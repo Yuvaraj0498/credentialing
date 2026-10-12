@@ -11,7 +11,8 @@ public final class PermissionDtos {
     private PermissionDtos() {
     }
 
-    public record RoleInfo(String id, String label, String color, String desc) {
+    /** locked: the built-in Admin role — every permission, not changeable. */
+    public record RoleInfo(String id, String label, String color, String desc, boolean locked) {
     }
 
     public record PermissionMatrixResponse(

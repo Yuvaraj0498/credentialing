@@ -46,6 +46,7 @@ public class OrgUserService {
     private final AuthContext authContext;
     private final PermissionService permissionService;
     private final PasswordEncoder passwordEncoder;
+    private final ProviderWelcomeMailer welcomeMailer;
     private final com.zmartcredential.repository.UserRoleRepository userRoleRepository;
 
     @Transactional(readOnly = true)
@@ -182,6 +183,12 @@ public class OrgUserService {
     /** The sign-in of a provider that was just added; username = the provider's email (the caller checked the permissions). */
     @Transactional
     public UserResponse createProviderLogin(Long providerId, String password, Long userRoleId) {
+        return createProviderLogin(providerId, password, userRoleId, true);
+    }
+
+    /** passwordInEmail: the sign-in email shows the password (false: the provider chose it, e.g. secure link). */
+    @Transactional
+    public UserResponse createProviderLogin(Long providerId, String password, Long userRoleId, boolean passwordInEmail) {
         Provider p = providerRepository.findById(providerId).orElseThrow(() -> NotFoundException.of("Provider", providerId));
         checkProviderLogin(p.getEmail(), password);
         String email = p.getEmail().trim().toLowerCase(Locale.ROOT);
@@ -194,7 +201,9 @@ public class OrgUserService {
         apply(u, p.getOrgId(), Role.PROVIDER.code(), name, p.getFirstName(), p.getLastName(), p.getSuffix(), p.getPhone(), providerId);
         u.setUserRoleId(userRoleId != null ? requireUserRole(userRoleId) : userRoleRepository.defaultFor(Role.PROVIDER.code()));
         u.setDisabled(false);
-        return toResponses(List.of(userRepository.save(u))).getFirst();
+        UserResponse saved = toResponses(List.of(userRepository.save(u))).getFirst();
+        welcomeMailer.send(providerId, email, passwordInEmail ? password : null);
+        return saved;
     }
 
     @Transactional

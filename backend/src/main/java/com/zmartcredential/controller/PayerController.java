@@ -62,6 +62,20 @@ public class PayerController {
         return payerService.create(req);
     }
 
+    @Operation(summary = "Organization admin: add a payer (duplicates by name / portal URL are checked against every payer)")
+    @PostMapping("/org-add")
+    public com.zmartcredential.service.PayerService.OrgPayerAddResult orgAdd(
+            @Valid @RequestBody com.zmartcredential.dto.payer.PlatformPayerRequest req) {
+        return payerService.orgAdd(req);
+    }
+
+    @Operation(summary = "Organization admin: enable an existing payer that is switched off for the organization")
+    @PostMapping("/{id}/org-enable")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void orgEnable(@PathVariable Long id) {
+        payerService.orgEnable(id);
+    }
+
     @Operation(summary = "Update a payer")
     @PutMapping("/{id}")
     public PayerResponse update(@PathVariable Long id, @Valid @RequestBody PayerRequest req) {

@@ -9,6 +9,7 @@ import { Logo } from "./Logo";
 import { useAuth, useUser } from "@/stores/auth";
 import { MAIN_NAV, PROVIDER_NAV, SUPER_NAV, SYSTEM_NAV, isVisible, type NavItem } from "@/lib/nav";
 import { useShell } from "@/stores/shell";
+import { ChangePasswordModal } from "@/components/auth/ChangePasswordModal";
 
 function NavLink({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const pathname = usePathname();
@@ -103,6 +104,7 @@ function SidebarUserCard() {
   const { logout } = useAuth();
   const router = useRouter();
   const [signingOut, setSigningOut] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
   const signOut = async () => {
     setSigningOut(true);
     await logout();
@@ -128,10 +130,16 @@ function SidebarUserCard() {
             </div>
           </>
         )}
+        {user.role === "provider" && (
+          <button onClick={() => setChangingPassword(true)} className="btn-ghost p-1.5 rounded-md hover:text-accent" title="Change password" aria-label="Change password">
+            <Icon name="KeyRound" size={15} />
+          </button>
+        )}
         <button onClick={signOut} disabled={signingOut} className="btn-ghost p-1.5 rounded-md hover:text-danger" title="Sign out" aria-label="Sign out">
           <Icon name="LogOut" size={15} />
         </button>
       </div>
+      {changingPassword && <ChangePasswordModal onClose={() => setChangingPassword(false)} />}
     </div>
   );
 }

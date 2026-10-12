@@ -3,35 +3,59 @@
 import { useState } from "react";
 import { AsyncBoundary } from "@/components/AsyncState";
 import { ConfirmDialog } from "@/components/Modal";
-import { EmptyState } from "@/components/EmptyState";
 import { Icon } from "@/components/Icon";
 import { PageHeader } from "@/components/PageHeader";
 import { useShell, useTopic } from "@/stores/shell";
 import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/stores/auth";
-import { fmtTs } from "@/lib/utils";
+import { matchesSearch } from "@/lib/search";
+import { cleanSearch, fmtTs } from "@/lib/utils";
 import { useAsync } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
 import type { NotificationListResponse, NotificationRow } from "@/types/notifications";
 
-type Filter = "all" | "unread";
+/** "just now", "5 min ago", "3 h ago", "2 days ago", else the date. */
+function timeAgo(iso: string): string {
+  const diff = Date.now() - new Date(iso).getTime();
+  if (!Number.isFinite(diff) || diff < 0) return fmtTs(iso);
+  const min = Math.floor(diff / 60000);
+  if (min < 1) return "just now";
+  if (min < 60) return min + " min ago";
+  const h = Math.floor(min / 60);
+  if (h < 24) return h + " h ago";
+  const d = Math.floor(h / 24);
+  if (d < 7) return d + (d === 1 ? " day ago" : " days ago");
+  return fmtTs(iso);
+}
 
+/** A colour with transparency, for the tinted icon circle (accepts #rgb / #rrggbb, else a CSS colour). */
+function tint(color: string | null | undefined, alpha: number): string {
+  const c = color || "";
+  const m = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(c);
+  if (!m) return "var(--accent-soft, rgba(249,115,22,.12))";
+  const hex = m[1].length === 3 ? m[1].split("").map((x) => x + x).join("") : m[1];
+  const n = parseInt(hex, 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${alpha})`;
+}
+
+/** Notifications: unread and read side by side. */
 export function NotificationsView() {
   const { user } = useAuth();
   const { publish } = useShell();
   const toast = useToast();
-  const [filter, setFilter] = useState<Filter>("all");
   const [busyId, setBusyId] = useState<number | null>(null);
   const [markingAll, setMarkingAll] = useState(false);
   const [deleting, setDeleting] = useState<NotificationRow | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [search, setSearch] = useState("");
 
-  const { data, loading, error, reload } = useAsync(() => api.get<NotificationListResponse>("/notifications", { filter }), [filter]);
+  const { data, loading, error, reload } = useAsync(() => api.get<NotificationListResponse>("/notifications", { filter: "all" }), []);
   useTopic("notifications", reload);
 
-  const notifications = data?.items ?? [];
+  const all = (data?.items ?? []).filter((n) => matchesSearch(search, n.title, n.body));
+  const unread = all.filter((n) => !n.read);
+  const read = all.filter((n) => n.read);
   const unreadCount = data?.unread ?? 0;
-  const total = data?.total ?? 0;
   const isAuditor = user?.role === "auditor";
 
   // publish() re-runs our own reload via useTopic and refreshes the sidebar badge.
@@ -77,52 +101,106 @@ export function NotificationsView() {
     }
   };
 
+  const card = (n: NotificationRow) => (
+    <div
+      key={n.id}
+      className="group relative rounded-xl border p-3.5 flex items-start gap-3 transition-shadow hover:shadow-md"
+      style={{
+        background: n.read ? "var(--paper)" : "linear-gradient(135deg, var(--paper) 0%, " + tint(n.color, 0.06) + " 100%)",
+        borderColor: n.read ? "var(--line)" : tint(n.color, 0.35),
+        opacity: busyId === n.id ? 0.6 : 1,
+      }}
+    >
+      <div className="w-9 h-9 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: tint(n.color, n.read ? 0.08 : 0.16) }}>
+        <Icon name={n.icon || "Bell"} size={16} style={{ color: n.color || "var(--accent)" }} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-start justify-between gap-2">
+          <div className={"text-sm leading-snug " + (n.read ? "text-ink-light font-medium" : "text-ink font-semibold")}>{n.title}</div>
+          {!n.read && <span className="w-2 h-2 rounded-full flex-shrink-0 mt-1.5" style={{ background: n.color || "var(--accent)" }} aria-label="Unread" />}
+        </div>
+        {n.body && <div className="text-xs text-ink-light mt-1 leading-relaxed">{n.body}</div>}
+        <div className="flex items-center gap-3 mt-2.5">
+          <span className="text-[11px] text-ink-faint inline-flex items-center gap-1" title={fmtTs(n.createdAt)}>
+            <Icon name="Clock" size={11} /> {timeAgo(n.createdAt)}
+          </span>
+          {n.broadcast && (
+            <span className="text-[10px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded" style={{ background: "var(--bg-soft-2)", color: "var(--ink-light)" }}>
+              Everyone
+            </span>
+          )}
+          <div className="ml-auto flex items-center gap-1">
+            {!n.read && (
+              <button
+                onClick={() => markRead(n)}
+                disabled={busyId === n.id}
+                className="btn btn-ghost text-[11px] px-2 py-1"
+                style={{ color: "var(--accent)" }}
+                aria-label={"Mark read: " + n.title}
+              >
+                <Icon name="Check" size={12} /> Mark read
+              </button>
+            )}
+            {!(isAuditor && n.broadcast) && (
+              <button onClick={() => setDeleting(n)} className="btn btn-ghost p-1.5 text-ink-faint hover:text-danger" title="Delete" aria-label={"Delete: " + n.title}>
+                <Icon name="Trash2" size={12} />
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const column = (title: string, icon: string, color: string, items: NotificationRow[], empty: { title: string; text: string }, action?: React.ReactNode) => (
+    <section className="card flex flex-col min-h-0" style={{ overflow: "hidden" }}>
+      <header className="flex items-center gap-2.5 px-4 py-3 border-b border-line" style={{ background: tint(color, 0.05) }}>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: tint(color, 0.15) }}>
+          <Icon name={icon} size={15} style={{ color }} />
+        </div>
+        <h3 className="font-display font-semibold text-ink">{title}</h3>
+        <span className="text-xs font-mono font-semibold rounded-full px-2 py-0.5" style={{ background: tint(color, 0.15), color }}>{items.length}</span>
+        <div className="ml-auto">{action}</div>
+      </header>
+      <div className="p-3 space-y-2.5 overflow-y-auto" style={{ maxHeight: "calc(100vh - 290px)", minHeight: 160 }}>
+        {items.length === 0 ? (
+          <div className="flex flex-col items-center justify-center text-center py-10">
+            <div className="w-12 h-12 rounded-full flex items-center justify-center mb-2" style={{ background: tint(color, 0.1) }}>
+              <Icon name={icon} size={20} style={{ color }} />
+            </div>
+            <div className="text-sm font-medium text-ink">{empty.title}</div>
+            <div className="text-xs text-ink-faint mt-0.5">{empty.text}</div>
+          </div>
+        ) : (
+          items.map(card)
+        )}
+      </div>
+    </section>
+  );
+
   return (
     <div>
-      <PageHeader
-        title="Notifications"
-        subtitle={unreadCount + " unread"}
-        actions={unreadCount > 0 && (
-          <button onClick={markAll} disabled={markingAll} className="btn btn-secondary">
-            {markingAll ? <span className="loader" /> : <Icon name="CheckCheck" size={13} />} Mark all read
-          </button>
-        )}
-      />
-      <div className="flex gap-1 border-b border-line mb-4">
-        {([
-          { id: "all", label: "All", count: total },
-          { id: "unread", label: "Unread", count: unreadCount },
-        ] as { id: Filter; label: string; count: number }[]).map((t) => (
-          <button key={t.id} onClick={() => setFilter(t.id)}
-                  className={"px-4 py-2 text-sm font-medium relative " + (filter === t.id ? "text-accent" : "text-ink-light hover:text-ink")}>
-            {t.label} <span className="text-ink-faint ml-1">{t.count}</span>
-            {filter === t.id && <div className="absolute bottom-0 left-0 right-0 h-0.5" style={{ background: "var(--accent)" }}></div>}
-          </button>
-        ))}
+      <PageHeader title="Notifications" subtitle={unreadCount > 0 ? unreadCount + " unread · " + (data?.total ?? 0) + " in total" : "You're all caught up"} />
+      <div className="relative mb-4">
+        <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
+        <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder="Search notifications..." className="input" style={{ paddingLeft: 32 }} aria-label="Search notifications" />
       </div>
       <AsyncBoundary loading={loading && !data} error={error} onRetry={reload}>
-        {notifications.length === 0 ? (
-          <EmptyState icon="Bell" title="No notifications" description="You're all caught up." />
-        ) : (
-          <div className="space-y-2">
-            {notifications.map((n) => (
-              <div key={n.id} className={"card card-pad flex items-start gap-3 " + (!n.read ? "border-l-4" : "")} style={{ ...(!n.read ? { borderLeftColor: "var(--accent)" } : {}), ...(busyId === n.id ? { opacity: 0.6 } : {}) }}>
-                <Icon name={n.icon || "Bell"} size={16} style={{ color: n.color || "var(--accent)" }} />
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className={"font-medium " + (!n.read ? "text-ink" : "text-ink-light")}>{n.title}</div>
-                    <div className="text-xs text-ink-faint flex-shrink-0">{fmtTs(n.createdAt)}</div>
-                  </div>
-                  {n.body && <div className="text-sm text-ink-light mt-0.5">{n.body}</div>}
-                  <div className="flex gap-2 mt-2">
-                    {!n.read && <button onClick={() => markRead(n)} disabled={busyId === n.id} className="text-xs text-accent hover:underline">Mark read</button>}
-                    {!(isAuditor && n.broadcast) && <button onClick={() => setDeleting(n)} className="text-xs text-ink-faint hover:text-danger">Delete</button>}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+          {column(
+            "Unread",
+            "BellRing",
+            "#f97316",
+            unread,
+            { title: "No unread notifications", text: search ? "Nothing matches your search." : "You're all caught up." },
+            unread.length > 0 && !search ? (
+              <button onClick={markAll} disabled={markingAll} className="btn btn-secondary text-xs" style={{ padding: "5px 10px" }}>
+                {markingAll ? <span className="loader" /> : <Icon name="CheckCheck" size={12} />} Mark all read
+              </button>
+            ) : undefined
+          )}
+          {column("Read", "MailOpen", "#059669", read, { title: "No read notifications", text: search ? "Nothing matches your search." : "Notifications you've read show here." })}
+        </div>
       </AsyncBoundary>
 
       {deleting && (

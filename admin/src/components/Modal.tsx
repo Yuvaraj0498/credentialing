@@ -56,6 +56,7 @@ export function ConfirmDialog({
   title,
   message,
   confirmLabel = "Delete",
+  cancelLabel = "Cancel",
   danger = true,
   busy,
   onConfirm,
@@ -64,6 +65,7 @@ export function ConfirmDialog({
   title: string;
   message: ReactNode;
   confirmLabel?: string;
+  cancelLabel?: string;
   danger?: boolean;
   busy?: boolean;
   onConfirm: () => void;
@@ -73,7 +75,7 @@ export function ConfirmDialog({
     <Modal title={title} onClose={onClose} maxWidth={440}>
       <div className="text-sm text-ink-light mb-5">{message}</div>
       <div className="flex justify-end gap-2">
-        <button className="btn btn-secondary" onClick={onClose} disabled={busy}>Cancel</button>
+        <button className="btn btn-secondary" onClick={onClose} disabled={busy}>{cancelLabel}</button>
         <button className={"btn " + (danger ? "btn-primary" : "btn-primary")} style={danger ? { background: "var(--danger)", borderColor: "var(--danger)" } : {}} onClick={onConfirm} disabled={busy}>
           {busy && <span className="loader" style={{ borderTopColor: "white" }} />} {confirmLabel}
         </button>

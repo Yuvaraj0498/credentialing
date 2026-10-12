@@ -32,6 +32,8 @@ public class PermissionService {
     public boolean can(String entity, String action) {
         AuthPrincipal p = authContext.principal();
         if (p.isPlatformAdmin()) return true;
+        // an organization's admin always has every permission (the Admin column is locked on the Permissions page)
+        if ("org_admin".equals(p.role().code()) || "admin".equals(p.role().code())) return true;
         Long orgId = p.orgId();
         return matrix(orgId).getOrDefault(key(entity, action, currentPermissionRole(p)), false);
     }

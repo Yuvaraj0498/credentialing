@@ -5,14 +5,16 @@ import com.zmartcredential.entity.Payer;
 import com.zmartcredential.repository.OrgPayerSettingRepository;
 import com.zmartcredential.security.AuthContext;
 import java.util.List;
-import java.util.Set;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * Which payers an organization's users see. Every payer is available to every organization; the super admin can
- * switch a payer off for one organization (Organizations → Payers). The super admin always sees every payer.
+ * Which payers an organization's users see. A payer added by the super admin is on for every organization; one
+ * added by an organization's admin is on only for that organization. The super admin switches payers on / off per
+ * organization (Organizations → Payers), which overrides the default. The super admin always sees every payer.
  */
 @Component
 @RequiredArgsConstructor
@@ -21,10 +23,22 @@ public class OrgPayerAccess {
     private final OrgPayerSettingRepository repository;
     private final AuthContext authContext;
 
-    public Set<Long> disabledFor(Long orgId) {
-        if (orgId == null) return Set.of();
-        return repository.findByOrgId(orgId).stream().filter(s -> Boolean.FALSE.equals(s.getEnabled()))
-                .map(OrgPayerSetting::getPayerId).collect(Collectors.toSet());
+    /** payer id → enabled, for the payers switched on / off explicitly for this organization. */
+    public Map<Long, Boolean> settings(Long orgId) {
+        if (orgId == null) return Map.of();
+        return repository.findByOrgId(orgId).stream()
+                .collect(Collectors.toMap(OrgPayerSetting::getPayerId, s -> !Boolean.FALSE.equals(s.getEnabled()), (a, b) -> b));
+    }
+
+    /** Whether the payer is on for the organization (settings from {@link #settings(Long)}). */
+    public static boolean enabled(Payer p, Long orgId, Map<Long, Boolean> settings) {
+        Boolean explicit = settings.get(p.getId());
+        if (explicit != null) return explicit;
+        return p.getAddedByOrgId() == null || Objects.equals(p.getAddedByOrgId(), orgId);
+    }
+
+    public boolean enabled(Payer p, Long orgId) {
+        return enabled(p, orgId, settings(orgId));
     }
 
     /** The payers the signed-in user may see (all of them for the super admin). */
@@ -34,7 +48,7 @@ public class OrgPayerAccess {
     }
 
     public List<Payer> forOrg(List<Payer> payers, Long orgId) {
-        Set<Long> off = disabledFor(orgId);
-        return off.isEmpty() ? payers : payers.stream().filter(p -> !off.contains(p.getId())).toList();
+        Map<Long, Boolean> s = settings(orgId);
+        return payers.stream().filter(p -> enabled(p, orgId, s)).toList();
     }
 }

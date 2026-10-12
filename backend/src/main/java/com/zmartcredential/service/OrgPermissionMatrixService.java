@@ -31,7 +31,6 @@ import java.util.Map;
 public class OrgPermissionMatrixService {
 
     private static final String[] COLORS = {"#f97316", "#2563eb", "#059669", "#6b7280", "#7c3aed", "#0891b2", "#db2777", "#ca8a04"};
-    private static final RoleInfo SUPER_ADMIN = new RoleInfo("platform_admin", "Super Admin", "#dc2626", "Full access — always allowed");
 
 
     private final RolePermissionRepository repository;
@@ -102,7 +101,7 @@ public class OrgPermissionMatrixService {
                     String key = PermissionService.key(entity, action, r.id());
                     RolePermission rp = existing.get(key);
                     boolean desired;
-                    if (Role.PLATFORM_ADMIN.code().equals(r.id())) desired = true;
+                    if (r.locked()) desired = true;
                     else if (requested != null) desired = requested.contains(r.id());
                     else desired = rp != null && Boolean.TRUE.equals(rp.getAllowed());
                     if (rp == null) {
@@ -121,7 +120,7 @@ public class OrgPermissionMatrixService {
 
     // ---------- helpers ----------
 
-    /** Matrix columns: Super Admin first, then every role the super admin created (User Roles). */
+    /** Matrix columns: the built-in Admin role first (locked, every permission), then the other roles (User Roles). */
     private List<RoleInfo> roles() {
         return roles(false);
     }
@@ -129,17 +128,21 @@ public class OrgPermissionMatrixService {
     /** includeDisabled: also the roles the super admin disabled (hidden on the page, their settings are kept). */
     private List<RoleInfo> roles(boolean includeDisabled) {
         List<RoleInfo> out = new ArrayList<>();
-        out.add(SUPER_ADMIN);
-        int i = 0;
+        int i = 1;
         for (var r : userRoleRepository.findAllByOrderByNameAsc()) {
             if (!includeDisabled && Boolean.FALSE.equals(r.getActive())) continue;
-            out.add(new RoleInfo(PermissionService.userRoleKey(r.getId()), r.getName(), COLORS[i++ % COLORS.length], ""));
+            if ("org_admin".equals(r.getSystemKey())) {
+                out.add(0, new RoleInfo(PermissionService.userRoleKey(r.getId()), r.getName(), COLORS[0], "Full access — always allowed", true));
+            } else {
+                out.add(new RoleInfo(PermissionService.userRoleKey(r.getId()), r.getName(), COLORS[i++ % COLORS.length], "", false));
+            }
         }
         return out;
     }
 
+    /** Roles whose cells can be set (the locked Admin role always has every permission). */
     private List<String> tenantRoles() {
-        return roles(true).stream().map(RoleInfo::id).filter(id -> !Role.PLATFORM_ADMIN.code().equals(id)).toList();
+        return roles(true).stream().filter(r -> !r.locked()).map(RoleInfo::id).toList();
     }
 
     private PermissionMatrixResponse build(Long orgId) {
@@ -157,8 +160,7 @@ public class OrgPermissionMatrixService {
             for (String action : PermissionService.ACTIONS) {
                 List<String> roles = new ArrayList<>();
                 for (RoleInfo r : roleList) {
-                    if (Role.PLATFORM_ADMIN.code().equals(r.id())
-                            || flat.getOrDefault(PermissionService.key(entity, action, r.id()), false)) {
+                    if (r.locked() || flat.getOrDefault(PermissionService.key(entity, action, r.id()), false)) {
                         roles.add(r.id());
                     }
                 }

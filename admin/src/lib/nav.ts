@@ -25,6 +25,8 @@ export const MAIN_NAV: NavItem[] = [
   { href: "/tasks", label: "Tasks", icon: "CheckSquare", badge: "openTasks" },
   { href: "/reports", label: "Reports", icon: "BarChart3" },
   { href: "/email", label: "Email", icon: "Mail" },
+  { href: "/provider-link-templates", label: "Link Templates", icon: "MailPlus", roles: ["org_admin"] },
+  { href: "/enrollment-mail-templates", label: "Enrollment Templates", icon: "MailCheck", roles: ["org_admin"] },
   { href: "/payers", label: "Payers", icon: "CreditCard" },
   { href: "/payer-submissions", label: "Payer Submissions", icon: "Send" },
   { href: "/credential-vault", label: "Credential Vault", icon: "KeyRound" },

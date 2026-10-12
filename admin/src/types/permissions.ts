@@ -8,6 +8,8 @@ export interface RoleDef {
   label: string;
   color: string;
   desc: string;
+  /** the built-in Admin role: every permission, not changeable */
+  locked?: boolean;
 }
 
 export interface PermissionMatrix {

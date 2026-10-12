@@ -17,7 +17,7 @@ import { useToast } from "@/stores/toast";
 import { fileExt, MAX_FILE_BYTES } from "./shared";
 
 /** Like the prototype: documents are PDF or images. */
-const UPLOAD_EXT = ["pdf", "jpg", "jpeg", "png"];
+const UPLOAD_EXT = ["pdf", "doc", "docx", "jpg", "jpeg", "png"];
 import { VerifyClassificationModal, type ClassifiedItem } from "@/components/modals/VerifyClassificationModal";
 import type { ClassifyResult, DocumentRow, ProviderDetail, UploadResult } from "@/types/providers";
 
@@ -51,7 +51,7 @@ export function DocumentUploadView({ providerId, portal = false }: { providerId:
     const accepted: File[] = [];
     const rejected: string[] = [];
     Array.from(list).forEach((f) => {
-      if (!UPLOAD_EXT.includes(fileExt(f.name))) rejected.push(f.name + " (only PDF, JPG or PNG)");
+      if (!UPLOAD_EXT.includes(fileExt(f.name))) rejected.push(f.name + " (only PDF, Word, JPG or PNG)");
       else if (f.size > MAX_FILE_BYTES) rejected.push(f.name + " (over 25 MB)");
       else if (f.size === 0) rejected.push(f.name + " (empty file)");
       else accepted.push(f);
@@ -267,7 +267,7 @@ export function DocumentUploadView({ providerId, portal = false }: { providerId:
                     <Icon name="UploadCloud" size={36} className="text-ink-faint" />
                     <div className="font-display font-semibold text-ink mt-3">Drop documents here</div>
                     <p className="text-sm text-ink-light mt-1">Or click to select files. {mode === "ai" ? "We'll classify them automatically." : "You'll choose each document's type next."}</p>
-                    <p className="text-xs text-ink-faint mt-3">Supports PDF, JPG, PNG · Up to 25MB per file</p>
+                    <p className="text-xs text-ink-faint mt-3">Supports PDF, Word, JPG, PNG · Up to 25MB per file</p>
                   </div>
                 ) : (
                   <div>

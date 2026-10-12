@@ -15,6 +15,7 @@ import { useAsync } from "@/lib/hooks";
 import { providerName, useProvidersLite } from "@/components/enrollments/shared";
 import type { ProviderLite } from "@/types/enrollments";
 import { ProviderPayerLoginModal } from "@/components/modals/ProviderPayerLoginModal";
+import { PayerFormModal } from "@/components/payers/PayerFormModal";
 import type { CredentialMatrix, Payer, PayerOverviewItem } from "@/types/payers";
 
 interface PayerRow {
@@ -35,7 +36,10 @@ async function loadPayerRows(): Promise<PayerRow[]> {
 
 /** Port of the prototype PayersView (L3580) plus the provider × payer login matrix. */
 export function PayersView() {
-  const { can } = useAuth();
+  const { can, user } = useAuth();
+  // the organization admin can add payers of their own (also visible to the super admin)
+  const canAdd = user?.role === "org_admin";
+  const [adding, setAdding] = useState(false);
   const canCreds = can("list", "credential_vault");
   const canEditCreds = can("update", "credential_vault") || can("create", "credential_vault");
   const [selectedProviderId, setSelectedProviderId] = useState("");
@@ -72,7 +76,29 @@ export function PayersView() {
 
   return (
     <div>
-      <PageHeader title="Payers" subtitle="All insurance payers your organization works with. Select a provider to manage their payer portal credentials." />
+      <PageHeader
+        title="Payers"
+        subtitle="All insurance payers your organization works with. Select a provider to manage their payer portal credentials."
+        actions={
+          canAdd ? (
+            <button onClick={() => setAdding(true)} className="btn btn-primary">
+              <Icon name="Plus" size={14} /> Add Payer
+            </button>
+          ) : undefined
+        }
+      />
+      {adding && (
+        <PayerFormModal
+          payer={null}
+          mode="org"
+          onClose={() => setAdding(false)}
+          onSaved={() => {
+            setAdding(false);
+            rows.reload();
+            matrix.reload();
+          }}
+        />
+      )}
 
       {/* Provider selector bar */}
       {canCreds && (

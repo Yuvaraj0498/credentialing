@@ -289,6 +289,23 @@ public class AuthService {
         return new AuthResponse(jwtService.issueAccessToken(user), raw, jwtService.accessTokenTtlSeconds(), toMe(user));
     }
 
+    /** Provider portal → Change Password (providers change their own password). */
+    @Transactional
+    public void changePassword(String currentPassword, String newPassword) {
+        AppUser user = userRepository.findById(authContext.userId())
+                .orElseThrow(() -> new UnauthorizedException("Account no longer exists"));
+        if (!"provider".equals(user.getRole())) throw new com.zmartcredential.exception.ForbiddenException("Only providers can change their password here");
+        if (currentPassword == null || !passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw BadRequestException.onField("currentPassword", "The current password is not correct");
+        }
+        if (newPassword == null || newPassword.length() < 8) throw BadRequestException.onField("newPassword", "At least 8 characters");
+        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
+            throw BadRequestException.onField("newPassword", "Choose a password different from the current one");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+    }
+
     private MeResponse toMe(AppUser user) {
         String orgName = user.getOrgId() == null ? null
                 : organizationRepository.findById(user.getOrgId()).map(Organization::getName).orElse(null);
@@ -298,7 +315,7 @@ public class AuthService {
         for (String entity : PermissionService.ENTITIES) {
             List<String> allowed = new ArrayList<>();
             for (String action : PermissionService.ACTIONS) {
-                if (role == Role.PLATFORM_ADMIN
+                if (role == Role.PLATFORM_ADMIN || role == Role.ORG_ADMIN
                         || matrix.getOrDefault(PermissionService.key(entity, action,
                         PermissionService.permissionRole(role.code(), user.getUserRoleId())), false)) {
                     allowed.add(action);

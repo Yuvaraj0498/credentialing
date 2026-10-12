@@ -150,6 +150,8 @@ public class OpsEmailReminderService {
         authContext.requireStaff();
         Long orgId = authContext.orgId();
         return templateRepository.findByOrgIdIsNullOrOrgId(orgId).stream()
+                // Provider Link / Enrollment Mail templates have their own screens
+                .filter(t -> !MailTemplateService.PROVIDER_LINK.equals(t.getType()) && !MailTemplateService.ENROLLMENT_APPROVED.equals(t.getType()))
                 .sorted(Comparator.comparing((EmailTemplate t) -> t.getOrgId() == null).thenComparing(EmailTemplate::getId))
                 .map(t -> new TemplateItem(t.getId(), t.getType(), t.getName(), t.getSubject(), t.getBody(),
                         t.getOrgId() == null, variablesOf(t)))

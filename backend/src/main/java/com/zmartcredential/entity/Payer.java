@@ -72,6 +72,9 @@ public class Payer {
     /** Whether the payer has a provider portal. */
     private Boolean portalAvailable = true;
 
+    /** The organization whose admin added this payer (null = added by the super admin). */
+    private Long addedByOrgId;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

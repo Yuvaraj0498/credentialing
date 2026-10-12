@@ -35,4 +35,10 @@ public final class PasswordResetDtos {
 
     public record VerifyCodeResponse(String resetToken) {
     }
+
+    /** Provider portal → Change Password. */
+    public record ChangePasswordRequest(
+            @NotBlank(message = "Enter your current password") String currentPassword,
+            @NotBlank(message = "Enter a new password") @Size(min = 8, max = 100, message = "8-100 characters") String newPassword) {
+    }
 }

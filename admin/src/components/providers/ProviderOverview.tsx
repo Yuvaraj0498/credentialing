@@ -206,11 +206,14 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
   );
 }
 
-/** Opens the uploaded file in a new browser tab (any status, as long as a file is stored). */
+/** Word documents can't be shown in the browser: they are downloaded instead of viewed. */
+const isWordFile = (name: string | null | undefined) => /\.(docx?|dot|dotx|rtf)$/i.test(name || "");
+
+/** Opens the uploaded file in a new browser tab (any status, as long as a file is stored; not for Word files). */
 function ViewFileButton({ doc, label }: { doc: DocumentRow; label?: boolean }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  if (!doc.hasFile) return null;
+  if (!doc.hasFile || isWordFile(doc.fileName)) return null;
   return (
     <button
       className={label ? "btn btn-secondary" : "btn-ghost p-1"}
@@ -355,6 +358,12 @@ function DocumentDetails({ doc, onClose, onChanged }: { doc: DocumentRow; onClos
         </div>
       )}
 
+      {doc.hasFile && isWordFile(doc.fileName) && (
+        <div className="mt-4 text-xs rounded-md px-3 py-2 flex items-start gap-2" style={{ background: "var(--bg-soft)", color: "var(--ink-light)" }}>
+          <Icon name="Info" size={13} className="mt-0.5" />
+          <span>Word documents can&apos;t be viewed in the browser — please download the file to open and verify it.</span>
+        </div>
+      )}
       <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-line">
         <ViewFileButton doc={doc} label />
         <DownloadButton doc={doc} label />

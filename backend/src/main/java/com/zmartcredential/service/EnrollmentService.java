@@ -68,6 +68,7 @@ public class EnrollmentService {
     private final PermissionService permissionService;
     private final FileStorageService storage;
     private final NotificationService notificationService;
+    private final MailTemplateService mailTemplateService;
 
     /** Name lookups for assembling rows. */
     public record Ctx(Map<Long, Provider> providers, Map<Long, Payer> payers, Map<Long, String> practices,
@@ -393,6 +394,8 @@ public class EnrollmentService {
     private void afterStatusChange(Enrollment e, String oldStatus) {
         String now = e.getStatus();
         if (Objects.equals(oldStatus, now)) return;
+        // Enrollment Mail Templates: the provider is emailed when the enrollment is approved
+        if ("approved".equals(now)) mailTemplateService.sendEnrollmentApproved(e);
         String type = switch (now) {
             case "submitted" -> "submitted";
             case "approved" -> "approved";

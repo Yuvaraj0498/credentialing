@@ -68,6 +68,7 @@ public class ProviderInviteService {
     private final ProviderService providerService;
     private final com.zmartcredential.repository.AppUserRepository userRepository;
     private final OrgUserService orgUserService;
+    private final MailTemplateService mailTemplateService;
     private final MailService mailService;
     private final CryptoService cryptoService;
     private final SecureLinkIssuer linkIssuer;
@@ -125,6 +126,8 @@ public class ProviderInviteService {
         Map<String, String> vars = Map.of(
                 "provider_first_name", provider.getFirstName(),
                 "provider_last_name", provider.getLastName(),
+                "provider_name", ((provider.getFirstName() == null ? "" : provider.getFirstName()) + " "
+                        + (provider.getLastName() == null ? "" : provider.getLastName())).trim(),
                 "pending_document_count", String.valueOf(missing.size()),
                 "missing_document_list", missing.isEmpty() ? "(none)"
                         : String.join("\n", missing.stream().map(r -> "- " + r.label()).toList()),
@@ -133,16 +136,17 @@ public class ProviderInviteService {
                 "upload_link", mailService.publicUrl() + uploadUrl,
                 "link_expires", inv.getExpiresAt().format(EXPIRY_FMT),
                 "organization_name", org == null ? "" : org.getName());
-        EmailTemplate tpl = templateRepository.findByOrgIdIsNullOrOrgId(orgId).stream()
-                .filter(t -> "missing_docs".equals(t.getType()))
-                .min(Comparator.comparing(t -> t.getOrgId() == null ? 1 : 0))
-                .orElse(null);
-        String subject = tpl == null ? "Please complete your credentialing profile" : render(tpl.getSubject(), vars);
+        // Provider Link Templates: the template the organization chose ("Use this template")
+        EmailTemplate tpl = mailTemplateService.resolve(orgId, MailTemplateService.PROVIDER_LINK).orElse(null);
+        String subject = tpl == null ? "Please complete your credentialing profile" : MailTemplateService.render(tpl.getSubject(), vars);
         String body = tpl == null || tpl.getBody() == null
                 ? "Hi " + provider.getFirstName() + ",\n\nPlease complete your credentialing profile and upload your documents.\n\n"
                   + "Secure Access PIN: " + inv.getPin() + "\n\nOpen your secure link: " + vars.get("upload_link")
                   + "\n\nLink expires: " + vars.get("link_expires")
-                : render(tpl.getBody(), vars);
+                : MailTemplateService.render(tpl.getBody(), vars);
+        // the provider can't open the link without these: added when a template leaves them out
+        if (!body.contains(vars.get("upload_link"))) body += "\n\nOpen your secure link: " + vars.get("upload_link");
+        if (!body.contains(inv.getPin())) body += "\nSecure access PIN: " + inv.getPin();
 
         MailService.Result mail = mailService.send(email, subject, body);
         EmailLog log = new EmailLog();
@@ -309,7 +313,7 @@ public class ProviderInviteService {
             if (req.password() == null || req.password().length() < 8) {
                 throw com.zmartcredential.exception.BadRequestException.onField("password", "Choose a password of at least 8 characters");
             }
-            orgUserService.createProviderLogin(p.getId(), req.password(), null);
+            orgUserService.createProviderLogin(p.getId(), req.password(), null, false);
         }
         inv.setStatus("submitted");
         inv.setSubmittedAt(LocalDateTime.now());

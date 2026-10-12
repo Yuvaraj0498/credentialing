@@ -48,7 +48,7 @@ export function PermissionsView() {
   const canEditMatrix = canEdit;
 
   const toggle = (entity: string, action: string, role: string) => {
-    if (!canEditMatrix || role === "platform_admin") return;
+    if (!canEditMatrix || roles.some((r) => r.id === role && r.locked)) return;
     const next = clone(local);
     next[entity] = next[entity] || {};
     const current = next[entity][action] || [];
@@ -149,7 +149,7 @@ export function PermissionsView() {
             <h3 className="font-semibold text-sm text-ink">Permission Matrix</h3>
             {hasOrgOverrides ? <Pill type="accent">Customized for this organization</Pill> : <Pill type="neutral">Using defaults</Pill>}
           </div>
-          <p className="text-xs text-ink-light mt-1">Click a cell to toggle. Green = allowed, grey = denied. Super Admin always has full access. A new role starts with every permission off.</p>
+          <p className="text-xs text-ink-light mt-1">Click a cell to toggle. Green = allowed, grey = denied. The Admin role always has every permission and can&apos;t be changed. A new role starts with every permission off.</p>
         </div>
         <div style={{ overflowX: "auto" }}>
           <table className="min-w-full">
@@ -179,7 +179,7 @@ export function PermissionsView() {
                       )}
                       <td className="text-xs capitalize font-mono">{action}</td>
                       {roles.map((r) => {
-                        const locked = r.id === "platform_admin";
+                        const locked = !!r.locked;
                         const isAllowed = locked || (local[entity]?.[action] || []).includes(r.id);
                         const editable = canEditMatrix && !locked;
                         return (
@@ -187,7 +187,7 @@ export function PermissionsView() {
                             <button
                               onClick={() => toggle(entity, action, r.id)}
                               disabled={!editable}
-                              title={locked ? "Platform admins always have access" : undefined}
+                              title={locked ? r.label + " always has every permission" : undefined}
                               aria-label={(isAllowed ? "Allowed" : "Denied") + ": " + r.label + " " + action + " " + entity}
                               className="w-7 h-7 rounded-full flex items-center justify-center transition-colors mx-auto"
                               style={{
