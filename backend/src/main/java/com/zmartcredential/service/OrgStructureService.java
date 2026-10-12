@@ -48,6 +48,7 @@ public class OrgStructureService {
 
     private final OrganizationRepository organizationRepository;
     private final OrgNames orgNames;
+    private final SoftDeleteCascade softDeleteCascade;
     private final EmailRegistry emailRegistry;
     private final ClientRepository clientRepository;
     private final PracticeRepository practiceRepository;
@@ -222,10 +223,16 @@ public class OrgStructureService {
         Long orgId = authContext.orgId();
         Client c = loadClient(orgId, id);
         int detached = 0;
-        for (Practice p : practiceRepository.findByClientId(c.getId())) {
+        List<Practice> practices = practiceRepository.findByClientId(c.getId());
+        for (Practice p : practices) {
             detached += detachLocations(p.getId());
         }
         int unassigned = providerRepository.orgUnassignClient(orgId, c.getId());
+        // the client's practices go with it (soft delete)
+        for (Practice p : practices) {
+            softDeleteCascade.practice(p.getId());
+            practiceRepository.delete(p);
+        }
         clientRepository.deleteById(c.getId());
         return new DeleteResult(true, unassigned, detached);
     }
@@ -276,6 +283,7 @@ public class OrgStructureService {
         Practice p = loadPractice(orgId, id);
         int detached = detachLocations(p.getId());
         int unassigned = providerRepository.orgUnassignPractice(orgId, p.getId());
+        softDeleteCascade.practice(p.getId());
         practiceRepository.deleteById(p.getId());
         return new DeleteResult(true, unassigned, detached);
     }

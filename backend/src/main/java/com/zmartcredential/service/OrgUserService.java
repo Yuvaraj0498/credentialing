@@ -47,6 +47,7 @@ public class OrgUserService {
     private final PermissionService permissionService;
     private final PasswordEncoder passwordEncoder;
     private final ProviderWelcomeMailer welcomeMailer;
+    private final SoftDeleteCascade softDeleteCascade;
     private final com.zmartcredential.repository.UserRoleRepository userRoleRepository;
 
     @Transactional(readOnly = true)
@@ -271,6 +272,10 @@ public class OrgUserService {
         AppUser u = load(id);
         if (u.getId().equals(authContext.userId())) throw new ConflictException("You cannot delete your own account");
         if (Role.ORG_ADMIN.code().equals(normalizeRole(u.getRole()))) ensureAnotherOrgAdmin(u);
+        // soft delete: kept and marked deleted; the email / username can be used again
+        softDeleteCascade.user(u.getId());
+        u.setDelToken(u.getId());
+        userRepository.saveAndFlush(u);
         userRepository.delete(u);
     }
 

@@ -13,6 +13,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Getter
 @Setter
 @NoArgsConstructor
+/** Deleting marks the row deleted (is_deleted = 1); deleted rows are left out of every query. */
+@org.hibernate.annotations.SoftDelete(columnName = "is_deleted")
 public class Client {
 
     @Id

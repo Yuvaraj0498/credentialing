@@ -100,6 +100,9 @@ public class UserRoleService {
             });
         }
         rolePermissionRepository.deleteByRole(com.zmartcredential.security.PermissionService.userRoleKey(id));
+        // soft delete: kept and marked deleted; the name can be used again
+        r.setDelToken(r.getId());
+        repository.saveAndFlush(r);
         repository.delete(r);
     }
 

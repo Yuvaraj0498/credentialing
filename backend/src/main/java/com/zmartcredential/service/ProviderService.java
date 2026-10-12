@@ -82,6 +82,7 @@ public class ProviderService {
     private final AuthContext authContext;
     private final CryptoService cryptoService;
     private final com.zmartcredential.repository.AppUserRepository userRepository;
+    private final SoftDeleteCascade softDeleteCascade;
 
     // ---------- list / read ----------
 
@@ -392,11 +393,12 @@ public class ProviderService {
     public void delete(Long id) {
         permissionService.require("provider", "delete");
         Provider p = support.loadForStaff(id);
-        List<String> keys = documentRepository.findByProviderId(p.getId()).stream()
-                .map(ProviderDocument::getStorageKey).filter(Objects::nonNull).toList();
+        // soft delete: the provider and its records are kept (marked deleted); stored files stay
+        softDeleteCascade.provider(p.getId());
+        p.setDelToken(p.getId());
+        providerRepository.saveAndFlush(p);
         providerRepository.delete(p);
         providerRepository.flush();
-        keys.forEach(fileStorageService::delete);
         notificationService.notifyOrg(p.getOrgId(), "Provider deleted", fullName(p) + " was removed.",
                 "UserMinus", NotificationService.WARN);
     }

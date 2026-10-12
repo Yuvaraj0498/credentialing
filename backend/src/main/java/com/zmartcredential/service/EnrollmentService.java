@@ -69,6 +69,7 @@ public class EnrollmentService {
     private final FileStorageService storage;
     private final NotificationService notificationService;
     private final MailTemplateService mailTemplateService;
+    private final SoftDeleteCascade softDeleteCascade;
 
     /** Name lookups for assembling rows. */
     public record Ctx(Map<Long, Provider> providers, Map<Long, Payer> payers, Map<Long, String> practices,
@@ -175,6 +176,7 @@ public class EnrollmentService {
             });
         }
         e = enrollmentRepository.save(e);
+        if ("approved".equals(e.getStatus())) mailTemplateService.sendEnrollmentApproved(e);
         Payer payer = support.payer(e.getPayerId());
         support.addEvent(e.getId(), "created",
                 eventNote != null ? eventNote : "Enrollment record created for " + payer.getName(), null);
@@ -230,7 +232,8 @@ public class EnrollmentService {
         permissionService.require("enrollment", "delete");
         authContext.requireStaff();
         Enrollment e = load(id, authContext.orgId());
-        fileRepository.findByEnrollmentIdOrderByUploadedAtDesc(id).forEach(f -> storage.delete(f.getStorageKey()));
+        // soft delete: the enrollment and its files are kept (marked deleted)
+        softDeleteCascade.enrollment(e.getId());
         enrollmentRepository.delete(e);
     }
 
@@ -323,7 +326,7 @@ public class EnrollmentService {
         authContext.requireStaff();
         EnrollmentFile f = fileRepository.findById(fileId).orElseThrow(() -> NotFoundException.of("File", fileId));
         load(f.getEnrollmentId(), authContext.orgId());
-        storage.delete(f.getStorageKey());
+        // soft delete: the stored file is kept
         fileRepository.delete(f);
     }
 

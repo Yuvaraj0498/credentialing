@@ -174,7 +174,7 @@ export function MailTemplatesView({ type }: { type: MailTemplateType }) {
                     <button onClick={() => setPreviewing(t)} className="btn btn-ghost text-xs" title="Preview with sample values">
                       <Icon name="Eye" size={12} /> Preview
                     </button>
-                    {!t.builtIn && (
+                    {(
                       <>
                         <button onClick={() => setEditing(t)} className="btn btn-ghost text-xs" aria-label={"Edit " + t.name}>
                           <Icon name="Pencil" size={12} /> Edit
@@ -215,7 +215,7 @@ export function MailTemplatesView({ type }: { type: MailTemplateType }) {
           title="Delete template"
           message={
             <>
-              Delete <strong>{deleting.name}</strong>?{deleting.inUse ? " It is the template in use — emails will use the built-in template until you pick another." : ""}
+              Delete <strong>{deleting.name}</strong>?{deleting.builtIn ? " It is removed for your organization only." : ""}{deleting.inUse ? " It is the template in use — emails will use the first template in the list until you pick another." : ""}
             </>
           }
           busy={deleteBusy}
@@ -306,6 +306,11 @@ function TemplateModal({
   return (
     <Modal title={template ? "Edit Template" : "Add Template"} onClose={busy ? undefined : onClose} maxWidth={760}>
       <div className="space-y-3">
+        {template?.builtIn && (
+          <div className="text-xs text-ink-light rounded-md px-3 py-2" style={{ background: "var(--bg-soft)" }}>
+            This is a built-in template: your changes apply to your organization only.
+          </div>
+        )}
         <Field label="Template Name" required error={errors.name}>
           <input value={name} onChange={(e) => { setName(e.target.value.replace(/^\s+/, "")); setErrors((x) => ({ ...x, name: "" })); }} className="input" maxLength={150} placeholder="e.g. Friendly invitation" autoFocus />
         </Field>

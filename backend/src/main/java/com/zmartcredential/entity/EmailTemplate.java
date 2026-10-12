@@ -25,4 +25,11 @@ public class EmailTemplate {
     private String subject;
 
     private String body;
+
+    /** Deleted (kept, left out of the lists). Also marks a built-in template an organization deleted. */
+    @Column(name = "is_deleted")
+    private Boolean deleted = false;
+
+    /** An organization's own copy of the built-in template it edited or deleted (hides the built-in for it). */
+    private Long baseTemplateId;
 }

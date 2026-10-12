@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
 public class OpsPrivilegeService {
 
     private final HospitalRepository hospitalRepository;
+    private final SoftDeleteCascade softDeleteCascade;
     private final PrivilegeCategoryRepository categoryRepository;
     private final PrivilegeItemRepository itemRepository;
     private final ProviderPrivilegeRepository privilegeRepository;
@@ -72,7 +73,9 @@ public class OpsPrivilegeService {
     @Transactional
     public void deleteHospital(Long id) {
         lookup.requireWriter();
-        hospitalRepository.delete(loadHospital(id, authContext.orgId()));
+        Hospital h = loadHospital(id, authContext.orgId());
+        softDeleteCascade.hospital(h.getId());
+        hospitalRepository.delete(h);
     }
 
     // ---------------------------------------------------------------- privileges

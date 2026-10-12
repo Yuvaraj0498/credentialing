@@ -45,6 +45,7 @@ public class PayerService {
     private final AuthContext authContext;
     private final OrgPayerAccess orgPayerAccess;
     private final com.zmartcredential.repository.OrgPayerSettingRepository orgPayerSettingRepository;
+    private final SoftDeleteCascade softDeleteCascade;
 
     @Transactional(readOnly = true)
     public List<PayerResponse> list(boolean activeOnly) {
@@ -102,6 +103,9 @@ public class PayerService {
         if (enrollmentRepository.existsByPayerId(id) || submissionRepository.existsByPayerId(id)) {
             throw new ConflictException(p.getName() + " is referenced by enrollments or submissions. Deactivate it instead.");
         }
+        softDeleteCascade.payer(p.getId());
+        p.setDelToken(p.getId());
+        payerRepository.saveAndFlush(p);
         payerRepository.delete(p);
     }
 
@@ -184,6 +188,10 @@ public class PayerService {
             boolean sameName = !name.isEmpty() && name.equals(norm(o.getName()));
             boolean sameUrl = !url.isEmpty() && url.equals(normUrl(o.getPortalUrl()));
             if (!sameName && !sameUrl) continue;
+            if (!Boolean.TRUE.equals(o.getPortalAvailable())) {
+                throw com.zmartcredential.exception.ConflictException.onField(sameName ? "name" : "portalUrl",
+                        "\"" + o.getName() + "\" already exists but is not available to organizations — please contact the super admin");
+            }
             if (Boolean.TRUE.equals(o.getActive()) && !OrgPayerAccess.enabled(o, orgId, settings)) {
                 return new OrgPayerAddResult("exists_disabled", o.getId(), o.getName());
             }
@@ -258,6 +266,8 @@ public class PayerService {
         authContext.requireRole(com.zmartcredential.security.Role.PLATFORM_ADMIN);
         Map<Long, Boolean> settings = orgPayerAccess.settings(orgId);
         return payerRepository.findByActiveTrueOrderBySortOrderAsc().stream()
+                // only payers with a portal can be switched on for an organization
+                .filter(p -> Boolean.TRUE.equals(p.getPortalAvailable()))
                 .sorted(java.util.Comparator.comparing(Payer::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(p -> new OrgPayerItem(p.getId(), p.getName(), p.getFullName(), p.getCategory(), p.getColor(), p.getLogo(),
                         p.getIntegration(), OrgPayerAccess.enabled(p, orgId, settings)))

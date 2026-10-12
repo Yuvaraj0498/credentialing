@@ -32,6 +32,8 @@ public class OrgPayerAccess {
 
     /** Whether the payer is on for the organization (settings from {@link #settings(Long)}). */
     public static boolean enabled(Payer p, Long orgId, Map<Long, Boolean> settings) {
+        // a payer without a portal ("Is portal available" unticked) is not offered to organizations
+        if (!Boolean.TRUE.equals(p.getPortalAvailable())) return false;
         Boolean explicit = settings.get(p.getId());
         if (explicit != null) return explicit;
         return p.getAddedByOrgId() == null || Objects.equals(p.getAddedByOrgId(), orgId);

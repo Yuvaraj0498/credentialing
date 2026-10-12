@@ -86,9 +86,7 @@ public class MailTemplateService {
         authContext.requireRole(Role.ORG_ADMIN);
         Long orgId = authContext.orgId();
         Long inUse = resolve(orgId, type).map(EmailTemplate::getId).orElse(null);
-        List<MailTemplateItem> items = templateRepository.findByOrgIdIsNullOrOrgId(orgId).stream()
-                .filter(t -> type.equals(t.getType()))
-                .sorted(Comparator.comparing((EmailTemplate t) -> t.getOrgId() != null).thenComparing(EmailTemplate::getId))
+        List<MailTemplateItem> items = visible(orgId, type).stream()
                 .map(t -> toItem(t, Objects.equals(t.getId(), inUse)))
                 .toList();
         return new MailTemplateList(type, items, VARIABLES.get(type));
@@ -111,31 +109,60 @@ public class MailTemplateService {
     public MailTemplateItem update(Long id, MailTemplateRequest req) {
         authContext.requireRole(Role.ORG_ADMIN);
         Long orgId = authContext.orgId();
-        EmailTemplate t = own(id, orgId);
+        EmailTemplate t = visibleOne(id, orgId);
         if (!t.getType().equals(req.type())) throw new BadRequestException("The template type can't be changed");
         validate(req, id, orgId);
-        apply(t, req);
-        templateRepository.save(t);
-        boolean inUse = resolve(orgId, t.getType()).map(x -> x.getId().equals(id)).orElse(false);
-        return toItem(t, inUse);
+        boolean wasInUse = resolve(orgId, t.getType()).map(x -> x.getId().equals(id)).orElse(false);
+        if (t.getOrgId() == null) {
+            // editing a built-in template: the organization gets its own copy, which replaces the built-in for it
+            EmailTemplate copy = new EmailTemplate();
+            copy.setOrgId(orgId);
+            copy.setType(t.getType());
+            copy.setBaseTemplateId(t.getId());
+            apply(copy, req);
+            t = templateRepository.save(copy);
+            if (wasInUse) choose(orgId, t);
+        } else {
+            apply(t, req);
+            templateRepository.save(t);
+        }
+        return toItem(t, wasInUse);
     }
 
     /** Deleting the template in use goes back to the built-in template. */
     @Transactional
     public void delete(Long id) {
         authContext.requireRole(Role.ORG_ADMIN);
-        EmailTemplate t = own(id, authContext.orgId());
-        templateRepository.delete(t);
+        Long orgId = authContext.orgId();
+        EmailTemplate t = visibleOne(id, orgId);
+        choiceRepository.findByOrgIdAndType(orgId, t.getType()).filter(c -> c.getTemplateId().equals(id)).ifPresent(choiceRepository::delete);
+        if (t.getOrgId() == null) {
+            // a built-in template: hidden for this organization only (kept as a deleted copy)
+            EmailTemplate hidden = new EmailTemplate();
+            hidden.setOrgId(orgId);
+            hidden.setType(t.getType());
+            hidden.setBaseTemplateId(t.getId());
+            hidden.setName(t.getName());
+            hidden.setSubject(t.getSubject());
+            hidden.setBody(t.getBody());
+            hidden.setDeleted(true);
+            templateRepository.save(hidden);
+        } else {
+            t.setDeleted(true);
+            templateRepository.save(t);
+        }
     }
 
     @Transactional
     public MailTemplateItem use(Long id) {
         authContext.requireRole(Role.ORG_ADMIN);
         Long orgId = authContext.orgId();
-        EmailTemplate t = templateRepository.findById(id)
-                .filter(x -> x.getOrgId() == null || x.getOrgId().equals(orgId))
-                .orElseThrow(() -> NotFoundException.of("Template", id));
-        requireType(t.getType());
+        EmailTemplate t = visibleOne(id, orgId);
+        choose(orgId, t);
+        return toItem(t, true);
+    }
+
+    private void choose(Long orgId, EmailTemplate t) {
         OrgEmailTemplateChoice c = choiceRepository.findByOrgIdAndType(orgId, t.getType()).orElseGet(() -> {
             OrgEmailTemplateChoice n = new OrgEmailTemplateChoice();
             n.setOrgId(orgId);
@@ -144,22 +171,43 @@ public class MailTemplateService {
         });
         c.setTemplateId(t.getId());
         choiceRepository.save(c);
-        return toItem(t, true);
+    }
+
+    /**
+     * The organization's templates of a type: the built-in ones it hasn't edited or deleted, its edited copies
+     * (in the built-in's place) and its own templates; deleted ones are left out.
+     */
+    public List<EmailTemplate> visible(Long orgId, String type) {
+        List<EmailTemplate> all = templateRepository.findByOrgIdIsNullOrOrgId(orgId).stream()
+                .filter(t -> type.equals(t.getType())).toList();
+        java.util.Set<Long> replaced = all.stream().filter(t -> t.getOrgId() != null && t.getBaseTemplateId() != null)
+                .map(EmailTemplate::getBaseTemplateId).collect(java.util.stream.Collectors.toSet());
+        return all.stream()
+                .filter(t -> !Boolean.TRUE.equals(t.getDeleted()))
+                .filter(t -> t.getOrgId() != null || !replaced.contains(t.getId()))
+                .sorted(Comparator.comparingLong((EmailTemplate t) -> t.getBaseTemplateId() != null ? t.getBaseTemplateId()
+                        : t.getOrgId() == null ? t.getId() : Long.MAX_VALUE / 2 + t.getId()))
+                .toList();
+    }
+
+    private EmailTemplate visibleOne(Long id, Long orgId) {
+        EmailTemplate t = templateRepository.findById(id).orElseThrow(() -> NotFoundException.of("Template", id));
+        requireType(t.getType());
+        if (visible(orgId, t.getType()).stream().noneMatch(x -> x.getId().equals(id))) throw NotFoundException.of("Template", id);
+        return t;
     }
 
     // ---------- sending ----------
 
     /** The template the organization uses for this type: its choice, else the first built-in one. */
     public java.util.Optional<EmailTemplate> resolve(Long orgId, String type) {
+        List<EmailTemplate> visible = visible(orgId, type);
         if (orgId != null) {
             var chosen = choiceRepository.findByOrgIdAndType(orgId, type)
-                    .flatMap(c -> templateRepository.findById(c.getTemplateId()))
-                    .filter(t -> t.getOrgId() == null || t.getOrgId().equals(orgId));
+                    .flatMap(c -> visible.stream().filter(t -> t.getId().equals(c.getTemplateId())).findFirst());
             if (chosen.isPresent()) return chosen;
         }
-        return templateRepository.findByOrgIdIsNullOrOrgId(orgId).stream()
-                .filter(t -> t.getOrgId() == null && type.equals(t.getType()))
-                .min(Comparator.comparing(EmailTemplate::getId));
+        return visible.stream().findFirst();
     }
 
     public static String render(String text, Map<String, String> vars) {
@@ -178,7 +226,13 @@ public class MailTemplateService {
     public void sendEnrollmentApproved(Enrollment e) {
         try {
             Provider p = providerRepository.findById(e.getProviderId()).orElse(null);
-            if (p == null || p.getEmail() == null || p.getEmail().isBlank()) return;
+            if (p == null) return;
+            if (p.getEmail() == null || p.getEmail().isBlank()) {
+                notificationService.notifyOrg(e.getOrgId(), "Approval email not sent",
+                        "Enrollment approved, but " + (p.getFirstName() + " " + p.getLastName()).trim()
+                                + " has no email address — add it in Edit Provider.", "MailX", NotificationService.WARN);
+                return;
+            }
             Payer payer = payerRepository.findById(e.getPayerId()).orElse(null);
             String org = organizationRepository.findById(e.getOrgId()).map(Organization::getName).orElse("");
             String name = ((p.getFirstName() == null ? "" : p.getFirstName()) + " " + (p.getLastName() == null ? "" : p.getLastName())).trim();
@@ -216,19 +270,11 @@ public class MailTemplateService {
 
     // ---------- helpers ----------
 
-    private EmailTemplate own(Long id, Long orgId) {
-        EmailTemplate t = templateRepository.findById(id).orElseThrow(() -> NotFoundException.of("Template", id));
-        if (t.getOrgId() == null) throw new BadRequestException("Built-in templates can't be changed — add your own template instead");
-        if (!t.getOrgId().equals(orgId)) throw NotFoundException.of("Template", id);
-        requireType(t.getType());
-        return t;
-    }
-
     private void validate(MailTemplateRequest req, Long id, Long orgId) {
         requireType(req.type());
         String name = req.name().trim().replaceAll("\\s+", " ");
-        boolean dup = templateRepository.findByOrgIdIsNullOrOrgId(orgId).stream()
-                .anyMatch(t -> req.type().equals(t.getType()) && !t.getId().equals(id) && name.equalsIgnoreCase(t.getName()));
+        boolean dup = visible(orgId, req.type()).stream()
+                .anyMatch(t -> !t.getId().equals(id) && name.equalsIgnoreCase(t.getName()));
         if (dup) throw ConflictException.onField("name", "A template named \"" + name + "\" already exists");
         List<String> known = VARIABLES.get(req.type()).stream().map(VariableInfo::key).toList();
         for (String text : List.of(req.subject(), req.body())) {

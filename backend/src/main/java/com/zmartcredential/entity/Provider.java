@@ -14,6 +14,8 @@ import org.hibernate.annotations.UpdateTimestamp;
 @Getter
 @Setter
 @NoArgsConstructor
+/** Deleting marks the row deleted (is_deleted = 1); deleted rows are left out of every query. */
+@org.hibernate.annotations.SoftDelete(columnName = "is_deleted")
 public class Provider {
 
     @Id
@@ -103,4 +105,7 @@ public class Provider {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    /** 0 while the row is live; the row's id once deleted, so its unique values can be used again. */
+    private Long delToken = 0L;
 }
