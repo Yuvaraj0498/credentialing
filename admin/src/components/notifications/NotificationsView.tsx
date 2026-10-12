@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AsyncBoundary } from "@/components/AsyncState";
 import { ConfirmDialog } from "@/components/Modal";
 import { Icon } from "@/components/Icon";
@@ -48,6 +48,24 @@ export function NotificationsView() {
   const [deleting, setDeleting] = useState<NotificationRow | null>(null);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [search, setSearch] = useState("");
+  // the two columns always reach the bottom of the window (whatever the zoom / header height)
+  const boardRef = useRef<HTMLDivElement | null>(null);
+  const [colHeight, setColHeight] = useState<number | null>(null);
+  const fitBoard = () => {
+    const el = boardRef.current;
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY;
+    setColHeight(Math.max(320, Math.floor(window.innerHeight - top - 24)));
+  };
+  useEffect(() => {
+    window.addEventListener("resize", fitBoard);
+    return () => window.removeEventListener("resize", fitBoard);
+  }, []);
+  // measured as soon as the board is shown (it appears once the notifications are loaded)
+  const setBoard = (el: HTMLDivElement | null) => {
+    boardRef.current = el;
+    if (el) requestAnimationFrame(fitBoard);
+  };
 
   const { data, loading, error, reload } = useAsync(() => api.get<NotificationListResponse>("/notifications", { filter: "all" }), []);
   useTopic("notifications", reload);
@@ -153,7 +171,7 @@ export function NotificationsView() {
   );
 
   const column = (title: string, icon: string, color: string, items: NotificationRow[], empty: { title: string; text: string }, action?: React.ReactNode) => (
-    <section className="card flex flex-col min-h-0" style={{ overflow: "hidden" }}>
+    <section className="card flex flex-col min-h-0" style={{ overflow: "hidden", height: colHeight ?? "calc(100vh - 230px)", minHeight: 320 }}>
       <header className="flex items-center gap-2.5 px-4 py-3 border-b border-line" style={{ background: tint(color, 0.05) }}>
         <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: tint(color, 0.15) }}>
           <Icon name={icon} size={15} style={{ color }} />
@@ -162,7 +180,7 @@ export function NotificationsView() {
         <span className="text-xs font-mono font-semibold rounded-full px-2 py-0.5" style={{ background: tint(color, 0.15), color }}>{items.length}</span>
         <div className="ml-auto">{action}</div>
       </header>
-      <div className="p-3 space-y-2.5 overflow-y-auto" style={{ maxHeight: "calc(100vh - 290px)", minHeight: 160 }}>
+      <div className="p-3 space-y-2.5 overflow-y-auto flex-1 min-h-0">
         {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center py-10">
             <div className="w-12 h-12 rounded-full flex items-center justify-center mb-2" style={{ background: tint(color, 0.1) }}>
@@ -186,7 +204,7 @@ export function NotificationsView() {
         <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder="Search notifications..." className="input" style={{ paddingLeft: 32 }} aria-label="Search notifications" />
       </div>
       <AsyncBoundary loading={loading && !data} error={error} onRetry={reload}>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+        <div ref={setBoard} className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch">
           {column(
             "Unread",
             "BellRing",

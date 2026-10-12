@@ -33,8 +33,9 @@ public class PayerController {
 
     @Operation(summary = "List payers (with their application forms)")
     @GetMapping
-    public List<PayerResponse> list(@RequestParam(defaultValue = "false") boolean activeOnly) {
-        return payerService.list(activeOnly);
+    public List<PayerResponse> list(@RequestParam(defaultValue = "false") boolean activeOnly,
+                                    @RequestParam(required = false) String scope) {
+        return payerService.list(activeOnly, scope);
     }
 
     @Operation(summary = "Per-payer enrollment stats for the current organization")

@@ -50,7 +50,7 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
     avgTatDays: payer?.avgTatDays != null ? String(payer.avgTatDays) : "",
     integration: payer?.integration || "",
     appForm: payer?.appForm || "",
-    portalAvailable: org ? true : payer ? payer.portalAvailable : false,
+    portalAvailable: payer ? payer.portalAvailable : false,
     portalUrl: payer?.portalUrl || "",
     logo: payer?.logo || "",
   });
@@ -82,9 +82,10 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
     else if (!Number.isInteger(tat) || tat < 1 || tat > 365) e.avgTatDays = "1-365 days";
     if (!form.integration) e.integration = "Integration is required";
     if (!form.appForm.trim()) e.appForm = "Form is required";
+    // the portal login URL is asked only when the payer has a portal
     const url = form.portalUrl.trim();
-    if (!url) e.portalUrl = "Portal login URL is required";
-    else if (!URL_RE.test(url)) e.portalUrl = "Enter a full address starting with https://";
+    if (form.portalAvailable && !url) e.portalUrl = "Portal login URL is required when a portal is available";
+    else if (form.portalAvailable && !URL_RE.test(url)) e.portalUrl = "Enter a full address starting with https://";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -100,7 +101,7 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
       integration: form.integration,
       appForm: form.appForm.trim(),
       portalAvailable: form.portalAvailable,
-      portalUrl: form.portalUrl.trim() || null,
+      portalUrl: form.portalAvailable ? form.portalUrl.trim() || null : null,
       logo: form.logo || null,
     };
     try {
@@ -201,17 +202,35 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
           <Field label="Insurance Company Name" required error={errors.fullName}>
             <input value={form.fullName} onChange={(e) => set("fullName", e.target.value.replace(/^\s+/, ""))} className={"input" + (errors.fullName ? " input-error" : "")} maxLength={200} placeholder="e.g. Blue Cross Blue Shield of Texas" />
           </Field>
-          <Field label="Portal Login URL" required error={errors.portalUrl}>
-            <input
-              value={form.portalUrl}
-              onChange={(e) => set("portalUrl", e.target.value.replace(/\s/g, ""))}
-              className={"input font-mono" + (errors.portalUrl ? " input-error" : "")}
-              maxLength={500}
-              placeholder="https://provider.payer.com/login"
-              inputMode="url"
-              autoComplete="off"
-            />
-          </Field>
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-ink" style={{ minHeight: 18 }}>
+              <input
+                type="checkbox"
+                checked={form.portalAvailable}
+                onChange={(e) => {
+                  set("portalAvailable", e.target.checked);
+                  if (!e.target.checked) setErrors((er) => ({ ...er, portalUrl: "" }));
+                }}
+              />
+              Is portal available
+            </label>
+            {form.portalAvailable ? (
+              <Field label="Portal Login URL" required error={errors.portalUrl} className="mt-1">
+                <input
+                  value={form.portalUrl}
+                  onChange={(e) => set("portalUrl", e.target.value.replace(/\s/g, ""))}
+                  className={"input font-mono" + (errors.portalUrl ? " input-error" : "")}
+                  maxLength={500}
+                  placeholder="https://provider.payer.com/login"
+                  inputMode="url"
+                  autoComplete="off"
+                  autoFocus
+                />
+              </Field>
+            ) : (
+              <div className="text-xs text-ink-faint mt-2">Tick it to enter the portal login URL.</div>
+            )}
+          </div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Avg TAT (days)" required error={errors.avgTatDays}>
@@ -229,16 +248,6 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
         <Field label="Form" required error={errors.appForm}>
           <input value={form.appForm} onChange={(e) => set("appForm", e.target.value.replace(/^\s+/, ""))} className={"input" + (errors.appForm ? " input-error" : "")} maxLength={150} placeholder="e.g. Ambetter Provider Set-up Form" />
         </Field>
-        {!org && (
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={form.portalAvailable}
-            onChange={(e) => set("portalAvailable", e.target.checked)}
-          />{" "}
-          Is portal available
-        </label>
-        )}
         <div className="flex justify-end gap-2 pt-3 border-t border-line">
           <button onClick={onClose} className="btn btn-secondary" disabled={busy}>Cancel</button>
           <button onClick={save} className="btn btn-primary" disabled={busy}>

@@ -49,9 +49,23 @@ public class PayerService {
 
     @Transactional(readOnly = true)
     public List<PayerResponse> list(boolean activeOnly) {
+        return list(activeOnly, null);
+    }
+
+    /** scope "enrollment" (New Enrollment): every payer the super admin added plus the organization's own payers. */
+    @Transactional(readOnly = true)
+    public List<PayerResponse> list(boolean activeOnly, String scope) {
         permissionService.require("payer", "list");
-        List<Payer> payers = orgPayerAccess.visible(activeOnly ? payerRepository.findByActiveTrueOrderBySortOrderAsc()
-                : payerRepository.findAllByOrderBySortOrderAsc());
+        List<Payer> source = activeOnly ? payerRepository.findByActiveTrueOrderBySortOrderAsc()
+                : payerRepository.findAllByOrderBySortOrderAsc();
+        List<Payer> payers;
+        if ("enrollment".equals(scope) && !authContext.principal().isPlatformAdmin()) {
+            Long orgId = authContext.orgId();
+            Map<Long, Boolean> settings = orgPayerAccess.settings(orgId);
+            payers = source.stream().filter(p -> p.getAddedByOrgId() == null || OrgPayerAccess.enabled(p, orgId, settings)).toList();
+        } else {
+            payers = orgPayerAccess.visible(source);
+        }
         Map<Long, List<PayerForm>> forms = formsByPayer();
         return payers.stream().map(p -> EnrollmentSupport.toPayerResponse(p, forms.get(p.getId()))).toList();
     }
@@ -182,16 +196,12 @@ public class PayerService {
         authContext.requireRole(com.zmartcredential.security.Role.ORG_ADMIN);
         Long orgId = authContext.orgId();
         String name = norm(r.name());
-        String url = normUrl(r.portalUrl());
+        String url = Boolean.TRUE.equals(r.portalAvailable()) ? normUrl(r.portalUrl()) : "";
         Map<Long, Boolean> settings = orgPayerAccess.settings(orgId);
         for (Payer o : payerRepository.findAll()) {
             boolean sameName = !name.isEmpty() && name.equals(norm(o.getName()));
             boolean sameUrl = !url.isEmpty() && url.equals(normUrl(o.getPortalUrl()));
             if (!sameName && !sameUrl) continue;
-            if (!Boolean.TRUE.equals(o.getPortalAvailable())) {
-                throw com.zmartcredential.exception.ConflictException.onField(sameName ? "name" : "portalUrl",
-                        "\"" + o.getName() + "\" already exists but is not available to organizations — please contact the super admin");
-            }
             if (Boolean.TRUE.equals(o.getActive()) && !OrgPayerAccess.enabled(o, orgId, settings)) {
                 return new OrgPayerAddResult("exists_disabled", o.getId(), o.getName());
             }
@@ -200,7 +210,7 @@ public class PayerService {
                     ? "\"" + o.getName() + "\"" + where
                     : "This portal login URL belongs to \"" + o.getName() + "\", which" + where);
         }
-        PayerResponse created = savePayer(null, r, orgId, true);
+        PayerResponse created = savePayer(null, r, orgId, r.portalAvailable());
         return new OrgPayerAddResult("created", created.id(), created.name());
     }
 
@@ -248,12 +258,14 @@ public class PayerService {
         p.setAvgTatDays(r.avgTatDays());
         p.setIntegration(r.integration());
         p.setAppForm(r.appForm().trim());
+        boolean portal = Boolean.TRUE.equals(portalAvailable);
         String portalUrl = r.portalUrl() == null || r.portalUrl().isBlank() ? null : r.portalUrl().trim();
-        if (portalUrl == null) {
-            throw com.zmartcredential.exception.BadRequestException.onField("portalUrl", "Portal login URL is required");
+        if (portal && portalUrl == null) {
+            throw com.zmartcredential.exception.BadRequestException.onField("portalUrl", "Portal login URL is required when a portal is available");
         }
-        p.setPortalAvailable(portalAvailable);
-        p.setPortalUrl(portalUrl);
+        p.setPortalAvailable(portal);
+        // the portal login URL is kept only for payers with a portal
+        p.setPortalUrl(portal ? portalUrl : null);
         if (id == null) p.setAddedByOrgId(addedByOrgId);
         p.setLogo(r.logo() == null || r.logo().isBlank() ? null : r.logo());
         p = payerRepository.save(p);
@@ -266,8 +278,6 @@ public class PayerService {
         authContext.requireRole(com.zmartcredential.security.Role.PLATFORM_ADMIN);
         Map<Long, Boolean> settings = orgPayerAccess.settings(orgId);
         return payerRepository.findByActiveTrueOrderBySortOrderAsc().stream()
-                // only payers with a portal can be switched on for an organization
-                .filter(p -> Boolean.TRUE.equals(p.getPortalAvailable()))
                 .sorted(java.util.Comparator.comparing(Payer::getName, String.CASE_INSENSITIVE_ORDER))
                 .map(p -> new OrgPayerItem(p.getId(), p.getName(), p.getFullName(), p.getCategory(), p.getColor(), p.getLogo(),
                         p.getIntegration(), OrgPayerAccess.enabled(p, orgId, settings)))

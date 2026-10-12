@@ -55,7 +55,8 @@ export function EnrollmentFormModal({
   const [saving, setSaving] = useState(false);
 
   const providers = useAsync(fetchProvidersLite, []);
-  const payers = useAsync(() => api.get<Payer[]>("/payers", { activeOnly: false }), []);
+  // every payer the super admin added (plus the organization's own), not only the ones switched on
+  const payers = useAsync(() => api.get<Payer[]>("/payers", { activeOnly: false, scope: "enrollment" }), []);
   const payerOptions = (payers.data || []).filter((p) => p.active || String(p.id) === form.payerId);
 
   const validate = () => {

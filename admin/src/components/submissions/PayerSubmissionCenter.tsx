@@ -59,7 +59,8 @@ export function PayerSubmissionCenter() {
   const selectedProvider = pickedProvider;
   const provider = providers.data?.find((p) => p.id === selectedProvider);
   const provCreds = matrix.data?.providers.find((p) => p.providerId === selectedProvider)?.credentials || [];
-  const payers = payersQ.data || [];
+  // submissions go through the payer's portal: payers without a portal are not listed
+  const payers = (payersQ.data || []).filter((p) => p.portalAvailable && !!p.portalUrl);
 
   /** The organization's login for a payer, whoever it is assigned to. */
   const orgLoginFor = (payerId: number) => matrix.data?.orgLevel.find((c) => c.payerId === payerId && c.username);

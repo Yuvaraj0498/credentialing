@@ -180,6 +180,11 @@ export function PayersView() {
                     <span className="text-right">{p.appForm || "—"}</span>
                   </div>
                 </div>
+                {!(p.portalAvailable && p.portalUrl) ? (
+                <div className="pt-3 border-t border-line text-xs text-ink-faint flex items-center gap-1">
+                  <Icon name="Globe" size={11} /> No provider portal for this payer
+                </div>
+                ) : (
                 <div className="pt-3 border-t border-line flex items-center justify-between">
                   <div className="text-xs">
                     {!selectedProvider && (
@@ -210,6 +215,7 @@ export function PayersView() {
                     </button>
                   )}
                 </div>
+                )}
               </div>
             );
           })}

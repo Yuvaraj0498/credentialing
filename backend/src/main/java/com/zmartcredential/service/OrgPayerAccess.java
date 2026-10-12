@@ -12,9 +12,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * Which payers an organization's users see. A payer added by the super admin is on for every organization; one
- * added by an organization's admin is on only for that organization. The super admin switches payers on / off per
- * organization (Organizations → Payers), which overrides the default. The super admin always sees every payer.
+ * Which payers an organization's users see: the payers the super admin switched on for the organization
+ * (Organizations → Payers; off by default) and the payers the organization's admin added (on for that
+ * organization only, unless the super admin switches them off). The super admin always sees every payer.
  */
 @Component
 @RequiredArgsConstructor
@@ -32,11 +32,9 @@ public class OrgPayerAccess {
 
     /** Whether the payer is on for the organization (settings from {@link #settings(Long)}). */
     public static boolean enabled(Payer p, Long orgId, Map<Long, Boolean> settings) {
-        // a payer without a portal ("Is portal available" unticked) is not offered to organizations
-        if (!Boolean.TRUE.equals(p.getPortalAvailable())) return false;
         Boolean explicit = settings.get(p.getId());
         if (explicit != null) return explicit;
-        return p.getAddedByOrgId() == null || Objects.equals(p.getAddedByOrgId(), orgId);
+        return p.getAddedByOrgId() != null && Objects.equals(p.getAddedByOrgId(), orgId);
     }
 
     public boolean enabled(Payer p, Long orgId) {
