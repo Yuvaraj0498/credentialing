@@ -12,12 +12,38 @@ import { Icon } from "@/components/Icon";
 import { useShell } from "@/stores/shell";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/stores/auth";
-import { fmtDate, fmtDateShort, fmtTs } from "@/lib/utils";
+import { daysFromNow, fmtDate, fmtDateShort, fmtTs } from "@/lib/utils";
 import { useAsync } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
 import type { DeferredResponse } from "@/types";
 import { ValField } from "./shared";
-import type { DocStatus, DocumentRow, ProviderDetail, Verification, VerificationSource } from "@/types/providers";
+import type { AdditionalDocument, DocStatus, DocType, DocumentRow, ProviderDetail, Verification, VerificationSource } from "@/types/providers";
+
+/** An additional document shown like a regular one. */
+const extraRow = (x: AdditionalDocument): DocumentRow => ({
+  id: x.id,
+  providerId: x.providerId,
+  docType: x.docType as DocType,
+  label: x.docTypeLabel,
+  critical: false,
+  expires: true,
+  sortOrder: null,
+  status: x.status as DocStatus,
+  fileName: x.fileName,
+  mimeType: null,
+  sizeBytes: x.sizeBytes,
+  originalRelativePath: null,
+  expiresAt: x.expiresAt,
+  daysUntilExpiry: daysFromNow(x.expiresAt),
+  uploadedAt: x.uploadedAt,
+  hasFile: true,
+  extra: true,
+});
+
+/** Row key: regular and additional documents have separate ids. */
+const rowKey = (d: DocumentRow) => (d.extra ? "x" : "d") + d.id;
+/** API path of a document (regular or additional). */
+const docPath = (d: DocumentRow) => (d.extra ? "/additional-documents/" : "/documents/") + d.id;
 
 const PSV_CHECKS: { source: VerificationSource; icon: string; iconColor: string; iconBg: string; title: string; subtitle: string; action: string }[] = [
   { source: "npi", icon: "ShieldCheck", iconColor: "#3b82f6", iconBg: "#dbeafe", title: "NPI Registry", subtitle: "Verify provider credentials with CMS", action: "Check NPI Registry" },
@@ -29,12 +55,18 @@ const PSV_CHECKS: { source: VerificationSource; icon: string; iconColor: string;
 /** Prototype ProviderOverview (L1871): documents, document details, PSV and credentials. */
 export function ProviderOverview({ provider, onChanged }: { provider: ProviderDetail; onChanged: () => void }) {
   const { can } = useAuth();
-  const [selectedDocId, setSelectedDocId] = useState<number | null>(null);
-  const [expandedDocs, setExpandedDocs] = useState<Set<number>>(new Set());
-  const docs = provider.documents;
-  const selectedDoc = docs.find((d) => d.id === selectedDocId) || null;
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
+  const extras = useAsync(() => api.get<AdditionalDocument[]>("/providers/" + provider.id + "/additional-documents"), [provider.id]);
+  const extraDocs = (extras.data || []).map(extraRow);
+  const docs = [...provider.documents, ...extraDocs];
+  const selectedDoc = docs.find((d) => rowKey(d) === selectedDocId) || null;
+  const changed = () => {
+    onChanged();
+    extras.reload();
+  };
 
-  const toggle = (id: number) =>
+  const toggle = (id: string) =>
     setExpandedDocs((p) => {
       const n = new Set(p);
       if (n.has(id)) n.delete(id);
@@ -69,14 +101,25 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
               </tr>
             </thead>
             <tbody>
-              {docs.map((doc) => {
-                const isExpanded = expandedDocs.has(doc.id);
+              {docs.map((doc, i) => {
+                const key = rowKey(doc);
+                const isExpanded = expandedDocs.has(key);
                 const hasFile = doc.hasFile;
                 const expDays = doc.daysUntilExpiry;
                 const expClass = expDays !== null && expDays < 0 ? "text-danger" : "text-ink-light";
                 return (
-                  <Fragment key={doc.id}>
-                    <tr className={hasFile ? "cursor-pointer" : ""} onClick={() => hasFile && toggle(doc.id)}>
+                  <Fragment key={key}>
+                    {doc.extra && !docs[i - 1]?.extra && (
+                      <tr className="no-hover">
+                        <td colSpan={4} style={{ background: "var(--bg-soft)" }}>
+                          <div className="flex items-center gap-2 text-xs font-semibold text-ink">
+                            <Icon name="FilePlus" size={13} className="text-accent" /> Additional Documents
+                            <span className="font-normal text-ink-faint">added by the provider</span>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    <tr className={hasFile ? "cursor-pointer" : ""} onClick={() => hasFile && toggle(key)} style={selectedDocId === key ? { background: "var(--accent-soft)" } : undefined}>
                       <td>
                         <div className="flex items-center gap-2">
                           {hasFile ? <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={13} className="text-ink-faint" /> : <span style={{ width: 13 }}></span>}
@@ -99,7 +142,7 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
                           style={hasFile ? undefined : { opacity: 0.35, cursor: "not-allowed" }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (hasFile) setSelectedDocId(doc.id);
+                            if (hasFile) setSelectedDocId(key);
                           }}
                         >
                           <Icon name="Eye" size={13} />
@@ -116,7 +159,7 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
                                 className="text-accent text-sm font-medium hover:underline truncate max-w-full text-left"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setSelectedDocId(doc.id);
+                                  setSelectedDocId(key);
                                 }}
                               >
                                 {doc.fileName}
@@ -131,7 +174,7 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
                                 title="View details"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setSelectedDocId(doc.id);
+                                  setSelectedDocId(key);
                                 }}
                               >
                                 <Icon name="Eye" size={13} />
@@ -161,7 +204,7 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
             </div>
           </div>
           {selectedDoc ? (
-            <DocumentDetails key={selectedDoc.id} doc={selectedDoc} onClose={() => setSelectedDocId(null)} onChanged={onChanged} />
+            <DocumentDetails key={rowKey(selectedDoc)} doc={selectedDoc} onClose={() => setSelectedDocId(null)} onChanged={changed} />
           ) : (
             <EmptyState icon="FileText" title="Select a document" description="Select a document category to view extracted details." />
           )}
@@ -225,7 +268,7 @@ export function ViewFileButton({ doc, label }: { doc: DocumentRow; label?: boole
         e.stopPropagation();
         setBusy(true);
         try {
-          await api.openInNewTab("/documents/" + doc.id + "/download", { inline: true });
+          await api.openInNewTab(docPath(doc) + "/download", { inline: true });
         } catch (err) {
           toast(errorMessage(err), "error");
         } finally {
@@ -252,7 +295,7 @@ export function DownloadButton({ doc, label }: { doc: DocumentRow; label?: boole
         e.stopPropagation();
         setBusy(true);
         try {
-          await api.download("/documents/" + doc.id + "/download", { inline: false }, doc.fileName || "document");
+          await api.download(docPath(doc) + "/download", { inline: false }, doc.fileName || "document");
         } catch (err) {
           toast(errorMessage(err), "error");
         } finally {
@@ -287,7 +330,7 @@ function DocumentDetails({ doc, onClose, onChanged }: { doc: DocumentRow; onClos
     }
     setBusy(key);
     try {
-      await api.patch<DocumentRow>("/documents/" + doc.id, body);
+      await api.patch(docPath(doc), body);
       toast(msg);
       onChanged();
       publish("providers");
@@ -303,8 +346,9 @@ function DocumentDetails({ doc, onClose, onChanged }: { doc: DocumentRow; onClos
   const removeFile = async () => {
     setBusy("remove");
     try {
-      await api.delete<DocumentRow>("/documents/" + doc.id + "/file");
-      toast("File removed");
+      if (doc.extra) await api.delete(docPath(doc));
+      else await api.delete<DocumentRow>("/documents/" + doc.id + "/file");
+      toast(doc.extra ? "Document removed" : "File removed");
       setConfirmRemove(false);
       onChanged();
       publish("providers");
@@ -320,7 +364,10 @@ function DocumentDetails({ doc, onClose, onChanged }: { doc: DocumentRow; onClos
   return (
     <div className="p-5">
       <div className="flex items-center justify-between mb-3">
-        <div className="font-semibold text-ink">{doc.label}</div>
+        <div className="font-semibold text-ink">
+          {doc.label}
+          {doc.extra && <div className="text-[10px] font-normal text-ink-faint">Additional document</div>}
+        </div>
         <button onClick={onClose} className="btn-ghost p-1" aria-label="Close details"><Icon name="X" size={14} /></button>
       </div>
       <div className="space-y-3 text-sm">
@@ -394,20 +441,26 @@ function DocumentDetails({ doc, onClose, onChanged }: { doc: DocumentRow; onClos
         )}
         {canRemove && doc.hasFile && (
           <button className="btn btn-ghost hover:text-red-600" style={{ fontSize: 11, padding: "5px 10px" }} disabled={busy !== null} onClick={() => setConfirmRemove(true)}>
-            <Icon name="Trash2" size={11} /> Remove File
+            <Icon name="Trash2" size={11} /> {doc.extra ? "Remove Document" : "Remove File"}
           </button>
         )}
       </div>
 
       {confirmRemove && (
         <ConfirmDialog
-          title="Remove file?"
+          title={doc.extra ? "Remove document?" : "Remove file?"}
           message={
-            <>
-              The file <strong>{doc.fileName}</strong> will be deleted and {doc.label} becomes <strong>Missing</strong>.
-            </>
+            doc.extra ? (
+              <>
+                The additional document <strong>{doc.label}</strong> ({doc.fileName}) will be removed.
+              </>
+            ) : (
+              <>
+                The file <strong>{doc.fileName}</strong> will be deleted and {doc.label} becomes <strong>Missing</strong>.
+              </>
+            )
           }
-          confirmLabel="Remove File"
+          confirmLabel={doc.extra ? "Remove Document" : "Remove File"}
           busy={busy === "remove"}
           onConfirm={removeFile}
           onClose={() => setConfirmRemove(false)}

@@ -20,7 +20,6 @@ import { FollowUpWidget, TimeTrackerWidget } from "@/components/widgets/Activity
 import { ProviderEditModal } from "@/components/modals/ProviderEditModal";
 import { ProviderInfo } from "./ProviderInfo";
 import { ProviderOverview } from "./ProviderOverview";
-import { AdditionalDocuments } from "./AdditionalDocuments";
 import { providerStatusLabel, StatusDropdown } from "./shared";
 import type { ProviderDetail, ProviderStatus } from "@/types/providers";
 
@@ -128,12 +127,7 @@ export function ProviderDetailView({ providerId }: { providerId: number }) {
             <div className={"tab " + (tab === "info" ? "active" : "")} onClick={() => setTab("info")}>Provider Information</div>
           </div>
 
-          {tab === "overview" && (
-            <>
-              <ProviderOverview provider={provider} onChanged={reload} />
-              <AdditionalDocuments providerId={provider.id} />
-            </>
-          )}
+          {tab === "overview" && <ProviderOverview provider={provider} onChanged={reload} />}
           {tab === "enrollments" && <ProviderEnrollmentsTab providerId={provider.id} onUploadDocs={canUpload ? () => router.push("/providers/" + provider.id + "/upload") : undefined} />}
           {tab === "activity" && (
             <div className="space-y-4">

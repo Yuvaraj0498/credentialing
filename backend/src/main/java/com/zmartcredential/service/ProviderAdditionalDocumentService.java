@@ -5,8 +5,10 @@ import com.zmartcredential.entity.Provider;
 import com.zmartcredential.entity.ProviderAdditionalDocument;
 import com.zmartcredential.exception.BadRequestException;
 import com.zmartcredential.exception.NotFoundException;
+import com.zmartcredential.dto.provider.ProviderDocumentDtos.ProviderDocumentPatchRequest;
 import com.zmartcredential.repository.ProviderAdditionalDocumentRepository;
 import com.zmartcredential.security.AuthContext;
+import com.zmartcredential.security.PermissionService;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,6 +32,7 @@ public class ProviderAdditionalDocumentService {
     private final FileStorageService fileStorageService;
     private final NotificationService notificationService;
     private final AuthContext authContext;
+    private final PermissionService permissionService;
 
     public record AdditionalDocumentItem(Long id, Long providerId, String docType, String docTypeLabel, String title,
                                          String notes, LocalDate expiresAt, String fileName, Long sizeBytes,
@@ -81,6 +84,41 @@ public class ProviderAdditionalDocumentService {
                     d.getDocType() + " added for " + who + ".", "FilePlus", NotificationService.INFO);
         }
         return toItem(d, types);
+    }
+
+    /** Staff review, as for the regular documents: status (approve / reject / N/A) and expiration date. */
+    @Transactional
+    public AdditionalDocumentItem patch(Long id, ProviderDocumentPatchRequest req) {
+        permissionService.require("document", "update");
+        authContext.requireStaff();
+        ProviderAdditionalDocument d = loadForStaff(id);
+        if (Boolean.TRUE.equals(req.clearExpiresAt())) d.setExpiresAt(null);
+        else if (req.expiresAt() != null) {
+            if (!req.expiresAt().equals(d.getExpiresAt()) && req.expiresAt().isBefore(LocalDate.now())) {
+                throw new BadRequestException("The expiration date can't be in the past");
+            }
+            d.setExpiresAt(req.expiresAt());
+        }
+        if (req.status() != null) {
+            d.setStatus(req.status());
+        } else if (req.expiresAt() != null && ("approved".equals(d.getStatus()) || "expired".equals(d.getStatus()))) {
+            d.setStatus(d.getExpiresAt().isBefore(LocalDate.now()) ? "expired" : "approved");
+        }
+        return toItem(repository.save(d), support.docTypes());
+    }
+
+    /** Staff remove an additional document (marked deleted). */
+    @Transactional
+    public void delete(Long id) {
+        permissionService.require("document", "delete");
+        authContext.requireStaff();
+        repository.delete(loadForStaff(id));
+    }
+
+    private ProviderAdditionalDocument loadForStaff(Long id) {
+        ProviderAdditionalDocument d = repository.findById(id).orElseThrow(() -> NotFoundException.of("Document", id));
+        support.loadAccessible(d.getProviderId()); // staff of the provider's organization
+        return d;
     }
 
     @Transactional(readOnly = true)

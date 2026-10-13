@@ -17,7 +17,7 @@ import type { AdditionalDocument } from "@/types/providers";
 
 /**
  * Extra documents of a provider, besides the required list. The provider adds them with Add More Document
- * (My Documents header); staff see them on the provider's page. Shown only once there is at least one.
+ * (My Documents header). Shown only once there is at least one. (Staff see them in the provider's documents table.)
  * `reloadKey` changes after a document was added, to load the list again.
  */
 export function AdditionalDocuments({ providerId, reloadKey = 0 }: { providerId: number; reloadKey?: number }) {

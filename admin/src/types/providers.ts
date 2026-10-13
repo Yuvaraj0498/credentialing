@@ -50,6 +50,8 @@ export interface DocumentRow {
   daysUntilExpiry: number | null;
   uploadedAt: string | null;
   hasFile: boolean;
+  /** an additional document the provider added (My Documents → Add More Document) */
+  extra?: boolean;
 }
 
 export interface ProviderDetail {

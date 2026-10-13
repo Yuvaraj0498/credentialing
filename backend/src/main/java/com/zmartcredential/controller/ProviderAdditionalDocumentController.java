@@ -1,6 +1,8 @@
 package com.zmartcredential.controller;
 
+import com.zmartcredential.dto.provider.ProviderDocumentDtos.ProviderDocumentPatchRequest;
 import com.zmartcredential.service.ProviderAdditionalDocumentService;
+import jakarta.validation.Valid;
 import com.zmartcredential.service.ProviderAdditionalDocumentService.AdditionalDocumentItem;
 import com.zmartcredential.service.ProviderDocumentService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -40,6 +42,19 @@ public class ProviderAdditionalDocumentController {
                                       @RequestParam(value = "notes", required = false) String notes,
                                       @RequestParam(value = "expiresAt", required = false) String expiresAt) {
         return service.add(id, file, docType, title, notes, expiresAt);
+    }
+
+    @Operation(summary = "Review an extra document: status and expiration date (staff)")
+    @PatchMapping("/api/additional-documents/{id:\\d+}")
+    public AdditionalDocumentItem patch(@PathVariable Long id, @Valid @RequestBody ProviderDocumentPatchRequest req) {
+        return service.patch(id, req);
+    }
+
+    @Operation(summary = "Remove an extra document (staff)")
+    @DeleteMapping("/api/additional-documents/{id:\\d+}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@PathVariable Long id) {
+        service.delete(id);
     }
 
     @Operation(summary = "Download / view an extra document")
