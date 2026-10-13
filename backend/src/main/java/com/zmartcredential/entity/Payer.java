@@ -74,6 +74,9 @@ public class Payer {
     /** Whether the payer has a provider portal. */
     private Boolean portalAvailable = true;
 
+    /** "CAQH Update" (free text). */
+    private String caqhUpdate;
+
     /** API access: key and token, encrypted (never sent back to the browser). */
     @Column(columnDefinition = "TEXT")
     private String apiKeyEnc;

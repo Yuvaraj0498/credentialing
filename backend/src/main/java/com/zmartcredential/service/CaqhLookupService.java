@@ -194,10 +194,10 @@ public class CaqhLookupService {
             p.setLicenseNumber(d.licenseNumber().trim());
             p.setLicenseState(d.licenseState().trim().toUpperCase());
             p.setLicenseExpires(d.licenseExpires());
-            p.setCaqhUsername(d.caqhUsername().trim());
+            p.setCaqhUsername(d.caqhUsername() == null || d.caqhUsername().isBlank() ? null : d.caqhUsername().trim());
             p.setCaqhPasswordEnc(cryptoService.encrypt(d.caqhPassword()));
             p.setPecosAccessGranted(d.pecosAccessGranted());
-            p.setPecosUsername(Boolean.TRUE.equals(d.pecosAccessGranted()) ? d.pecosUsername().trim() : null);
+            p.setPecosUsername(Boolean.TRUE.equals(d.pecosAccessGranted()) && d.pecosUsername() != null && !d.pecosUsername().isBlank() ? d.pecosUsername().trim() : null);
             p.setStatus(d.status());
         }
         p.setSource("caqh");

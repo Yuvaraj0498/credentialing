@@ -35,5 +35,6 @@ public record PayerResponse(
         Boolean portalAvailable,
         /* API access: whether a key / token is saved (the values are never returned) */
         boolean hasApiKey,
-        boolean hasApiToken) {
+        boolean hasApiToken,
+        String caqhUpdate) {
 }

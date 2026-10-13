@@ -188,7 +188,6 @@ export function ProviderForm({
     else if (!NPI_RE.test(form.npi)) e.npi = "10 digits required";
     // CAQH ID is optional; when entered it must be 6-10 digits
     if (form.caqhId && !/^[0-9]{6,10}$/.test(form.caqhId)) e.caqhId = "6-10 digits";
-    req("caqhUsername", form.caqhUsername);
     req("specialty", form.specialty);
     if (!form.email.trim()) e.email = "Required";
     else if (!EMAIL_RE.test(form.email.trim())) e.email = "Valid email required";
@@ -201,9 +200,6 @@ export function ProviderForm({
     // expiration dates can't be in the past (an unchanged date of an existing provider is left alone)
     if (form.licenseExpires && form.licenseExpires < todayISO() && form.licenseExpires !== (initial.licenseExpires || "")) e.licenseExpires = "Choose today or a later date";
     req("status", form.status);
-    if (!form.caqhPassword && !hasStoredPassword) e.caqhPassword = "Required";
-    if (!form.pecosAccess) e.pecosAccess = "Required";
-    else if (form.pecosAccess === "yes" && !form.pecosUsername.trim()) e.pecosUsername = "Required";
     if (!form.practiceId) e.practiceId = "Practice assignment is required";
     if (!form.locationId) e.locationId = "Location is required";
     setErrors(e);
@@ -294,7 +290,7 @@ export function ProviderForm({
             disabled={lockCaqhId}
           />
         </Field>
-        <Field label="CAQH Username *" error={err("caqhUsername")}>
+        <Field label="CAQH Username" error={err("caqhUsername")}>
           <input value={form.caqhUsername} onChange={(e) => set("caqhUsername", e.target.value.replace(/\s/g, ""))} className="input font-mono" maxLength={100} autoComplete="off" />
         </Field>
       </div>
@@ -352,7 +348,7 @@ export function ProviderForm({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Field
-          label={hasStoredPassword ? "CAQH Password" : "CAQH Password *"}
+          label="CAQH Password"
           error={err("caqhPassword")}
           hint={hasStoredPassword ? "Leave blank to keep the saved password" : undefined}
         >
@@ -365,14 +361,14 @@ export function ProviderForm({
             placeholder={hasStoredPassword ? "••••••••" : ""}
           />
         </Field>
-        <Field label="PECOS Access Granted *" error={err("pecosAccess")}>
+        <Field label="PECOS Access Granted" error={err("pecosAccess")}>
           <select value={form.pecosAccess} onChange={(e) => set("pecosAccess", e.target.value)} className="input">
             <option value="">— Select —</option>
             <option value="yes">Yes</option>
             <option value="no">No</option>
           </select>
         </Field>
-        <Field label={form.pecosAccess === "yes" ? "PECOS User Name *" : "PECOS User Name"} error={err("pecosUsername")}>
+        <Field label="PECOS User Name" error={err("pecosUsername")}>
           <input
             value={form.pecosUsername}
             onChange={(e) => set("pecosUsername", e.target.value.replace(/\s/g, ""))}

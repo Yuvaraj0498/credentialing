@@ -72,8 +72,9 @@ export function EnrollmentFormModal({
     if (!form.status) e.status = "Required";
     const today = todayISO();
     // Follow Up and Est Approved dates: today or later (an unchanged earlier date of an existing enrollment is kept)
-    if (form.followUpDate && form.followUpDate < today && form.followUpDate !== (enrollment?.followUpDate || "")) e.followUpDate = "Choose today or a later date";
-    if (form.estApprovedDate && form.estApprovedDate < today && form.estApprovedDate !== (enrollment?.estApprovedDate || "")) e.estApprovedDate = "Choose today or a later date";
+    const approvedStatus = form.status === "approved";
+    if (!approvedStatus && form.followUpDate && form.followUpDate < today && form.followUpDate !== (enrollment?.followUpDate || "")) e.followUpDate = "Choose today or a later date";
+    if (!approvedStatus && form.estApprovedDate && form.estApprovedDate < today && form.estApprovedDate !== (enrollment?.estApprovedDate || "")) e.estApprovedDate = "Choose today or a later date";
     // Approved date: required when the status is Approved
     if (form.status === "approved") {
       if (!form.effectiveDate) e.effectiveDate = "Approved date is required";
@@ -93,8 +94,9 @@ export function EnrollmentFormModal({
       status: form.status,
       submittedDate: form.submittedDate || null,
       effectiveDate: form.status === "approved" ? form.effectiveDate || null : enrollment?.effectiveDate || null,
-      followUpDate: form.followUpDate || null,
-      estApprovedDate: form.estApprovedDate || null,
+      // an approved enrollment has no follow-up / estimated approval date
+      followUpDate: form.status === "approved" ? null : form.followUpDate || null,
+      estApprovedDate: form.status === "approved" ? null : form.estApprovedDate || null,
       notes: form.notes || undefined,
     };
     if (enrollment) {
@@ -159,12 +161,12 @@ export function EnrollmentFormModal({
               <input type="date" value={form.submittedDate || ""} onChange={(e) => setForm({ ...form, submittedDate: e.target.value })} className="input" />
             </Field>
             <Field label="Follow Up Date" error={errors.followUpDate}>
-              <input type="date" min={todayISO()} value={form.followUpDate || ""} onChange={(e) => setForm({ ...form, followUpDate: e.target.value })} className="input" />
+              <input type="date" min={todayISO()} value={form.status === "approved" ? "" : form.followUpDate || ""} onChange={(e) => setForm({ ...form, followUpDate: e.target.value })} className="input" disabled={form.status === "approved"} title={form.status === "approved" ? "Not used for an approved enrollment" : undefined} />
             </Field>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Est Approved Date" error={errors.estApprovedDate}>
-              <input type="date" min={todayISO()} value={form.estApprovedDate || ""} onChange={(e) => setForm({ ...form, estApprovedDate: e.target.value })} className="input" />
+              <input type="date" min={todayISO()} value={form.status === "approved" ? "" : form.estApprovedDate || ""} onChange={(e) => setForm({ ...form, estApprovedDate: e.target.value })} className="input" disabled={form.status === "approved"} title={form.status === "approved" ? "Not used for an approved enrollment" : undefined} />
             </Field>
             {form.status === "approved" && (
               <Field label="Approved Date *" error={errors.effectiveDate}>

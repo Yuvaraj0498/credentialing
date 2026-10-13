@@ -395,14 +395,16 @@ public class EnrollmentService {
         e.setEffectiveDate(approved);
         // follow-up and estimated approval dates: today or later (an unchanged earlier date is left alone)
         LocalDate today = LocalDate.now();
-        if (r.followUpDate() != null && !r.followUpDate().equals(e.getFollowUpDate()) && r.followUpDate().isBefore(today)) {
+        if (!"approved".equals(e.getStatus()) && r.followUpDate() != null && !r.followUpDate().equals(e.getFollowUpDate()) && r.followUpDate().isBefore(today)) {
             throw BadRequestException.onField("followUpDate", "Choose today or a later date");
         }
-        if (r.estApprovedDate() != null && !r.estApprovedDate().equals(e.getEstApprovedDate()) && r.estApprovedDate().isBefore(today)) {
+        if (!"approved".equals(e.getStatus()) && r.estApprovedDate() != null && !r.estApprovedDate().equals(e.getEstApprovedDate()) && r.estApprovedDate().isBefore(today)) {
             throw BadRequestException.onField("estApprovedDate", "Choose today or a later date");
         }
-        e.setFollowUpDate(r.followUpDate());
-        e.setEstApprovedDate(r.estApprovedDate());
+        // an approved enrollment has no follow-up / estimated approval date
+        boolean approvedNow = "approved".equals(e.getStatus());
+        e.setFollowUpDate(approvedNow ? null : r.followUpDate());
+        e.setEstApprovedDate(approvedNow ? null : r.estApprovedDate());
         // always recomputed: clearing a date clears the TAT (prototype kept a stale value)
         e.setTatDays(EnrollmentSupport.tat(r.submittedDate(), r.effectiveDate()));
         e.setNotes(blankToNull(r.notes()));

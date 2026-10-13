@@ -128,8 +128,8 @@ export function SecureLinkPortal({ token }: { token: string }) {
         licenseExpires: orNull(profile.licenseExpires),
         deaNumber: orNull(profile.deaNumber),
         deaExpires: orNull(profile.deaExpires),
-        caqhUsername: profile.caqhUsername.trim(),
-        caqhPassword: profile.caqhPassword,
+        caqhUsername: profile.caqhUsername.trim() || null,
+        caqhPassword: profile.caqhPassword || null,
         pecosAccessGranted: profile.pecosAccess === "yes",
         pecosUsername: profile.pecosAccess === "yes" ? profile.pecosUsername.trim() : undefined,
         password: needsLogin ? profile.password : undefined,
@@ -166,10 +166,7 @@ export function SecureLinkPortal({ token }: { token: string }) {
     if (!p.licenseExpires) e.licenseExpires = "Required";
     else if (p.licenseExpires < today) e.licenseExpires = "The license has expired — enter the current expiration date";
     if (p.deaExpires && p.deaExpires < today) e.deaExpires = "The DEA registration has expired — enter the current date or leave it empty";
-    if (!p.caqhUsername.trim()) e.caqhUsername = "Required";
-    if (!p.caqhPassword) e.caqhPassword = "Required";
-    if (!p.pecosAccess) e.pecosAccess = "Required";
-    else if (p.pecosAccess === "yes" && !p.pecosUsername.trim()) e.pecosUsername = "Required when PECOS access is granted";
+    // CAQH username / password and PECOS are optional
     if (needsLogin) {
       if (p.password.length < 8) e.password = p.password ? "At least 8 characters" : "Required";
       if (!p.confirmPassword) e.confirmPassword = "Required";
@@ -503,22 +500,22 @@ function ProfileForm({ profile, errors, loginEmail, onChange }: { profile: Profi
         </Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="CAQH Username" required error={errors.caqhUsername}>
+        <Field label="CAQH Username" error={errors.caqhUsername}>
           <input value={profile.caqhUsername} onChange={(e) => set("caqhUsername", e.target.value.replace(/\s/g, ""))} className="input font-mono" maxLength={100} autoComplete="off" />
         </Field>
-        <Field label="CAQH Password" required error={errors.caqhPassword}>
+        <Field label="CAQH Password" error={errors.caqhPassword}>
           <PasswordInput value={profile.caqhPassword} onChange={(e) => set("caqhPassword", e.target.value)} className="input font-mono" maxLength={200} autoComplete="new-password" />
         </Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="PECOS Access Granted" required error={errors.pecosAccess || errors.pecosAccessGranted}>
+        <Field label="PECOS Access Granted" error={errors.pecosAccess || errors.pecosAccessGranted}>
           <select value={profile.pecosAccess} onChange={(e) => set("pecosAccess", e.target.value)} className="input">
             <option value="">— Select —</option>
             <option value="yes">Yes</option>
             <option value="no">No</option>
           </select>
         </Field>
-        <Field label="PECOS User Name" required={profile.pecosAccess === "yes"} error={errors.pecosUsername}>
+        <Field label="PECOS User Name" error={errors.pecosUsername}>
           <input value={profile.pecosUsername} onChange={(e) => set("pecosUsername", e.target.value.replace(/\s/g, ""))} className="input font-mono" maxLength={100} disabled={profile.pecosAccess !== "yes"} autoComplete="off" />
         </Field>
       </div>

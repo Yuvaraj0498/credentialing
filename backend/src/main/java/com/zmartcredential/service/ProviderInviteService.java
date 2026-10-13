@@ -285,17 +285,14 @@ public class ProviderInviteService {
         if (req.licenseExpires() == null) missing.add("License Expiration");
         else if (req.licenseExpires().isBefore(java.time.LocalDate.now())) throw new BadRequestException("License Expiration can't be in the past");
         if (req.deaExpires() != null && req.deaExpires().isBefore(java.time.LocalDate.now())) throw new BadRequestException("DEA Expiration can't be in the past");
-        if (blankToNull(req.caqhUsername()) == null) missing.add("CAQH Username");
-        if (blankToNull(req.caqhPassword()) == null && p.getCaqhPasswordEnc() == null) missing.add("CAQH Password");
-        if (req.pecosAccessGranted() == null) missing.add("PECOS Access Granted");
-        else if (req.pecosAccessGranted() && blankToNull(req.pecosUsername()) == null) missing.add("PECOS User Name");
+        // CAQH username / password and PECOS are optional
         if (!missing.isEmpty()) throw new BadRequestException("Required: " + String.join(", ", missing));
         p.setNpi(npi);
         if (blankToNull(req.caqhId()) != null) p.setCaqhId(req.caqhId().trim());
-        p.setCaqhUsername(req.caqhUsername().trim());
+        p.setCaqhUsername(blankToNull(req.caqhUsername()));
         if (blankToNull(req.caqhPassword()) != null) p.setCaqhPasswordEnc(cryptoService.encrypt(req.caqhPassword()));
         p.setPecosAccessGranted(req.pecosAccessGranted());
-        p.setPecosUsername(req.pecosAccessGranted() ? req.pecosUsername().trim() : null);
+        p.setPecosUsername(Boolean.TRUE.equals(req.pecosAccessGranted()) ? blankToNull(req.pecosUsername()) : null);
         p.setSuffix(blankToNull(req.suffix()));
         p.setSpecialty(blankToNull(req.specialty()));
         p.setPhone(blankToNull(req.phone()));

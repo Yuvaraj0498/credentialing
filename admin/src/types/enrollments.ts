@@ -149,6 +149,7 @@ export interface Payer {
   /** API access: whether a key / token is saved (the values are never sent to the browser) */
   hasApiKey?: boolean;
   hasApiToken?: boolean;
+  caqhUpdate?: string | null;
 }
 
 // ---------- Providers (owned by the providers module; only the lite list is used here) ----------

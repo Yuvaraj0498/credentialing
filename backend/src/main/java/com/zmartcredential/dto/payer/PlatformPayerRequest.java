@@ -32,8 +32,9 @@ public record PlatformPayerRequest(
         String apiKey,
         @Size(max = 4000, message = "At most 4000 characters")
         String apiToken,
-        /* CAQH update: whether the payer takes its provider data from CAQH */
-        Boolean caqhUpdate,
+        /* CAQH update (free text, optional) */
+        @Size(max = 255, message = "At most 255 characters")
+        String caqhUpdate,
         /* the payer's provider portal login page (required when portalAvailable; checked in PayerService) */
         @Size(max = 500, message = "At most 500 characters")
         @Pattern(regexp = "^$|^https?://\\S+$", message = "Enter a full address starting with https://")

@@ -621,10 +621,7 @@ public class ProviderService {
         if (blankToNull(req.caqhId()) != null && !req.caqhId().trim().matches("[0-9]{6,10}")) {
             throw BadRequestException.onField("caqhId", "CAQH ID must be 6-10 digits");
         }
-        if (blankToNull(req.caqhUsername()) == null) missing.add("CAQH Username");
-        if (blankToNull(req.caqhPassword()) == null) missing.add("CAQH Password");
-        if (req.pecosAccessGranted() == null) missing.add("PECOS Access Granted");
-        else if (req.pecosAccessGranted() && blankToNull(req.pecosUsername()) == null) missing.add("PECOS User Name");
+        // CAQH username / password and PECOS are optional
         if (req.practiceId() == null) missing.add("Practice");
         if (req.locationId() == null) missing.add("Location");
         if (!missing.isEmpty()) throw new BadRequestException("Required: " + String.join(", ", missing));
