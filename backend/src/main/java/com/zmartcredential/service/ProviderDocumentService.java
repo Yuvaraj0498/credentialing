@@ -221,7 +221,8 @@ public class ProviderDocumentService {
 
     @Transactional(readOnly = true)
     public DownloadedFile download(Long docId) {
-        permissionService.require("document", "read");
+        // a provider can always open their own files (loadDoc only finds their own documents)
+        if (!authContext.principal().isProvider()) permissionService.require("document", "read");
         ProviderDocument d = loadDoc(docId);
         if (d.getStorageKey() == null) throw new NotFoundException("No file has been uploaded for this document");
         return new DownloadedFile(fileStorageService.load(d.getStorageKey()),

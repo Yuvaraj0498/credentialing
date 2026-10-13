@@ -207,10 +207,10 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
 }
 
 /** Word documents can't be shown in the browser: they are downloaded instead of viewed. */
-const isWordFile = (name: string | null | undefined) => /\.(docx?|dot|dotx|rtf)$/i.test(name || "");
+export const isWordFile = (name: string | null | undefined) => /\.(docx?|dot|dotx|rtf)$/i.test(name || "");
 
 /** Opens the uploaded file in a new browser tab (any status, as long as a file is stored; not for Word files). */
-function ViewFileButton({ doc, label }: { doc: DocumentRow; label?: boolean }) {
+export function ViewFileButton({ doc, label }: { doc: DocumentRow; label?: boolean }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   if (!doc.hasFile || isWordFile(doc.fileName)) return null;
@@ -238,7 +238,7 @@ function ViewFileButton({ doc, label }: { doc: DocumentRow; label?: boolean }) {
   );
 }
 
-function DownloadButton({ doc, label }: { doc: DocumentRow; label?: boolean }) {
+export function DownloadButton({ doc, label }: { doc: DocumentRow; label?: boolean }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   if (!doc.hasFile) return null;
