@@ -258,7 +258,7 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
     else if (!/^[^@]+@[^@]+\.[^@]+$/.test(form.email)) e.email = "Enter a valid email address";
     else if (emailTaken) e.email = emailTaken;
     if (!form.phone) e.phone = "Required";
-    else if (!PHONE_RE.test(form.phone)) e.phone = "Phone must be 10 digits";
+    else if (!PHONE_RE.test(form.phone)) e.phone = "Ph.No must be 10 digits";
     if (!user && !form.password) e.password = "Password is required";
     else if (form.password && form.password.length < 8) e.password = "Password must be at least 8 characters";
     if (!form.role) e.role = "Required";
@@ -391,7 +391,7 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
           <Field label="Email *" error={errors.email || emailTaken} hint="Used to sign in">
             <input type="email" value={form.email} onChange={(e) => { setForm({ ...form, email: e.target.value }); setErrors((er) => ({ ...er, email: "" })); }} className="input" autoComplete="off" />
           </Field>
-          <Field label="Phone *" error={errors.phone}>
+          <Field label="Ph.No *" error={errors.phone}>
             <PhoneInput value={form.phone} onChange={(v) => { setForm({ ...form, phone: v }); setErrors((er) => ({ ...er, phone: "" })); }} invalid={!!errors.phone} />
           </Field>
           <Field label={user ? "New Password" : "Password *"} error={errors.password} hint={user ? "Blank = keep the current one" : undefined}>

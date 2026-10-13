@@ -117,8 +117,8 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
       if (!data.email) e.email = "Email is required";
       else if (!EMAIL_RE.test(data.email)) e.email = "Enter a valid email address";
       else if (emailTaken) e.email = emailTaken;
-      if (!data.phone) e.phone = "Phone is required";
-      else if (!PHONE_RE.test(data.phone)) e.phone = "Phone must be 10 digits";
+      if (!data.phone) e.phone = "Ph.No is required";
+      else if (!PHONE_RE.test(data.phone)) e.phone = "Ph.No must be 10 digits";
       if (!data.password) e.password = "Password is required";
       else if (data.password.length < 8) e.password = "Password must be at least 8 characters";
       if (!data.confirmPassword) e.confirmPassword = "Confirm the password";
@@ -316,13 +316,13 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
                   </div>
                 </div>
                 <div>
-                  <label className="label">Work Email *</label>
+                  <label className="label">Email *</label>
                   <input type="email" value={data.email} onChange={(e) => set("email", e.target.value)} className={"input" + (errors.email ? " input-error" : "")} placeholder="you@yourcompany.com" autoComplete="email" />
                   <div className="text-[10px] text-ink-faint mt-1">This will be your username</div>
                   <Err msg={errors.email || emailTaken} />
                 </div>
                 <div>
-                  <label className="label">Phone *</label>
+                  <label className="label">Ph.No *</label>
                   <PhoneInput value={data.phone} onChange={(v) => set("phone", v)} invalid={!!errors.phone} />
                   <Err msg={errors.phone} />
                 </div>

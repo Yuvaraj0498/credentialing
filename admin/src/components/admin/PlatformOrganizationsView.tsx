@@ -249,7 +249,7 @@ function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
     if (form.taxId && !/^\d{9}$/.test(form.taxId)) e.taxId = "9 digits required";
     if (form.zip && !/^\d{5}$/.test(form.zip)) e.zip = "5 digits required";
     if (form.email && !/^[^@]+@[^@]+\.[^@]+$/.test(form.email)) e.email = "Valid email required";
-    if (form.phone && !PHONE_RE.test(form.phone)) e.phone = "Phone must be 10 digits";
+    if (form.phone && !PHONE_RE.test(form.phone)) e.phone = "Ph.No must be 10 digits";
     if (form.packageCode) {
       const n = Number(form.estimatedProviders);
       if (!Number.isInteger(n) || n < 1) e.estimatedProviders = "Whole number, at least 1";
@@ -259,7 +259,7 @@ function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
       if (!form.adminLastName.trim()) e.adminLastName = "Required";
       if (!/^[^@]+@[^@]+\.[^@]+$/.test(form.adminEmail)) e.adminEmail = "Valid email required";
       if (form.adminPassword.length < 8) e.adminPassword = "At least 8 characters";
-      if (form.adminPhone && !PHONE_RE.test(form.adminPhone)) e.adminPhone = "Phone must be 10 digits";
+      if (form.adminPhone && !PHONE_RE.test(form.adminPhone)) e.adminPhone = "Ph.No must be 10 digits";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -322,7 +322,7 @@ function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
           <Field label="Email" error={errors.email}>
             <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="input" />
           </Field>
-          <Field label="Phone" error={errors.phone}>
+          <Field label="Ph.No" error={errors.phone}>
             <PhoneInput value={form.phone} onChange={(v) => set("phone", v)} invalid={!!errors.phone} />
           </Field>
         </div>
@@ -390,7 +390,7 @@ function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
                 <Field label="Title" error={errors.adminTitle}>
                   <input value={form.adminTitle} onChange={(e) => set("adminTitle", e.target.value)} className="input" />
                 </Field>
-                <Field label="Phone" error={errors.adminPhone}>
+                <Field label="Ph.No" error={errors.adminPhone}>
                   <PhoneInput value={form.adminPhone} onChange={(v) => set("adminPhone", v)} invalid={!!errors.adminPhone} />
                 </Field>
               </div>

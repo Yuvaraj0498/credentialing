@@ -38,7 +38,7 @@ export const nameRule = (label: string, max: number, required = true): Rule => (
   return undefined;
 };
 
-export const phoneRule: Rule = (v) => (v && !PHONE_RE.test(v) ? "Phone must be 10 digits" : undefined);
+export const phoneRule: Rule = (v) => (v && !PHONE_RE.test(v) ? "Ph.No must be 10 digits" : undefined);
 export const npiRule: Rule = (v) => (v && !NPI_RE.test(v) ? "NPI must be 10 digits" : undefined);
 export const zipRule = (required: boolean): Rule => (v) => (!v ? (required ? "ZIP is required" : undefined) : !ZIP_RE.test(v) ? "ZIP must be 5 digits" : undefined);
 export const emailRule: Rule = (v) => (v && !EMAIL_RE.test(v.trim()) ? "Enter a valid email address" : undefined);

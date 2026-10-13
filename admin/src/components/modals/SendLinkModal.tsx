@@ -34,7 +34,7 @@ export function SendLinkModal({
   onSent: (invite: InviteResponse) => void;
 }) {
   const toast = useToast();
-  const [form, setForm] = useState({ firstName: provider?.firstName || "", lastName: provider?.lastName || "", email: provider?.email || "", caqhId: "" });
+  const [form, setForm] = useState({ firstName: provider?.firstName || "", lastName: provider?.lastName || "", email: provider?.email || "" });
   const emailTaken = useEmailCheck(form.email, { kind: "provider", id: provider?.id });
   const [assignment, setAssignment] = useState<OrgAssignment>(
     !provider && placement
@@ -61,7 +61,6 @@ export function SendLinkModal({
     if (!assignment.practiceId) e.practiceId = "Pick a practice to continue";
     if (!provider) {
       if (!assignment.locationId) e.locationId = "Pick a location to continue";
-      if (form.caqhId && !/^[0-9]{6,10}$/.test(form.caqhId)) e.caqhId = "6-10 digits";
     }
     setErrors(e);
     if (Object.keys(e).length) return;
@@ -73,7 +72,6 @@ export function SendLinkModal({
             firstName: form.firstName.trim(),
             lastName: form.lastName.trim(),
             email: form.email.trim(),
-            caqhId: form.caqhId,
             ...assignmentPayload(assignment),
           });
       setSent(res);
@@ -164,14 +162,9 @@ export function SendLinkModal({
             <input value={form.lastName} onChange={(e) => set("lastName", e.target.value)} className="input" disabled={!!provider} />
           </Field>
         </div>
-        <Field label="Email Address" error={errors.email || emailTaken}>
+        <Field label="Email" error={errors.email || emailTaken}>
           <input value={form.email} onChange={(e) => set("email", e.target.value)} type="email" className="input" placeholder="provider@example.com" />
         </Field>
-        {!provider && (
-          <Field label="CAQH ID" error={errors.caqhId}>
-            <input value={form.caqhId} onChange={(e) => set("caqhId", e.target.value.replace(/[^0-9]/g, "").slice(0, 10))} className="input font-mono" placeholder="8 digits" inputMode="numeric" />
-          </Field>
-        )}
         <OrgAssignmentFields
           value={assignment}
           onChange={(a) => {

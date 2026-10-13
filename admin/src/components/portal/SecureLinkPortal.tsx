@@ -2,7 +2,7 @@
 
 import { Fragment, useRef, useState } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
-import { SPECIALTIES } from "@/lib/constants";
+import { SPECIALTIES, SUFFIXES } from "@/lib/constants";
 import { PasswordInput } from "@/components/PasswordInput";
 import { Loading } from "@/components/AsyncState";
 import { Field } from "@/components/Field";
@@ -11,16 +11,17 @@ import { Pill } from "@/components/Pill";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { US_STATES } from "@/lib/constants";
 import { fmtDate, fmtTs, todayISO } from "@/lib/utils";
-import { ALLOWED_EXT, fileExt, MAX_FILE_BYTES, NPI_RE } from "@/components/providers/shared";
+import { ALLOWED_EXT, fileExt, MAX_FILE_BYTES, NPI_RE, PROVIDER_STATUS_OPTIONS } from "@/components/providers/shared";
 import { useAsync } from "@/lib/hooks";
 import { PHONE_RE, phoneDigits } from "@/lib/validation";
 import type { PublicInviteInfo, PublicLinkStatus, PublicMissingDoc, PublicUploadResult } from "@/types/providers";
 
 type Step = "profile" | "docs" | "review" | "done";
 const STEPS: Step[] = ["profile", "docs", "review", "done"];
-const CREDENTIALS = ["MD", "DO", "NP", "PA", "DDS", "DMD", "LCSW", "LPC", "LMFT", "BCBA", "RN", "PhD"];
 
 interface Profile {
+  firstName: string;
+  lastName: string;
   npi: string;
   caqhId: string;
   suffix: string;
@@ -81,6 +82,8 @@ export function SecureLinkPortal({ token }: { token: string }) {
       setInfo(res);
       setDocs(res.missingDocuments);
       setProfile({
+        firstName: res.firstName || "",
+        lastName: res.lastName || "",
         npi: p.npi || "",
         caqhId: p.caqhId || "",
         suffix: p.suffix || "",
@@ -117,6 +120,8 @@ export function SecureLinkPortal({ token }: { token: string }) {
     try {
       const res = await api.post<PublicLinkStatus>(base + "/profile", {
         pin,
+        firstName: profile.firstName.trim(),
+        lastName: profile.lastName.trim(),
         npi: profile.npi,
         caqhId: orNull(profile.caqhId),
         suffix: orNull(profile.suffix),
@@ -160,7 +165,9 @@ export function SecureLinkPortal({ token }: { token: string }) {
     if (p.caqhId && !/^[0-9]{6,10}$/.test(p.caqhId)) e.caqhId = "CAQH ID must be 6–10 digits (or leave it empty)";
     if (!p.suffix) e.suffix = "Required";
     if (!p.specialty.trim()) e.specialty = "Required";
-    if (!PHONE_RE.test(p.phone)) e.phone = p.phone ? "Phone must be 10 digits" : "Required";
+    if (!PHONE_RE.test(p.phone)) e.phone = p.phone ? "Ph.No must be 10 digits" : "Required";
+    if (!p.firstName.trim()) e.firstName = "Required";
+    if (!p.lastName.trim()) e.lastName = "Required";
     if (!p.licenseNumber.trim()) e.licenseNumber = "Required";
     if (!p.licenseState) e.licenseState = "Required";
     if (!p.licenseExpires) e.licenseExpires = "Required";
@@ -314,6 +321,13 @@ export function SecureLinkPortal({ token }: { token: string }) {
               profile={profile}
               errors={profileErrors}
               loginEmail={needsLogin ? info?.profile.loginEmail || info?.email || "" : null}
+              fixed={{
+                email: info?.profile.loginEmail || info?.email || "",
+                status: info?.profile.status || null,
+                clientName: info?.profile.clientName || null,
+                practiceName: info?.profile.practiceName || null,
+                locationName: info?.profile.locationName || null,
+              }}
               onChange={(p) => {
                 // a field's message goes away once that field is changed
                 setProfileErrors((er) => {
@@ -375,10 +389,10 @@ export function SecureLinkPortal({ token }: { token: string }) {
               <div className="p-3 rounded-lg" style={{ background: "var(--bg-soft)" }}>
                 <div className="text-xs font-semibold text-ink mb-2">Personal Information</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
-                  <div><span className="text-ink-faint">Name:</span> {info.firstName} {info.lastName}{profile.suffix ? ", " + profile.suffix : ""}</div>
+                  <div><span className="text-ink-faint">Name:</span> {profile.firstName} {profile.lastName}{profile.suffix ? ", " + profile.suffix : ""}</div>
                   <div><span className="text-ink-faint">NPI:</span> <span className="font-mono">{profile.npi}</span></div>
                   <div><span className="text-ink-faint">Specialty:</span> {profile.specialty || "—"}</div>
-                  <div><span className="text-ink-faint">Phone:</span> {profile.phone || "—"}</div>
+                  <div><span className="text-ink-faint">Ph.No:</span> {profile.phone || "—"}</div>
                   <div><span className="text-ink-faint">License:</span> <span className="font-mono">{profile.licenseNumber}{profile.licenseState ? " (" + profile.licenseState + ")" : ""}</span></div>
                   <div><span className="text-ink-faint">DEA:</span> <span className="font-mono">{profile.deaNumber || "—"}</span></div>
                 </div>
@@ -437,26 +451,52 @@ export function SecureLinkPortal({ token }: { token: string }) {
   );
 }
 
-function ProfileForm({ profile, errors, loginEmail, onChange }: { profile: Profile; errors: Record<string, string>; loginEmail: string | null; onChange: (p: Profile) => void }) {
+interface FixedInfo {
+  email: string;
+  status: string | null;
+  clientName: string | null;
+  practiceName: string | null;
+  locationName: string | null;
+}
+
+/** A value set by the staff member who sent the link: shown in a field, not editable. */
+function Fixed({ label, value }: { label: string; value: string | null }) {
+  return (
+    <Field label={label}>
+      <input value={value || "—"} readOnly disabled className="input" title="Set by your credentialing team" />
+    </Field>
+  );
+}
+
+/** The same fields, names and order as Add Provider Manually (email, status and organization are set by the staff). */
+function ProfileForm({ profile, errors, loginEmail, fixed, onChange }: { profile: Profile; errors: Record<string, string>; loginEmail: string | null; fixed: FixedInfo; onChange: (p: Profile) => void }) {
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => onChange({ ...profile, [k]: v });
+  const suffixOptions = profile.suffix && !SUFFIXES.includes(profile.suffix) ? [profile.suffix, ...SUFFIXES] : SUFFIXES;
+  const statusLabel = PROVIDER_STATUS_OPTIONS.find((o) => o.id === fixed.status)?.label || fixed.status;
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="NPI Number" required error={errors.npi}>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Field label="First Name" required error={errors.firstName}>
+          <input value={profile.firstName} onChange={(e) => set("firstName", e.target.value)} className="input" maxLength={80} />
+        </Field>
+        <Field label="Last Name" required error={errors.lastName}>
+          <input value={profile.lastName} onChange={(e) => set("lastName", e.target.value)} className="input" maxLength={80} />
+        </Field>
+        <Field label="Suffix" required error={errors.suffix}>
+          <select value={profile.suffix} onChange={(e) => set("suffix", e.target.value)} className="input">
+            <option value="">— Select —</option>
+            {suffixOptions.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
+        </Field>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Field label="NPI" required error={errors.npi}>
           <input value={profile.npi} onChange={(e) => set("npi", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="10 digits" inputMode="numeric" />
         </Field>
         <Field label="CAQH ID" error={errors.caqhId}>
           <input value={profile.caqhId} onChange={(e) => set("caqhId", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="8 digits" inputMode="numeric" />
-        </Field>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Credential" required error={errors.suffix}>
-          <select value={profile.suffix} onChange={(e) => set("suffix", e.target.value)} className="input">
-            <option value="">— Select —</option>
-            {CREDENTIALS.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
         </Field>
         <Field label="Specialty" required error={errors.specialty}>
           <select value={profile.specialty} onChange={(e) => set("specialty", e.target.value)} className="input">
@@ -467,37 +507,39 @@ function ProfileForm({ profile, errors, loginEmail, onChange }: { profile: Profi
           </select>
         </Field>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="Phone" required error={errors.phone || (profile.phone && !PHONE_RE.test(profile.phone) ? "Phone must be 10 digits" : undefined)}>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Fixed label="Email" value={fixed.email} />
+        <Field label="Ph.No" required error={errors.phone || (profile.phone && !PHONE_RE.test(profile.phone) ? "Ph.No must be 10 digits" : undefined)}>
           <PhoneInput value={profile.phone} onChange={(v) => set("phone", v)} invalid={!!errors.phone} />
         </Field>
         <Field label="Date of Birth" error={errors.dateOfBirth}>
-          <input type="date" value={profile.dateOfBirth} onChange={(e) => set("dateOfBirth", e.target.value)} className="input" />
+          <input type="date" max={todayISO()} value={profile.dateOfBirth} onChange={(e) => set("dateOfBirth", e.target.value)} className="input" />
         </Field>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Field label="License Number" required error={errors.licenseNumber} className="sm:col-span-2">
-          <input value={profile.licenseNumber} onChange={(e) => set("licenseNumber", e.target.value)} className="input font-mono" />
+        <Field label="License Number" required error={errors.licenseNumber}>
+          <input value={profile.licenseNumber} onChange={(e) => set("licenseNumber", e.target.value)} className="input font-mono" maxLength={40} />
         </Field>
-        <Field label="State" required error={errors.licenseState}>
+        <Field label="License State" required error={errors.licenseState}>
           <select value={profile.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
-            <option value="">—</option>
+            <option value="">— Select —</option>
             {US_STATES.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
         </Field>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Field label="License Expiration" required error={errors.licenseExpires}>
           <input type="date" min={todayISO()} value={profile.licenseExpires} onChange={(e) => set("licenseExpires", e.target.value)} className="input" />
         </Field>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Field label="DEA Number" error={errors.deaNumber}>
-          <input value={profile.deaNumber} onChange={(e) => set("deaNumber", e.target.value.toUpperCase())} className="input font-mono" placeholder="(optional for mid-levels)" />
+          <input value={profile.deaNumber} onChange={(e) => set("deaNumber", e.target.value.toUpperCase())} className="input font-mono" maxLength={20} placeholder="(optional for mid-levels)" />
         </Field>
         <Field label="DEA Expiration" error={errors.deaExpires}>
           <input type="date" min={todayISO()} value={profile.deaExpires} onChange={(e) => set("deaExpires", e.target.value)} className="input" />
         </Field>
+        <Fixed label="Status" value={statusLabel} />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Field label="CAQH Username" error={errors.caqhUsername}>
@@ -520,23 +562,26 @@ function ProfileForm({ profile, errors, loginEmail, onChange }: { profile: Profi
         </Field>
       </div>
       {loginEmail != null && (
-        <div className="pt-3 border-t border-line space-y-3">
-          <div>
-            <div className="text-sm font-semibold text-ink">Your sign-in</div>
-            <div className="text-xs text-ink-light">
-              Sign in to the portal with your email <strong>{loginEmail}</strong> and the password you choose here.
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Password" required error={errors.password || (profile.password && profile.password.length < 8 ? "At least 8 characters" : undefined)}>
-              <PasswordInput value={profile.password} onChange={(e) => set("password", e.target.value)} className="input" maxLength={100} autoComplete="new-password" />
-            </Field>
-            <Field label="Confirm Password" required error={errors.confirmPassword || (profile.confirmPassword && profile.confirmPassword !== profile.password ? "Passwords do not match" : undefined)}>
-              <PasswordInput value={profile.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} className="input" maxLength={100} autoComplete="new-password" />
-            </Field>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Password" required error={errors.password || (profile.password && profile.password.length < 8 ? "At least 8 characters" : undefined)} hint={"Sign-in: " + loginEmail + " + this password"}>
+            <PasswordInput value={profile.password} onChange={(e) => set("password", e.target.value)} className="input" maxLength={100} autoComplete="new-password" placeholder="At least 8 characters" />
+          </Field>
+          <Field label="Confirm Password" required error={errors.confirmPassword || (profile.confirmPassword && profile.confirmPassword !== profile.password ? "Passwords do not match" : undefined)}>
+            <PasswordInput value={profile.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} className="input" maxLength={100} autoComplete="new-password" />
+          </Field>
         </div>
       )}
+      <div className="pt-3 mt-3 border-t border-line">
+        <div className="text-xs font-semibold text-ink mb-2 flex items-center gap-1.5">
+          <Icon name="Building2" size={13} className="text-accent" />
+          Assign to Organization
+        </div>
+        <div className="grid grid-cols-1 gap-3">
+          <Fixed label="Client" value={fixed.clientName} />
+          <Fixed label="Practice" value={fixed.practiceName} />
+          <Fixed label="Location" value={fixed.locationName} />
+        </div>
+      </div>
     </div>
   );
 }

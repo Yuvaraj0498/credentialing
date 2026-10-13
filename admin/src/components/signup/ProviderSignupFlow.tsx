@@ -98,7 +98,7 @@ export function ProviderSignupFlow() {
       if (!data.lastName.trim()) e.lastName = "Last name is required";
       if (!data.email) e.email = "Email is required";
       else if (!EMAIL_RE.test(data.email)) e.email = "Enter a valid email address";
-      if (data.phone && !PHONE_RE.test(data.phone)) e.phone = "Phone must be 10 digits";
+      if (data.phone && !PHONE_RE.test(data.phone)) e.phone = "Ph.No must be 10 digits";
       if (!data.password) e.password = "Password is required";
       else if (data.password.length < 8) e.password = "Password must be at least 8 characters";
       if (data.password !== data.confirmPassword) e.confirmPassword = "Passwords don't match";
@@ -230,7 +230,7 @@ export function ProviderSignupFlow() {
                   <Err msg={errors.email} />
                 </div>
                 <div>
-                  <label className="label">Phone</label>
+                  <label className="label">Ph.No</label>
                   <PhoneInput value={data.phone} onChange={(v) => set("phone", v)} invalid={!!errors.phone} />
                   <Err msg={errors.phone} />
                 </div>

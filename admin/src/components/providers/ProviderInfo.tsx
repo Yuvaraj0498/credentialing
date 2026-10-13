@@ -16,7 +16,7 @@ export function ProviderInfo({ provider }: { provider: ProviderDetail }) {
           <ValField label="Suffix" val={provider.suffix} />
           <ValField label="Specialty" val={provider.specialty} />
           <ValField label="Email" val={provider.email} />
-          <ValField label="Phone" val={provider.phone} />
+          <ValField label="Ph.No" val={provider.phone} />
         </div>
       </div>
       <div className="card card-pad">

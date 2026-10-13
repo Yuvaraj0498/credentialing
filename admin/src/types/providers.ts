@@ -333,6 +333,11 @@ export interface PublicProfile {
   /** false = the provider chooses a sign-in password on the profile step (their email is the username). */
   hasLogin: boolean;
   loginEmail: string | null;
+  /** set by the staff member who sent the link (shown, not editable) */
+  status?: string | null;
+  clientName?: string | null;
+  practiceName?: string | null;
+  locationName?: string | null;
 }
 
 /** GET /public/invites/{token}: link state before the PIN is entered. */

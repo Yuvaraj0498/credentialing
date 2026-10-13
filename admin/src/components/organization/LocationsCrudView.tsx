@@ -290,7 +290,7 @@ export function LocationFormModal({ location, practices, onSaved, onClose }: { l
             <input value={form.zip} onChange={(e) => setForm({ ...form, zip: digitsOnly(e.target.value, 5) })} className="input font-mono" inputMode="numeric" placeholder="5 digits" />
           </Field>
         </div>
-        <Field label="Phone" error={errors.phone}>
+        <Field label="Ph.No" error={errors.phone}>
           <PhoneInput value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} invalid={!!errors.phone} />
         </Field>
         <label className="flex items-center gap-2 text-sm">

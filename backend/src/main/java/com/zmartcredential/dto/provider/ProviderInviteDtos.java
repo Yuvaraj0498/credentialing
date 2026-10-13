@@ -55,12 +55,17 @@ public final class ProviderInviteDtos {
                                 LocalDate dateOfBirth, String licenseNumber, String licenseState,
                                 LocalDate licenseExpires, String deaNumber, LocalDate deaExpires,
                                 /* false = the provider sets a password here to be able to sign in */
-                                boolean hasLogin, String loginEmail) {
+                                boolean hasLogin, String loginEmail,
+                                /* set by the staff member who sent the link: shown, not editable */
+                                String status, String clientName, String practiceName, String locationName) {
     }
 
     public record PublicProfileRequest(
             @NotBlank(message = "PIN is required") @Pattern(regexp = "^\\d{6}$", message = "PIN must be 6 digits")
             String pin,
+            /* the provider's name (optional: blank keeps the name the staff member entered) */
+            @Size(max = 80, message = "At most 80 characters") String firstName,
+            @Size(max = 80, message = "At most 80 characters") String lastName,
             @NotBlank(message = "NPI is required") @Pattern(regexp = "^\\d{10}$", message = "NPI must be 10 digits")
             String npi,
             @Pattern(regexp = "^$|^\\d{6,10}$", message = "CAQH ID must be 6-10 digits") String caqhId,

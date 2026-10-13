@@ -456,7 +456,7 @@ export function OrganizationView() {
                       <div className="space-y-1 text-xs text-ink-light">
                         <div><span className="text-ink-faint">Tax ID:</span> {selectedPractice.taxId || "—"}</div>
                         <div><span className="text-ink-faint">Address:</span> {selectedPractice.address || "—"}</div>
-                        <div><span className="text-ink-faint">Phone:</span> {selectedPractice.phone || "—"}</div>
+                        <div><span className="text-ink-faint">Ph.No:</span> {selectedPractice.phone || "—"}</div>
                         <div><span className="text-ink-faint">Email:</span> {selectedPractice.email || "—"}</div>
                       </div>
                     </>
@@ -482,7 +482,7 @@ export function OrganizationView() {
                       <span className="text-ink-faint">Address:</span>{" "}
                       {[selectedLocation.address, selectedLocation.city, [selectedLocation.state, selectedLocation.zip].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "—"}
                     </div>
-                    {selectedLocation.phone && <div><span className="text-ink-faint">Phone:</span> {selectedLocation.phone}</div>}
+                    {selectedLocation.phone && <div><span className="text-ink-faint">Ph.No:</span> {selectedLocation.phone}</div>}
                   </div>
                 </div>
               </div>

@@ -45,7 +45,7 @@ export const ROLE_LABEL: Record<string, string> = {
   auditor: "Auditor",
 };
 
-export const SUFFIXES = ["MD", "DO", "NP", "PA", "DDS", "PhD", "LCSW", "LPC", "BCBA", "RN"];
+export const SUFFIXES = ["MD", "DO", "NP", "PA", "DDS", "DMD", "PhD", "LCSW", "LPC", "LMFT", "BCBA", "RN"];
 
 export const SPECIALTIES = [
   "Family Medicine", "Internal Medicine", "Pediatrics", "Cardiology", "Interventional Cardiology", "Psychiatry",

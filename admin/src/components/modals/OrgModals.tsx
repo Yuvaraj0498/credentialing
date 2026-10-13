@@ -242,7 +242,7 @@ function PracticeContactFields({
         <input value={address} onChange={(e) => onChange("address", addressChars(e.target.value))} className="input" placeholder="e.g. 30 Pearly Lane, Gardner, MA 01440" />
       </Field>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <Field label="Phone" error={errors.phone}>
+        <Field label="Ph.No" error={errors.phone}>
           <PhoneInput value={phone} onChange={(v) => onChange("phone", v)} invalid={!!errors.phone} />
         </Field>
         <Field label="Email" error={errors.email}>
@@ -308,7 +308,7 @@ export function EditLocationModal({ location, onClose, onSaved }: { location: Lo
         <Field label="Address" error={errors.address}>
           <input value={form.address} onChange={(e) => setForm({ ...form, address: addressChars(e.target.value) })} className="input" placeholder="e.g. 30 Pearly Lane, Gardner, MA 01440" />
         </Field>
-        <Field label="Phone" error={errors.phone}>
+        <Field label="Ph.No" error={errors.phone}>
           <PhoneInput value={form.phone} onChange={(v) => setForm({ ...form, phone: v })} invalid={!!errors.phone} />
         </Field>
         <FormError message={formError} />
@@ -359,7 +359,7 @@ export function LocationMapModal({ location, onClose }: { location: Location; on
             <div className="font-mono">{location.npi || "—"}</div>
           </div>
           <div>
-            <div className="text-xs text-ink-faint">Phone</div>
+            <div className="text-xs text-ink-faint">Ph.No</div>
             <div>{location.phone || "—"}</div>
           </div>
           <div>

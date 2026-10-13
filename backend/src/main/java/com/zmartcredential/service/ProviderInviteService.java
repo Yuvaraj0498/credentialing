@@ -73,6 +73,9 @@ public class ProviderInviteService {
     private final CryptoService cryptoService;
     private final SecureLinkIssuer linkIssuer;
     private final AuthContext authContext;
+    private final com.zmartcredential.repository.ClientRepository clientRepository;
+    private final com.zmartcredential.repository.PracticeRepository practiceRepository;
+    private final com.zmartcredential.repository.LocationRepository locationRepository;
 
     @Transactional
     public ProviderInviteResponse invite(Long providerId, ProviderInviteRequest req) {
@@ -258,7 +261,11 @@ public class ProviderInviteService {
         PublicProfile profile = new PublicProfile(provider.getNpi(), provider.getCaqhId(), provider.getSuffix(),
                 provider.getSpecialty(), provider.getPhone(), provider.getDateOfBirth(), provider.getLicenseNumber(),
                 provider.getLicenseState(), provider.getLicenseExpires(), provider.getDeaNumber(), provider.getDeaExpires(),
-                userRepository.findByProviderId(provider.getId()).isPresent(), provider.getEmail());
+                userRepository.findByProviderId(provider.getId()).isPresent(), provider.getEmail(),
+                provider.getStatus(),
+                provider.getClientId() == null ? null : clientRepository.findById(provider.getClientId()).map(com.zmartcredential.entity.Client::getName).orElse(null),
+                provider.getPracticeId() == null ? null : practiceRepository.findById(provider.getPracticeId()).map(com.zmartcredential.entity.Practice::getName).orElse(null),
+                provider.getLocationId() == null ? null : locationRepository.findById(provider.getLocationId()).map(com.zmartcredential.entity.Location::getName).orElse(null));
         return new PublicInviteInfo(fullName(provider), orgName, inv.getEmail(), missing(provider), inv.getExpiresAt(),
                 provider.getFirstName(), provider.getLastName(), profile);
     }
@@ -288,6 +295,8 @@ public class ProviderInviteService {
         // CAQH username / password and PECOS are optional
         if (!missing.isEmpty()) throw new BadRequestException("Required: " + String.join(", ", missing));
         p.setNpi(npi);
+        if (blankToNull(req.firstName()) != null) p.setFirstName(req.firstName().trim());
+        if (blankToNull(req.lastName()) != null) p.setLastName(req.lastName().trim());
         if (blankToNull(req.caqhId()) != null) p.setCaqhId(req.caqhId().trim());
         p.setCaqhUsername(blankToNull(req.caqhUsername()));
         if (blankToNull(req.caqhPassword()) != null) p.setCaqhPasswordEnc(cryptoService.encrypt(req.caqhPassword()));

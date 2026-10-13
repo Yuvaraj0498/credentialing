@@ -244,7 +244,7 @@ function CaqhImportModal({
               <ValField label="Specialty" val={p.specialty} />
               <ValField label="Taxonomy" val={p.taxonomy || "N/A"} />
               <ValField label="Email" val={p.email} />
-              <ValField label="Phone" val={p.phone} />
+              <ValField label="Ph.No" val={p.phone} />
               <ValField label="DEA #" val={p.deaNumber || "N/A"} />
               <ValField label="DEA Expires" val={p.deaExpires ? fmtDate(p.deaExpires) : "N/A"} />
               {p.boardCert && <ValField label="Board Cert" val={p.boardCert.board + " · " + p.boardCert.status} />}
