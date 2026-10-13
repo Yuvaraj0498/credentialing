@@ -86,6 +86,43 @@ public class ProviderAdditionalDocumentService {
         return toItem(d, types);
     }
 
+    /**
+     * Replace the file of an additional document (the provider for their own documents, or staff). The new file
+     * waits for review again; a new expiration date may be given.
+     */
+    @Transactional
+    public AdditionalDocumentItem replaceFile(Long id, MultipartFile file, String expiresAt) {
+        ProviderAdditionalDocument d = repository.findById(id).orElseThrow(() -> NotFoundException.of("Document", id));
+        Provider p = support.loadAccessible(d.getProviderId());
+        if (file == null || file.isEmpty()) throw BadRequestException.onField("file", "Choose the file to upload");
+        LocalDate exp = ProviderDocumentService.parseDate(expiresAt);
+        if (exp != null && exp.isBefore(LocalDate.now())) throw BadRequestException.onField("expiresAt", "Choose today or a later date");
+        String oldKey = d.getStorageKey();
+        d.setStorageKey(fileStorageService.store(p.getOrgId(), file));
+        d.setFileName(cleanName(file.getOriginalFilename()));
+        d.setMimeType(file.getContentType() == null ? null : file.getContentType().substring(0, Math.min(100, file.getContentType().length())));
+        d.setSizeBytes(file.getSize());
+        if (exp != null) d.setExpiresAt(exp);
+        d.setUploadedBy(authContext.userId());
+        d.setUploadedAt(LocalDateTime.now());
+        d.setStatus("pending_review");
+        d = repository.saveAndFlush(d);
+        if (oldKey != null && !oldKey.equals(d.getStorageKey())) fileStorageService.delete(oldKey);
+        if (p.getOrgId() != null && authContext.principal().isProvider()) {
+            String who = ((p.getFirstName() == null ? "" : p.getFirstName()) + " " + (p.getLastName() == null ? "" : p.getLastName())).trim();
+            notificationService.notifyOrg(p.getOrgId(), "Additional document replaced",
+                    d.getDocType() + " replaced by " + who + ".", "FilePlus", NotificationService.INFO);
+        }
+        return toItem(d, support.docTypes());
+    }
+
+    private static String cleanName(String name) {
+        if (name == null) return null;
+        name = name.replace('\\', '/');
+        name = name.substring(name.lastIndexOf('/') + 1);
+        return name.length() > 255 ? name.substring(name.length() - 255) : name;
+    }
+
     /** Staff review, as for the regular documents: status (approve / reject / N/A) and expiration date. */
     @Transactional
     public AdditionalDocumentItem patch(Long id, ProviderDocumentPatchRequest req) {

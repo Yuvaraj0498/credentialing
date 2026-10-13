@@ -50,6 +50,13 @@ public class ProviderAdditionalDocumentController {
         return service.patch(id, req);
     }
 
+    @Operation(summary = "Replace the file of an extra document (expiresAt optional)")
+    @PostMapping(value = "/api/additional-documents/{id:\\d+}/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public AdditionalDocumentItem replaceFile(@PathVariable Long id, @RequestParam(value = "file", required = false) MultipartFile file,
+                                              @RequestParam(value = "expiresAt", required = false) String expiresAt) {
+        return service.replaceFile(id, file, expiresAt);
+    }
+
     @Operation(summary = "Remove an extra document (staff)")
     @DeleteMapping("/api/additional-documents/{id:\\d+}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

@@ -12,7 +12,7 @@ import { fmtDate, todayISO } from "@/lib/utils";
 import { useAsync } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
 import { ALLOWED_EXT, fileExt, MAX_FILE_BYTES } from "./shared";
-import { isWordFile } from "./ProviderOverview";
+import { MandatoryMark, isWordFile } from "./ProviderOverview";
 import type { AdditionalDocument } from "@/types/providers";
 
 /**
@@ -23,6 +23,7 @@ import type { AdditionalDocument } from "@/types/providers";
 export function AdditionalDocuments({ providerId, reloadKey = 0 }: { providerId: number; reloadKey?: number }) {
   const state = useAsync(() => api.get<AdditionalDocument[]>("/providers/" + providerId + "/additional-documents"), [providerId, reloadKey]);
   const docs = state.data || [];
+  const [replacing, setReplacing] = useState<AdditionalDocument | null>(null);
   if (!state.error && docs.length === 0) return null;
   return (
     <div className="card mt-4" id="additional-documents">
@@ -36,33 +37,45 @@ export function AdditionalDocuments({ providerId, reloadKey = 0 }: { providerId:
       ) : (
         <div className="table-scroll">
           <table>
+            <DocTableCols />
             <thead>
               <tr>
-                <th>Document Type</th>
-                <th>File</th>
-                <th>Expires</th>
-                <th>Added</th>
+                <th>Document</th>
                 <th>Status</th>
-                <th className="text-right">File</th>
+                <th>Mandatory</th>
+                <th>Expires</th>
+                <th>Last Updated</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {docs.map((d) => (
                 <tr key={d.id}>
-                  <td className="font-medium">{d.docTypeLabel}</td>
-                  <td>
-                    <div className="text-sm truncate" style={{ maxWidth: 280 }}>{d.fileName || "—"}</div>
-                    {d.title && <div className="text-[11px] text-ink-faint">{d.title}</div>}
-                    {d.notes && <div className="text-[11px] text-ink-light mt-0.5" style={{ maxWidth: 320, whiteSpace: "pre-wrap" }}>{d.notes}</div>}
+                  <td className="font-medium">
+                    {d.docTypeLabel}
+                    {d.fileName && <div className="text-[10px] text-ink-faint font-normal truncate" style={{ maxWidth: 320 }}>{d.fileName}</div>}
                   </td>
-                  <td className="text-ink-light text-xs">{d.expiresAt ? fmtDate(d.expiresAt) : "—"}</td>
-                  <td className="text-ink-light text-xs">{fmtDate(d.uploadedAt)}</td>
                   <td>
                     <DocStatusBadge status={d.status} />
                   </td>
+                  <td className="text-xs">
+                    <MandatoryMark yes={false} />
+                  </td>
+                  <td className="text-ink-light text-xs">{d.expiresAt ? fmtDate(d.expiresAt) : "—"}</td>
+                  <td className="text-ink-light text-xs">{fmtDate(d.uploadedAt)}</td>
                   <td className="text-right whitespace-nowrap">
-                    <ExtraFileButton doc={d} inline />
-                    <ExtraFileButton doc={d} />
+                    <div className="inline-flex items-center gap-1">
+                      <ExtraFileButton doc={d} inline />
+                      <ExtraFileButton doc={d} />
+                      <button
+                        className="btn btn-primary ml-1"
+                        style={{ fontSize: 11, padding: "5px 10px" }}
+                        aria-label={"Replace " + d.docTypeLabel}
+                        onClick={() => setReplacing(d)}
+                      >
+                        <Icon name="RefreshCw" size={11} /> Replace
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -70,7 +83,32 @@ export function AdditionalDocuments({ providerId, reloadKey = 0 }: { providerId:
           </table>
         </div>
       )}
+      {replacing && (
+        <AddMoreDocumentModal
+          providerId={providerId}
+          replace={replacing}
+          onClose={() => setReplacing(null)}
+          onSaved={() => {
+            setReplacing(null);
+            state.reload();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/** Column widths shared by My Documents and Additional Documents, so the two tables line up. */
+export function DocTableCols() {
+  return (
+    <colgroup>
+      <col style={{ width: "30%" }} />
+      <col style={{ width: "13%" }} />
+      <col style={{ width: "10%" }} />
+      <col style={{ width: "12%" }} />
+      <col style={{ width: "13%" }} />
+      <col style={{ width: "22%" }} />
+    </colgroup>
   );
 }
 
@@ -98,14 +136,15 @@ function ExtraFileButton({ doc, inline }: { doc: AdditionalDocument; inline?: bo
         }
       }}
     >
-      {busy ? <span className="loader" style={{ width: 11, height: 11 }} /> : <Icon name={inline ? "ExternalLink" : "Download"} size={13} />}
+      {busy ? <span className="loader" style={{ width: 11, height: 11 }} /> : <Icon name={inline ? "Eye" : "Download"} size={13} />}
     </button>
   );
 }
 
-export function AddMoreDocumentModal({ providerId, onClose, onSaved }: { providerId: number; onClose: () => void; onSaved: () => void }) {
+/** Add More Document; with `replace`, replaces that document's file (its document type can't be changed). */
+export function AddMoreDocumentModal({ providerId, replace, onClose, onSaved }: { providerId: number; replace?: AdditionalDocument; onClose: () => void; onSaved: () => void }) {
   const toast = useToast();
-  const [form, setForm] = useState({ docType: "", expiresAt: "" });
+  const [form, setForm] = useState({ docType: replace?.docTypeLabel || "", expiresAt: replace?.expiresAt && replace.expiresAt >= todayISO() ? replace.expiresAt : "" });
   const [dragOver, setDragOver] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -138,12 +177,13 @@ export function AddMoreDocumentModal({ providerId, onClose, onSaved }: { provide
     if (Object.keys(e).length) return;
     const fd = new FormData();
     fd.append("file", file as File);
-    fd.append("docType", form.docType.trim());
+    if (!replace) fd.append("docType", form.docType.trim());
     if (form.expiresAt) fd.append("expiresAt", form.expiresAt);
     setBusy(true);
     try {
-      await api.upload("/providers/" + providerId + "/additional-documents", fd);
-      toast("Document added");
+      if (replace) await api.upload("/additional-documents/" + replace.id + "/file", fd);
+      else await api.upload("/providers/" + providerId + "/additional-documents", fd);
+      toast(replace ? "Document replaced" : "Document added");
       onSaved();
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fieldErrors).length) setErrors(err.fieldErrors);
@@ -154,11 +194,18 @@ export function AddMoreDocumentModal({ providerId, onClose, onSaved }: { provide
   };
 
   return (
-    <Modal title="Add More Document" subtitle="Give your credentialing team another document." onClose={busy ? undefined : onClose} maxWidth={560}>
+    <Modal
+      title={replace ? "Replace Document" : "Add More Document"}
+      subtitle={replace ? "Upload a new file for this document. It is reviewed again." : "Give your credentialing team another document."}
+      onClose={busy ? undefined : onClose}
+      maxWidth={560}
+    >
       <BlurLoader show={busy} label="Uploading document, please wait" />
       <div className="space-y-3">
-        <Field label="Document Type" required error={errors.docType} hint="Type the name of the document, e.g. Fellowship Certificate">
+        <Field label="Document Type" required error={errors.docType} hint={replace ? (replace.fileName ? "Current file: " + replace.fileName : undefined) : "Type the name of the document, e.g. Fellowship Certificate"}>
           <input
+            readOnly={!!replace}
+            disabled={!!replace}
             value={form.docType}
             onChange={(e) => set("docType", e.target.value.replace(/^\s+/, ""))}
             className="input"
@@ -224,7 +271,7 @@ export function AddMoreDocumentModal({ providerId, onClose, onSaved }: { provide
           Cancel
         </button>
         <button className="btn btn-primary" onClick={save} disabled={busy}>
-          <Icon name="Upload" size={13} /> Add Document
+          <Icon name={replace ? "RefreshCw" : "Upload"} size={13} /> {replace ? "Replace Document" : "Add Document"}
         </button>
       </div>
     </Modal>

@@ -14,7 +14,7 @@ import { fmtDate } from "@/lib/utils";
 import { useAsync } from "@/lib/hooks";
 import { DocumentUploadView } from "@/components/providers/DocumentUploadView";
 import { DownloadButton, MandatoryMark, ViewFileButton } from "@/components/providers/ProviderOverview";
-import { AddMoreDocumentModal, AdditionalDocuments } from "@/components/providers/AdditionalDocuments";
+import { AddMoreDocumentModal, AdditionalDocuments, DocTableCols } from "@/components/providers/AdditionalDocuments";
 import type { MyEnrollment, ProviderDetail } from "@/types/providers";
 
 /** Loads GET /me/provider; a 404 means no provider profile is linked to this account. */
@@ -184,6 +184,7 @@ function MyDocuments({ provider }: { provider: ProviderDetail }) {
       <div className="card overflow-hidden">
         <div className="table-scroll">
           <table>
+            <DocTableCols />
             <thead>
               <tr>
                 <th>Document</th>
@@ -215,7 +216,7 @@ function MyDocuments({ provider }: { provider: ProviderDetail }) {
                       {doc.hasFile && <DownloadButton doc={doc} />}
                       <Link
                         href={"/my-documents/upload?docType=" + encodeURIComponent(doc.docType)}
-                        className="btn btn-secondary ml-1"
+                        className={"btn ml-1 " + (doc.hasFile ? "btn-primary" : "btn-secondary")}
                         style={{ fontSize: 11, padding: "5px 10px" }}
                         aria-label={(doc.hasFile ? "Replace " : "Upload ") + doc.label}
                       >
