@@ -13,14 +13,7 @@ import { useAsync } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
 import { ALLOWED_EXT, fileExt, MAX_FILE_BYTES } from "./shared";
 import { isWordFile } from "./ProviderOverview";
-import type { AdditionalDocument, DocumentRow } from "@/types/providers";
-
-/** Document types for the Add More Document form (every type in the system, in their usual order). */
-export function docTypeOptions(rows: DocumentRow[]) {
-  const seen = new Map<string, { docType: string; label: string; sortOrder: number }>();
-  for (const r of rows) if (!seen.has(r.docType)) seen.set(r.docType, { docType: r.docType, label: r.label, sortOrder: r.sortOrder ?? 999 });
-  return [...seen.values()].sort((a, b) => a.sortOrder - b.sortOrder || a.label.localeCompare(b.label));
-}
+import type { AdditionalDocument } from "@/types/providers";
 
 /**
  * Extra documents of a provider, besides the required list. The provider adds them with Add More Document
@@ -46,7 +39,7 @@ export function AdditionalDocuments({ providerId, reloadKey = 0 }: { providerId:
             <thead>
               <tr>
                 <th>Document Type</th>
-                <th>Title / File</th>
+                <th>File</th>
                 <th>Expires</th>
                 <th>Added</th>
                 <th>Status</th>
@@ -58,8 +51,8 @@ export function AdditionalDocuments({ providerId, reloadKey = 0 }: { providerId:
                 <tr key={d.id}>
                   <td className="font-medium">{d.docTypeLabel}</td>
                   <td>
-                    <div className="text-sm">{d.title || d.fileName || "—"}</div>
-                    {d.title && d.fileName && <div className="text-[10px] text-ink-faint truncate" style={{ maxWidth: 260 }}>{d.fileName}</div>}
+                    <div className="text-sm truncate" style={{ maxWidth: 280 }}>{d.fileName || "—"}</div>
+                    {d.title && <div className="text-[11px] text-ink-faint">{d.title}</div>}
                     {d.notes && <div className="text-[11px] text-ink-light mt-0.5" style={{ maxWidth: 320, whiteSpace: "pre-wrap" }}>{d.notes}</div>}
                   </td>
                   <td className="text-ink-light text-xs">{d.expiresAt ? fmtDate(d.expiresAt) : "—"}</td>
@@ -110,9 +103,10 @@ function ExtraFileButton({ doc, inline }: { doc: AdditionalDocument; inline?: bo
   );
 }
 
-export function AddMoreDocumentModal({ providerId, types, onClose, onSaved }: { providerId: number; types: { docType: string; label: string }[]; onClose: () => void; onSaved: () => void }) {
+export function AddMoreDocumentModal({ providerId, onClose, onSaved }: { providerId: number; onClose: () => void; onSaved: () => void }) {
   const toast = useToast();
-  const [form, setForm] = useState({ docType: "", title: "", expiresAt: "", notes: "" });
+  const [form, setForm] = useState({ docType: "", expiresAt: "" });
+  const [dragOver, setDragOver] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
@@ -137,17 +131,15 @@ export function AddMoreDocumentModal({ providerId, types, onClose, onSaved }: { 
 
   const save = async () => {
     const e: Record<string, string> = {};
-    if (!form.docType) e.docType = "Required";
+    if (!form.docType.trim()) e.docType = "Required";
     if (!file) e.file = "Required";
     if (form.expiresAt && form.expiresAt < todayISO()) e.expiresAt = "Choose today or a later date";
     setErrors(e);
     if (Object.keys(e).length) return;
     const fd = new FormData();
     fd.append("file", file as File);
-    fd.append("docType", form.docType);
-    if (form.title.trim()) fd.append("title", form.title.trim());
+    fd.append("docType", form.docType.trim());
     if (form.expiresAt) fd.append("expiresAt", form.expiresAt);
-    if (form.notes.trim()) fd.append("notes", form.notes.trim());
     setBusy(true);
     try {
       await api.upload("/providers/" + providerId + "/additional-documents", fd);
@@ -165,25 +157,66 @@ export function AddMoreDocumentModal({ providerId, types, onClose, onSaved }: { 
     <Modal title="Add More Document" subtitle="Give your credentialing team another document." onClose={busy ? undefined : onClose} maxWidth={560}>
       <BlurLoader show={busy} label="Uploading document, please wait" />
       <div className="space-y-3">
-        <Field label="Document Type" required error={errors.docType}>
-          <select value={form.docType} onChange={(e) => set("docType", e.target.value)} className="input" aria-label="Document Type">
-            <option value="">— Select —</option>
-            {types.map((t) => (
-              <option key={t.docType} value={t.docType}>{t.label}</option>
-            ))}
-          </select>
+        <Field label="Document Type" required error={errors.docType} hint="Type the name of the document, e.g. Fellowship Certificate">
+          <input
+            value={form.docType}
+            onChange={(e) => set("docType", e.target.value.replace(/^\s+/, ""))}
+            className="input"
+            maxLength={150}
+            placeholder="Document name"
+            aria-label="Document Type"
+            autoComplete="off"
+          />
         </Field>
-        <Field label="File" required error={errors.file} hint="PDF, image, Word or Excel, up to 25 MB">
-          <input type="file" className="input" accept={ALLOWED_EXT.map((x) => "." + x).join(",")} onChange={(e) => pickFile(e.target.files?.[0] || null)} aria-label="File" />
-        </Field>
-        <Field label="Title" error={errors.title}>
-          <input value={form.title} onChange={(e) => set("title", e.target.value)} className="input" maxLength={200} placeholder="e.g. Texas Medical License" />
+        <Field label="File" required error={errors.file}>
+          {file ? (
+            <div className="flex items-center gap-3 rounded-lg border border-line p-3" style={{ background: "var(--accent-soft)" }}>
+              <div className="flex items-center justify-center rounded-lg shrink-0" style={{ width: 40, height: 40, background: "var(--surface, #fff)" }}>
+                <Icon name="FileText" size={20} style={{ color: "var(--accent)" }} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium text-ink truncate">{file.name}</div>
+                <div className="text-[11px] text-ink-faint">{(file.size / 1024 / 1024 < 0.1 ? Math.max(1, Math.round(file.size / 1024)) + " KB" : (file.size / 1024 / 1024).toFixed(1) + " MB")}</div>
+              </div>
+              <label className="btn btn-secondary cursor-pointer" style={{ fontSize: 11, padding: "5px 10px" }}>
+                Change
+                <input type="file" className="hidden" accept={ALLOWED_EXT.map((x) => "." + x).join(",")} onChange={(e) => pickFile(e.target.files?.[0] || null)} />
+              </label>
+              <button className="btn-ghost p-1" aria-label="Remove file" title="Remove file" onClick={() => setFile(null)}>
+                <Icon name="X" size={14} />
+              </button>
+            </div>
+          ) : (
+            <label
+              className="flex flex-col items-center justify-center gap-1.5 rounded-lg cursor-pointer text-center px-4 py-6 transition-colors"
+              style={{
+                border: "2px dashed " + (dragOver ? "var(--accent)" : errors.file ? "var(--danger)" : "var(--line, #d6d3d1)"),
+                background: dragOver ? "var(--accent-soft)" : "transparent",
+              }}
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOver(true);
+              }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOver(false);
+                pickFile(e.dataTransfer.files?.[0] || null);
+              }}
+            >
+              <div className="flex items-center justify-center rounded-full" style={{ width: 44, height: 44, background: "var(--accent-soft)" }}>
+                <Icon name="UploadCloud" size={22} style={{ color: "var(--accent)" }} />
+              </div>
+              <div className="text-sm text-ink">
+                <span className="font-semibold" style={{ color: "var(--accent)" }}>Click to choose a file</span> or drag it here
+              </div>
+              <div className="text-[11px] text-ink-faint">PDF, image, Word or Excel · up to 25 MB</div>
+              <input type="file" className="hidden" accept={ALLOWED_EXT.map((x) => "." + x).join(",")} onChange={(e) => pickFile(e.target.files?.[0] || null)} aria-label="File" />
+            </label>
+          )}
         </Field>
         <Field label="Expiration Date" error={errors.expiresAt}>
           <input type="date" min={todayISO()} value={form.expiresAt} onChange={(e) => set("expiresAt", e.target.value)} className="input" />
-        </Field>
-        <Field label="Notes" error={errors.notes}>
-          <textarea value={form.notes} onChange={(e) => set("notes", e.target.value)} className="input" rows={3} maxLength={1000} />
         </Field>
       </div>
       <div className="flex justify-end gap-2 mt-5">

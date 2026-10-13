@@ -15,7 +15,7 @@ import { useAsync } from "@/lib/hooks";
 import { DocumentUploadView } from "@/components/providers/DocumentUploadView";
 import { DownloadButton, ViewFileButton, isWordFile } from "@/components/providers/ProviderOverview";
 import { ValField } from "@/components/providers/shared";
-import { AddMoreDocumentModal, AdditionalDocuments, docTypeOptions } from "@/components/providers/AdditionalDocuments";
+import { AddMoreDocumentModal, AdditionalDocuments } from "@/components/providers/AdditionalDocuments";
 import type { DocumentRow, MyEnrollment, ProviderDetail } from "@/types/providers";
 
 /** Loads GET /me/provider; a 404 means no provider profile is linked to this account. */
@@ -256,7 +256,6 @@ function MyDocuments({ provider }: { provider: ProviderDetail }) {
       {adding && (
         <AddMoreDocumentModal
           providerId={provider.id}
-          types={docTypeOptions(provider.documents)}
           onClose={() => setAdding(false)}
           onSaved={() => {
             setAdding(false);

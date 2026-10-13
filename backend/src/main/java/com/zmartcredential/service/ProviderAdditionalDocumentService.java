@@ -17,8 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 /**
- * My Documents → Add More Document: a provider adds extra documents (document type required; title, expiration
- * date and notes optional). Staff see them on the provider's page. Access: the provider for their own record,
+ * My Documents → Add More Document: a provider adds extra documents. The document type is a name the provider
+ * types (required); expiration date and notes are optional. Staff see them on the provider's page. Access: the provider for their own record,
  * staff of the provider's organization.
  */
 @Service
@@ -48,7 +48,7 @@ public class ProviderAdditionalDocumentService {
         Provider p = support.loadAccessible(providerId);
         Map<String, DocumentType> types = support.docTypes();
         if (docType == null || docType.isBlank()) throw BadRequestException.onField("docType", "Document Type is required");
-        if (!types.containsKey(docType.trim())) throw BadRequestException.onField("docType", "Choose a document type from the list");
+        if (docType.trim().length() > 150) throw BadRequestException.onField("docType", "At most 150 characters");
         if (file == null || file.isEmpty()) throw BadRequestException.onField("file", "Choose the file to upload");
         LocalDate exp = ProviderDocumentService.parseDate(expiresAt);
         if (exp != null && exp.isBefore(LocalDate.now())) throw BadRequestException.onField("expiresAt", "Choose today or a later date");
@@ -78,7 +78,7 @@ public class ProviderAdditionalDocumentService {
         if (p.getOrgId() != null) {
             String who = ((p.getFirstName() == null ? "" : p.getFirstName()) + " " + (p.getLastName() == null ? "" : p.getLastName())).trim();
             notificationService.notifyOrg(p.getOrgId(), "Additional document added",
-                    types.get(d.getDocType()).getLabel() + " added for " + who + ".", "FilePlus", NotificationService.INFO);
+                    d.getDocType() + " added for " + who + ".", "FilePlus", NotificationService.INFO);
         }
         return toItem(d, types);
     }
