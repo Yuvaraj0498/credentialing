@@ -367,7 +367,7 @@ public class EnrollmentService {
                 throw BadRequestException.onField("followUpDate", "Follow up date must be on or after the submitted date");
             }
             if (r.estApprovedDate() != null && r.estApprovedDate().isBefore(r.submittedDate())) {
-                throw BadRequestException.onField("estApprovedDate", "Est approved date must be on or after the submitted date");
+                throw BadRequestException.onField("estApprovedDate", "Estimated approval date must be on or after the submitted date");
             }
         }
         Long practiceId = r.practiceId();
