@@ -30,7 +30,7 @@ const extraRow = (x: AdditionalDocument): DocumentRow => ({
   sortOrder: null,
   status: x.status as DocStatus,
   fileName: x.fileName,
-  mimeType: null,
+  mimeType: x.mimeType ?? null,
   sizeBytes: x.sizeBytes,
   originalRelativePath: null,
   expiresAt: x.expiresAt,
@@ -258,13 +258,14 @@ export function MandatoryMark({ yes }: { yes: boolean }) {
 }
 
 /** Word documents can't be shown in the browser: they are downloaded instead of viewed. */
-export const isWordFile = (name: string | null | undefined) => /\.(docx?|dot|dotx|rtf)$/i.test(name || "");
+export const isWordFile = (name: string | null | undefined, mimeType?: string | null) =>
+  /\.(docx?|docm|dotx?|dotm|rtf|odt)$/i.test((name || "").trim()) || /msword|wordprocessingml|ms-word|opendocument\.text|rtf/i.test(mimeType || "");
 
 /** Opens the uploaded file in a new browser tab (any status, as long as a file is stored; not for Word files). */
 export function ViewFileButton({ doc, label, eye }: { doc: DocumentRow; label?: boolean; eye?: boolean }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  if (!doc.hasFile || isWordFile(doc.fileName)) return null;
+  if (!doc.hasFile || isWordFile(doc.fileName, doc.mimeType)) return null;
   return (
     <button
       className={label ? "btn btn-secondary" : "btn-ghost p-1"}
@@ -413,7 +414,7 @@ function DocumentDetails({ doc, onClose, onChanged }: { doc: DocumentRow; onClos
         </div>
       )}
 
-      {doc.hasFile && isWordFile(doc.fileName) && (
+      {doc.hasFile && isWordFile(doc.fileName, doc.mimeType) && (
         <div className="mt-4 text-xs rounded-md px-3 py-2 flex items-start gap-2" style={{ background: "var(--bg-soft)", color: "var(--ink-light)" }}>
           <Icon name="Info" size={13} className="mt-0.5" />
           <span>Word documents can&apos;t be viewed in the browser — please download the file to open and verify it.</span>

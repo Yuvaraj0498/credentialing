@@ -116,7 +116,7 @@ export function DocTableCols() {
 function ExtraFileButton({ doc, inline }: { doc: AdditionalDocument; inline?: boolean }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
-  if (inline && isWordFile(doc.fileName)) return null;
+  if (inline && isWordFile(doc.fileName, doc.mimeType)) return null;
   const path = "/additional-documents/" + doc.id + "/download";
   return (
     <button

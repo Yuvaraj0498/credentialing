@@ -28,6 +28,7 @@ export interface AdditionalDocument {
   notes: string | null;
   expiresAt: string | null;
   fileName: string | null;
+  mimeType?: string | null;
   sizeBytes: number | null;
   status: string;
   uploadedAt: string;

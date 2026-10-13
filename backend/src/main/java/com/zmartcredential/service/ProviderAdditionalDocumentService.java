@@ -35,7 +35,7 @@ public class ProviderAdditionalDocumentService {
     private final PermissionService permissionService;
 
     public record AdditionalDocumentItem(Long id, Long providerId, String docType, String docTypeLabel, String title,
-                                         String notes, LocalDate expiresAt, String fileName, Long sizeBytes,
+                                         String notes, LocalDate expiresAt, String fileName, String mimeType, Long sizeBytes,
                                          String status, LocalDateTime uploadedAt) {
     }
 
@@ -169,6 +169,6 @@ public class ProviderAdditionalDocumentService {
     private static AdditionalDocumentItem toItem(ProviderAdditionalDocument d, Map<String, DocumentType> types) {
         DocumentType t = types.get(d.getDocType());
         return new AdditionalDocumentItem(d.getId(), d.getProviderId(), d.getDocType(), t == null ? d.getDocType() : t.getLabel(),
-                d.getTitle(), d.getNotes(), d.getExpiresAt(), d.getFileName(), d.getSizeBytes(), d.getStatus(), d.getUploadedAt());
+                d.getTitle(), d.getNotes(), d.getExpiresAt(), d.getFileName(), d.getMimeType(), d.getSizeBytes(), d.getStatus(), d.getUploadedAt());
     }
 }

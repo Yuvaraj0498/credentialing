@@ -181,6 +181,10 @@ function MyDocuments({ provider }: { provider: ProviderDetail }) {
           </button>
         }
       />
+      <div className="-mt-2 mb-4 text-xs rounded-md px-3 py-2 flex items-start gap-2" style={{ background: "var(--info-soft)", color: "#1d4ed8" }}>
+        <Icon name="Info" size={13} className="mt-0.5 shrink-0" />
+        <span>Word documents can&apos;t be viewed here — you can review them only by downloading them.</span>
+      </div>
       <div className="card overflow-hidden">
         <div className="table-scroll">
           <table>
