@@ -5,7 +5,7 @@ import { PhoneInput } from "@/components/PhoneInput";
 import { useEmailCheck } from "@/lib/useEmailCheck";
 import { todayISO } from "@/lib/utils";
 import { PasswordInput } from "@/components/PasswordInput";
-import { Field } from "@/components/Field";
+import { Field, RequiredMark } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { ApiError, errorMessage } from "@/lib/api";
 import { SPECIALTIES, SUFFIXES } from "@/lib/constants";
@@ -427,7 +427,7 @@ export function ProviderForm({
           <Field
             label={
               <>
-                Practice * {form.clientId && availablePractices.length === 0 && <span className="text-xs text-ink-faint">(no practices in this client)</span>}
+                Practice<RequiredMark /> {form.clientId && availablePractices.length === 0 && <span className="text-xs text-ink-faint">(no practices in this client)</span>}
               </>
             }
             error={err("practiceId")}
@@ -451,7 +451,7 @@ export function ProviderForm({
           <Field
             label={
               <>
-                Location *{" "}
+                Location<RequiredMark />{" "}
                 {form.practiceId && availableLocations.length === 0 && (
                   <span className="text-xs" style={{ color: "#a16207" }}>
                     ⚠ No locations under this practice. Add one from Organization → &quot;+ Add Client / Practice / Location&quot;

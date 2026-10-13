@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertBox } from "./AlertBox";
-import { Field } from "./Field";
+import { Field, RequiredMark } from "./Field";
 import { Icon } from "./Icon";
 import { useOrgStructure } from "@/components/providers/shared";
 
@@ -49,7 +49,8 @@ export function OrgAssignmentFields({
     <div className="pt-3 mt-1 border-t border-line">
       <div className="text-xs font-semibold text-ink mb-2 flex items-center gap-1.5">
         <Icon name="Building2" size={13} className="text-accent" />
-        {title}
+        {title.replace(/\s*\*$/, "")}
+        {/\*$/.test(title) && <RequiredMark />}
       </div>
       {org.error ? (
         <AlertBox type="danger">

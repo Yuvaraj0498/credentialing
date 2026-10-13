@@ -5,7 +5,7 @@ import { matchesSearch } from "@/lib/search";
 import { cleanSearch } from "@/lib/utils";
 import { AsyncBoundary } from "@/components/AsyncState";
 import { EmptyState } from "@/components/EmptyState";
-import { Field } from "@/components/Field";
+import { Field, RequiredMark } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { ConfirmDialog, Modal } from "@/components/Modal";
 import { PageHeader } from "@/components/PageHeader";
@@ -228,7 +228,7 @@ export function UserRolesView() {
                   <strong>{deleting.name}</strong> is assigned to {deleting.userCount} user(s). Choose the role they move to, then the role is deleted.
                 </div>
                 <div>
-                  <label className="label" htmlFor="move-to">Move the user(s) to *</label>
+                  <label className="label" htmlFor="move-to">Move the user(s) to<RequiredMark /></label>
                   <select
                     id="move-to"
                     value={moveTo}

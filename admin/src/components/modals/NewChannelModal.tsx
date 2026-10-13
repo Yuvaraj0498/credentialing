@@ -1,5 +1,6 @@
 "use client";
 
+import { RequiredMark } from "@/components/Field";
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
@@ -39,7 +40,7 @@ export function NewChannelModal({ onCreated, onClose }: { onCreated: (ch: Channe
     <Modal title="New Channel" subtitle="Create a channel for your team" onClose={onClose} maxWidth={460}>
       <div className="space-y-3">
         <div>
-          <label className="label">Channel Name *</label>
+          <label className="label">Channel Name<RequiredMark /></label>
           <div className="flex items-center gap-2">
             <span className="text-ink-faint">#</span>
             <input value={name} onChange={(e) => setName(e.target.value)} className={"input " + (errors.name ? "input-error" : "")} placeholder="e.g. billing, team-updates" autoFocus maxLength={80} />

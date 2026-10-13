@@ -1,5 +1,6 @@
 "use client";
 
+import { RequiredMark } from "@/components/Field";
 import { Fragment, useEffect, useState } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
 import { useEmailCheck } from "@/lib/useEmailCheck";
@@ -247,7 +248,7 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
               <p className="text-xs text-ink-light mb-4">Tell us about your organization</p>
               <div className="space-y-3">
                 <div>
-                  <label className="label">Organization Name *</label>
+                  <label className="label">Organization Name<RequiredMark /></label>
                   <input value={data.orgName} onChange={(e) => { set("orgName", e.target.value); setErrors((er) => ({ ...er, orgName: undefined })); }} className={"input" + (errors.orgName || nameTaken ? " input-error" : "")} placeholder="ACME Medical Group, P.A." maxLength={200} />
                   <Err msg={errors.orgName || nameTaken} />
                 </div>
@@ -260,7 +261,7 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
                     <Err msg={errors.orgType} />
                   </div>
                   <div>
-                    <label className="label">Tax ID (EIN) *</label>
+                    <label className="label">Tax ID (EIN)<RequiredMark /></label>
                     <input value={data.taxId} onChange={(e) => set("taxId", e.target.value.replace(/\D/g, "").slice(0, 9))} className={"input font-mono" + (errors.taxId ? " input-error" : "")} placeholder="9 digits" />
                     <Err msg={errors.taxId} />
                   </div>
@@ -277,7 +278,7 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="label">City *</label>
+                    <label className="label">City<RequiredMark /></label>
                     <input value={data.city} onChange={(e) => set("city", e.target.value)} className={"input" + (errors.city ? " input-error" : "")} />
                     <Err msg={errors.city} />
                   </div>
@@ -289,7 +290,7 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
                     <Err msg={errors.state} />
                   </div>
                   <div>
-                    <label className="label">ZIP *</label>
+                    <label className="label">ZIP<RequiredMark /></label>
                     <input value={data.zip} onChange={(e) => set("zip", e.target.value.replace(/\D/g, "").slice(0, 5))} className={"input font-mono" + (errors.zip ? " input-error" : "")} />
                     <Err msg={errors.zip} />
                   </div>
@@ -305,35 +306,35 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="label">First Name *</label>
+                    <label className="label">First Name<RequiredMark /></label>
                     <input value={data.firstName} onChange={(e) => set("firstName", e.target.value)} className={"input" + (errors.firstName ? " input-error" : "")} autoComplete="given-name" />
                     <Err msg={errors.firstName} />
                   </div>
                   <div>
-                    <label className="label">Last Name *</label>
+                    <label className="label">Last Name<RequiredMark /></label>
                     <input value={data.lastName} onChange={(e) => set("lastName", e.target.value)} className={"input" + (errors.lastName ? " input-error" : "")} autoComplete="family-name" />
                     <Err msg={errors.lastName} />
                   </div>
                 </div>
                 <div>
-                  <label className="label">Email *</label>
+                  <label className="label">Email<RequiredMark /></label>
                   <input type="email" value={data.email} onChange={(e) => set("email", e.target.value)} className={"input" + (errors.email ? " input-error" : "")} placeholder="you@yourcompany.com" autoComplete="email" />
                   <div className="text-[10px] text-ink-faint mt-1">This will be your username</div>
                   <Err msg={errors.email || emailTaken} />
                 </div>
                 <div>
-                  <label className="label">Ph.No *</label>
+                  <label className="label">Ph.No<RequiredMark /></label>
                   <PhoneInput value={data.phone} onChange={(v) => set("phone", v)} invalid={!!errors.phone} />
                   <Err msg={errors.phone} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="label">Password *</label>
+                    <label className="label">Password<RequiredMark /></label>
                     <PasswordInput value={data.password} onChange={(e) => set("password", e.target.value)} className={"input" + (errors.password ? " input-error" : "")} placeholder="At least 8 characters" autoComplete="new-password" />
                     <Err msg={errors.password} />
                   </div>
                   <div>
-                    <label className="label">Confirm Password *</label>
+                    <label className="label">Confirm Password<RequiredMark /></label>
                     <PasswordInput value={data.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} className={"input" + (errors.confirmPassword ? " input-error" : "")} autoComplete="new-password" />
                     <Err msg={errors.confirmPassword} />
                   </div>
@@ -412,7 +413,7 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
               </DeferredNotice>
               <div className="space-y-3">
                 <div>
-                  <label className="label">Card Number *</label>
+                  <label className="label">Card Number<RequiredMark /></label>
                   <input
                     value={data.cardNumber}
                     onChange={(e) => set("cardNumber", e.target.value.replace(/\D/g, "").slice(0, 16).replace(/(\d{4})/g, "$1 ").trim())}
@@ -428,7 +429,7 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="label">Exp (MM/YY) *</label>
+                    <label className="label">Exp (MM/YY)<RequiredMark /></label>
                     <input
                       value={data.cardExp}
                       onChange={(e) => {
@@ -443,18 +444,18 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
                     <Err msg={errors.cardExp} />
                   </div>
                   <div>
-                    <label className="label">CVC *</label>
+                    <label className="label">CVC<RequiredMark /></label>
                     <input value={data.cardCvc} onChange={(e) => set("cardCvc", e.target.value.replace(/\D/g, "").slice(0, 4))} className={"input font-mono" + (errors.cardCvc ? " input-error" : "")} placeholder="123" autoComplete="cc-csc" inputMode="numeric" />
                     <Err msg={errors.cardCvc} />
                   </div>
                 </div>
                 <div>
-                  <label className="label">Cardholder Name *</label>
+                  <label className="label">Cardholder Name<RequiredMark /></label>
                   <input value={data.cardName} onChange={(e) => set("cardName", e.target.value)} className={"input" + (errors.cardName ? " input-error" : "")} autoComplete="cc-name" />
                   <Err msg={errors.cardName} />
                 </div>
                 <div>
-                  <label className="label">Billing ZIP *</label>
+                  <label className="label">Billing ZIP<RequiredMark /></label>
                   <input value={data.cardZip} onChange={(e) => set("cardZip", e.target.value.replace(/\D/g, "").slice(0, 5))} className={"input font-mono" + (errors.cardZip ? " input-error" : "")} style={{ maxWidth: 120 }} autoComplete="postal-code" inputMode="numeric" />
                   <Err msg={errors.cardZip} />
                 </div>

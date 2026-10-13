@@ -31,13 +31,23 @@ export function readableError(error: string, label?: ReactNode): string {
   return msg;
 }
 
+/** The red * of a required field. */
+export function RequiredMark() {
+  return <span className="required-mark" style={{ color: "var(--danger)" }}> *</span>;
+}
+
 export function Field({ label, error, children, required, hint, className = "" }: { label?: ReactNode; error?: string; children: ReactNode; required?: boolean; hint?: ReactNode; className?: string }) {
+  // a label written as "Name *" is a required field: show the name and a red *
+  if (typeof label === "string" && /\s*\*$/.test(label)) {
+    label = label.replace(/\s*\*$/, "");
+    required = true;
+  }
   return (
     <div className={className}>
       {label && (
         <label className="label">
           {label}
-          {required && <span style={{ color: "var(--danger)" }}> *</span>}
+          {required && <RequiredMark />}
         </label>
       )}
       {children}

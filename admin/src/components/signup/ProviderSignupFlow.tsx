@@ -1,5 +1,6 @@
 "use client";
 
+import { RequiredMark } from "@/components/Field";
 import { Fragment, useEffect, useState } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
 import { PHONE_RE } from "@/lib/validation";
@@ -214,18 +215,18 @@ export function ProviderSignupFlow() {
                     <Err msg={errors.suffix} />
                   </div>
                   <div>
-                    <label className="label">First Name *</label>
+                    <label className="label">First Name<RequiredMark /></label>
                     <input value={data.firstName} onChange={(e) => set("firstName", e.target.value)} className={"input" + (errors.firstName ? " input-error" : "")} autoComplete="given-name" />
                     <Err msg={errors.firstName} />
                   </div>
                   <div>
-                    <label className="label">Last Name *</label>
+                    <label className="label">Last Name<RequiredMark /></label>
                     <input value={data.lastName} onChange={(e) => set("lastName", e.target.value)} className={"input" + (errors.lastName ? " input-error" : "")} autoComplete="family-name" />
                     <Err msg={errors.lastName} />
                   </div>
                 </div>
                 <div>
-                  <label className="label">Email *</label>
+                  <label className="label">Email<RequiredMark /></label>
                   <input type="email" value={data.email} onChange={(e) => set("email", e.target.value)} className={"input" + (errors.email ? " input-error" : "")} placeholder="you@yourpractice.com" autoComplete="email" />
                   <Err msg={errors.email} />
                 </div>
@@ -236,12 +237,12 @@ export function ProviderSignupFlow() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="label">Password *</label>
+                    <label className="label">Password<RequiredMark /></label>
                     <PasswordInput value={data.password} onChange={(e) => set("password", e.target.value)} className={"input" + (errors.password ? " input-error" : "")} placeholder="At least 8 characters" autoComplete="new-password" />
                     <Err msg={errors.password} />
                   </div>
                   <div>
-                    <label className="label">Confirm *</label>
+                    <label className="label">Confirm<RequiredMark /></label>
                     <PasswordInput value={data.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} className={"input" + (errors.confirmPassword ? " input-error" : "")} autoComplete="new-password" />
                     <Err msg={errors.confirmPassword} />
                   </div>
@@ -256,7 +257,7 @@ export function ProviderSignupFlow() {
               <p className="text-xs text-ink-light mb-4">We&apos;ll verify your NPI against the CMS registry</p>
               <div className="space-y-3">
                 <div>
-                  <label className="label">NPI Number *</label>
+                  <label className="label">NPI Number<RequiredMark /></label>
                   <div className="flex gap-2">
                     <input
                       value={data.npi}
@@ -276,7 +277,7 @@ export function ProviderSignupFlow() {
                   {npiNotice && <DeferredNotice className="mt-2">Automatic NPI verification will be available in a later phase. Your NPI will be checked by your credentialing team.</DeferredNotice>}
                 </div>
                 <div>
-                  <label className="label">Primary Specialty *</label>
+                  <label className="label">Primary Specialty<RequiredMark /></label>
                   <select value={data.specialty} onChange={(e) => set("specialty", e.target.value)} className={"input" + (errors.specialty ? " input-error" : "")}>
                     <option value="">— Select —</option>
                     {SPECIALTIES.map((s) => <option key={s}>{s}</option>)}
