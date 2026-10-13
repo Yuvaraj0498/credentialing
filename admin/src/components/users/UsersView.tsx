@@ -254,12 +254,13 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
     const e: Record<string, string> = {};
     if (!form.firstName.trim()) e.firstName = "Required";
     if (!form.lastName.trim()) e.lastName = "Required";
-    if (!form.email || !/^[^@]+@[^@]+\.[^@]+$/.test(form.email)) e.email = "Valid email required";
+    if (!form.email) e.email = "Email is required";
+    else if (!/^[^@]+@[^@]+\.[^@]+$/.test(form.email)) e.email = "Enter a valid email address";
     else if (emailTaken) e.email = emailTaken;
     if (!form.phone) e.phone = "Required";
     else if (!PHONE_RE.test(form.phone)) e.phone = "Phone must be 10 digits";
-    if (!user && (!form.password || form.password.length < 8)) e.password = "8+ characters";
-    if (user && form.password && form.password.length < 8) e.password = "8+ characters";
+    if (!user && !form.password) e.password = "Password is required";
+    else if (form.password && form.password.length < 8) e.password = "Password must be at least 8 characters";
     if (!form.role) e.role = "Required";
     if (!form.userRoleId) e.userRoleId = "Choose a role";
     if (access === "provider" && !form.providerId) e.providerId = "Select the provider this login belongs to";

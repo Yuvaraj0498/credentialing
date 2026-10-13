@@ -106,31 +106,37 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
   const validateStep = (s: number) => {
     const e: Errors = {};
     if (s === 1) {
-      if (!data.orgName.trim()) e.orgName = "Required";
+      if (!data.orgName.trim()) e.orgName = "Organization name is required";
       else if (nameTaken) e.orgName = nameTaken;
-      if (!data.taxId || !/^\d{9}$/.test(data.taxId.replace(/\D/g, ""))) e.taxId = "9 digits required";
-      if (!data.city.trim()) e.city = "Required";
-      if (!data.zip || !/^\d{5}$/.test(data.zip)) e.zip = "5 digits required";
+      if (!data.taxId || !/^\d{9}$/.test(data.taxId.replace(/\D/g, ""))) e.taxId = data.taxId ? "Tax ID must be 9 digits" : "Tax ID is required";
+      if (!data.city.trim()) e.city = "City is required";
+      if (!data.zip || !/^\d{5}$/.test(data.zip)) e.zip = data.zip ? "ZIP must be 5 digits" : "ZIP is required";
     } else if (s === 2) {
-      if (!data.firstName.trim()) e.firstName = "Required";
-      if (!data.lastName.trim()) e.lastName = "Required";
-      if (!data.email || !EMAIL_RE.test(data.email)) e.email = "Valid email required";
+      if (!data.firstName.trim()) e.firstName = "First name is required";
+      if (!data.lastName.trim()) e.lastName = "Last name is required";
+      if (!data.email) e.email = "Email is required";
+      else if (!EMAIL_RE.test(data.email)) e.email = "Enter a valid email address";
       else if (emailTaken) e.email = emailTaken;
       if (!data.phone) e.phone = "Phone is required";
       else if (!PHONE_RE.test(data.phone)) e.phone = "Phone must be 10 digits";
-      if (!data.password || data.password.length < 8) e.password = "At least 8 characters";
-      if (data.password !== data.confirmPassword) e.confirmPassword = "Passwords don't match";
+      if (!data.password) e.password = "Password is required";
+      else if (data.password.length < 8) e.password = "Password must be at least 8 characters";
+      if (!data.confirmPassword) e.confirmPassword = "Confirm the password";
+      else if (data.password !== data.confirmPassword) e.confirmPassword = "Passwords don't match";
     } else if (s === 3) {
       if (!selectedPkg) e.packageId = "Choose a plan";
       else if (overCap(selectedPkg, data.estimatedProviders)) e.packageId = selectedPkg.name + " supports up to " + selectedPkg.providerCap + " providers";
     } else if (s === 4) {
       const cleaned = data.cardNumber.replace(/\s/g, "");
-      if (cleaned.length < 13) e.cardNumber = "Invalid card";
+      if (!cleaned) e.cardNumber = "Card number is required";
+      else if (cleaned.length < 13) e.cardNumber = "Enter a valid card number";
       const expProblem = cardExpProblem(data.cardExp);
       if (expProblem) e.cardExp = expProblem;
-      if (data.cardCvc.length < 3) e.cardCvc = "3-4 digits";
-      if (!data.cardName.trim()) e.cardName = "Required";
-      if (!/^\d{5}$/.test(data.cardZip)) e.cardZip = "5 digits";
+      if (!data.cardCvc) e.cardCvc = "CVC is required";
+      else if (data.cardCvc.length < 3) e.cardCvc = "CVC must be 3-4 digits";
+      if (!data.cardName.trim()) e.cardName = "Name on card is required";
+      if (!data.cardZip) e.cardZip = "Billing ZIP is required";
+      else if (!/^\d{5}$/.test(data.cardZip)) e.cardZip = "Billing ZIP must be 5 digits";
     }
     setErrors(e);
     return Object.keys(e).length === 0;

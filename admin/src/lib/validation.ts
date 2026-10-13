@@ -94,7 +94,7 @@ export const phoneDigits = (v: string | null | undefined) => {
 
 /** Card expiry "MM/YY": a real month, and this month or later. */
 export const cardExpProblem = (exp: string): string | null => {
-  if (!exp || !exp.trim()) return "Required";
+  if (!exp || !exp.trim()) return "Expiration date is required";
   const m = /^(\d{2})\/(\d{2})$/.exec(exp.trim());
   if (!m) return "MM/YY format";
   const month = Number(m[1]);

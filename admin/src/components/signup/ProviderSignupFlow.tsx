@@ -94,15 +94,18 @@ export function ProviderSignupFlow() {
   const validateStep = (s: number) => {
     const e: Errors = {};
     if (s === 1) {
-      if (!data.firstName.trim()) e.firstName = "Required";
-      if (!data.lastName.trim()) e.lastName = "Required";
-      if (!data.email || !EMAIL_RE.test(data.email)) e.email = "Valid email required";
+      if (!data.firstName.trim()) e.firstName = "First name is required";
+      if (!data.lastName.trim()) e.lastName = "Last name is required";
+      if (!data.email) e.email = "Email is required";
+      else if (!EMAIL_RE.test(data.email)) e.email = "Enter a valid email address";
       if (data.phone && !PHONE_RE.test(data.phone)) e.phone = "Phone must be 10 digits";
-      if (!data.password || data.password.length < 8) e.password = "At least 8 characters";
+      if (!data.password) e.password = "Password is required";
+      else if (data.password.length < 8) e.password = "Password must be at least 8 characters";
       if (data.password !== data.confirmPassword) e.confirmPassword = "Passwords don't match";
     } else if (s === 2) {
-      if (!data.npi || data.npi.length !== 10) e.npi = "10 digits required";
-      if (!data.specialty) e.specialty = "Required";
+      if (!data.npi) e.npi = "NPI is required";
+      else if (data.npi.length !== 10) e.npi = "NPI must be 10 digits";
+      if (!data.specialty) e.specialty = "Specialty is required";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
