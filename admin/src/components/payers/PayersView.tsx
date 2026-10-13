@@ -16,8 +16,7 @@ import { providerName, useProvidersLite } from "@/components/enrollments/shared"
 import type { ProviderLite } from "@/types/enrollments";
 import { ProviderPayerLoginModal } from "@/components/modals/ProviderPayerLoginModal";
 import { PayerFormModal } from "@/components/payers/PayerFormModal";
-import { BorderTabs } from "@/components/BorderTabs";
-import { OrgPayersPanel } from "@/components/superadmin/OrgPayersPanel";
+import { PayerChecklist } from "@/components/payers/PayerChecklist";
 import type { CredentialMatrix, Payer, PayerOverviewItem } from "@/types/payers";
 
 interface PayerRow {
@@ -42,8 +41,6 @@ export function PayersView() {
   // the organization admin can add payers of their own (also visible to the super admin)
   const canAdd = user?.role === "org_admin";
   const [adding, setAdding] = useState(false);
-  // Enabled Payers (the cards) | All Payers (switch payers on / off for the organization; admins only)
-  const [tab, setTab] = useState<"enabled" | "all">("enabled");
   const canCreds = can("list", "credential_vault");
   const canEditCreds = can("update", "credential_vault") || can("create", "credential_vault");
   const [selectedProviderId, setSelectedProviderId] = useState("");
@@ -104,20 +101,10 @@ export function PayersView() {
         />
       )}
 
-      {canAdd && (
-        <BorderTabs
-          tabs={[
-            { id: "enabled", label: "Enabled Payers", icon: "CreditCard", count: rows.data?.length },
-            { id: "all", label: "All Payers", icon: "ToggleRight" },
-          ]}
-          value={tab}
-          onChange={setTab}
-        />
-      )}
-      {canAdd && tab === "all" ? (
-        <OrgPayersPanel mine adminName="your organization" onChanged={() => { rows.reload(); matrix.reload(); }} />
-      ) : (
-      <>
+      {/* left: every payer with a checkbox (admins); right: the enabled payers as cards */}
+      <div className={canAdd ? "flex flex-col lg:flex-row gap-4 items-start" : ""}>
+      {canAdd && <PayerChecklist onChanged={() => { rows.reload(); matrix.reload(); }} />}
+      <div className="flex-1 min-w-0 w-full">
       {/* Provider selector bar */}
       {canCreds && (
         <div
@@ -171,7 +158,7 @@ export function PayersView() {
           <EmptyState icon="CreditCard" title={search ? "No payers match" : "No payers yet"} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {filteredRows.map(({ payer: p, avgTatDays }) => {
             const providerCred = perProvider ? perProvider[p.id] : null;
             const providerHasCreds = !!providerCred?.username;
@@ -236,8 +223,8 @@ export function PayersView() {
           })}
         </div>
       )}
-      </>
-      )}
+      </div>
+      </div>
 
       {provModal && (
         <ProviderPayerLoginModal

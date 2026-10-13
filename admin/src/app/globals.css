@@ -191,3 +191,6 @@ tr.no-hover td { background: transparent; }
 }
 
 @tailwind utilities;
+
+/* Admin → Payers: payer checklist rows */
+.payer-check:hover { background: var(--bg-soft-2); }
