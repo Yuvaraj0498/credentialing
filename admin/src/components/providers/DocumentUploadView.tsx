@@ -14,11 +14,11 @@ import { api, errorMessage } from "@/lib/api";
 import { useAuth } from "@/stores/auth";
 import { useAsync } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
-import { fileExt, MAX_FILE_BYTES } from "./shared";
+import { DOC_UPLOAD_EXT, fileExt, MAX_FILE_BYTES } from "./shared";
 import { todayISO } from "@/lib/utils";
 
-/** Like the prototype: documents are PDF or images. */
-const UPLOAD_EXT = ["pdf", "doc", "docx", "jpg", "jpeg", "png"];
+/** Like the prototype: documents are PDF, Word or images. */
+const UPLOAD_EXT = DOC_UPLOAD_EXT;
 import { VerifyClassificationModal, type ClassifiedItem } from "@/components/modals/VerifyClassificationModal";
 import type { ClassifyResult, DocumentRow, ProviderDetail, UploadResult } from "@/types/providers";
 

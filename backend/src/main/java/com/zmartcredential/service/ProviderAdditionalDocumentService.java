@@ -34,6 +34,16 @@ public class ProviderAdditionalDocumentService {
     private final AuthContext authContext;
     private final PermissionService permissionService;
 
+    /** The same file types as the regular document upload: PDF, Word, JPG or PNG. */
+    private static final java.util.Set<String> ALLOWED_EXT = java.util.Set.of("pdf", "doc", "docx", "jpg", "jpeg", "png");
+
+    private static void checkFileType(MultipartFile file) {
+        String name = file.getOriginalFilename() == null ? "" : file.getOriginalFilename();
+        int dot = name.lastIndexOf('.');
+        String ext = dot < 0 ? "" : name.substring(dot + 1).toLowerCase(java.util.Locale.ROOT);
+        if (!ALLOWED_EXT.contains(ext)) throw BadRequestException.onField("file", "Only PDF, Word, JPG or PNG files can be uploaded");
+    }
+
     public record AdditionalDocumentItem(Long id, Long providerId, String docType, String docTypeLabel, String title,
                                          String notes, LocalDate expiresAt, String fileName, String mimeType, Long sizeBytes,
                                          String status, LocalDateTime uploadedAt) {
@@ -53,6 +63,7 @@ public class ProviderAdditionalDocumentService {
         if (docType == null || docType.isBlank()) throw BadRequestException.onField("docType", "Document Type is required");
         if (docType.trim().length() > 150) throw BadRequestException.onField("docType", "At most 150 characters");
         if (file == null || file.isEmpty()) throw BadRequestException.onField("file", "Choose the file to upload");
+        checkFileType(file);
         LocalDate exp = ProviderDocumentService.parseDate(expiresAt);
         if (exp != null && exp.isBefore(LocalDate.now())) throw BadRequestException.onField("expiresAt", "Choose today or a later date");
         if (title != null && title.length() > 200) throw BadRequestException.onField("title", "At most 200 characters");
@@ -95,6 +106,7 @@ public class ProviderAdditionalDocumentService {
         ProviderAdditionalDocument d = repository.findById(id).orElseThrow(() -> NotFoundException.of("Document", id));
         Provider p = support.loadAccessible(d.getProviderId());
         if (file == null || file.isEmpty()) throw BadRequestException.onField("file", "Choose the file to upload");
+        checkFileType(file);
         LocalDate exp = ProviderDocumentService.parseDate(expiresAt);
         if (exp != null && exp.isBefore(LocalDate.now())) throw BadRequestException.onField("expiresAt", "Choose today or a later date");
         String oldKey = d.getStorageKey();

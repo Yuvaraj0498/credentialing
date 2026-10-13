@@ -32,6 +32,8 @@ export const NPI_RE = /^\d{10}$/;
 
 /** Max upload size per file (API: 25 MB). */
 export const MAX_FILE_BYTES = 25 * 1024 * 1024;
+/** Provider documents (Upload / Replace, Add More Document): PDF, Word, JPG or PNG. */
+export const DOC_UPLOAD_EXT = ["pdf", "doc", "docx", "jpg", "jpeg", "png"];
 export const ALLOWED_EXT = ["pdf", "png", "jpg", "jpeg", "gif", "webp", "tif", "tiff", "doc", "docx", "xls", "xlsx", "csv", "txt", "heic"];
 export const fileExt = (name: string) => (name.includes(".") ? name.split(".").pop()!.toLowerCase() : "");
 

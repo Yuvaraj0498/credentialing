@@ -11,7 +11,7 @@ import { ApiError, api, errorMessage } from "@/lib/api";
 import { fmtDate, todayISO } from "@/lib/utils";
 import { useAsync } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
-import { ALLOWED_EXT, fileExt, MAX_FILE_BYTES } from "./shared";
+import { DOC_UPLOAD_EXT, fileExt, MAX_FILE_BYTES } from "./shared";
 import { MandatoryMark, isWordFile } from "./ProviderOverview";
 import type { AdditionalDocument } from "@/types/providers";
 
@@ -157,9 +157,9 @@ export function AddMoreDocumentModal({ providerId, replace, onClose, onSaved }: 
   const pickFile = (f: File | null) => {
     setErrors((e) => ({ ...e, file: "" }));
     if (!f) return setFile(null);
-    if (!ALLOWED_EXT.includes(fileExt(f.name))) {
+    if (!DOC_UPLOAD_EXT.includes(fileExt(f.name))) {
       setFile(null);
-      return setErrors((e) => ({ ...e, file: "This file type is not allowed (" + ALLOWED_EXT.join(", ") + ")" }));
+      return setErrors((e) => ({ ...e, file: "Only PDF, Word, JPG or PNG files can be uploaded" }));
     }
     if (f.size > MAX_FILE_BYTES) {
       setFile(null);
@@ -227,7 +227,7 @@ export function AddMoreDocumentModal({ providerId, replace, onClose, onSaved }: 
               </div>
               <label className="btn btn-secondary cursor-pointer" style={{ fontSize: 11, padding: "5px 10px" }}>
                 Change
-                <input type="file" className="hidden" accept={ALLOWED_EXT.map((x) => "." + x).join(",")} onChange={(e) => pickFile(e.target.files?.[0] || null)} />
+                <input type="file" className="hidden" accept={DOC_UPLOAD_EXT.map((x) => "." + x).join(",")} onChange={(e) => pickFile(e.target.files?.[0] || null)} />
               </label>
               <button className="btn-ghost p-1" aria-label="Remove file" title="Remove file" onClick={() => setFile(null)}>
                 <Icon name="X" size={14} />
@@ -257,8 +257,8 @@ export function AddMoreDocumentModal({ providerId, replace, onClose, onSaved }: 
               <div className="text-sm text-ink">
                 <span className="font-semibold" style={{ color: "var(--accent)" }}>Click to choose a file</span> or drag it here
               </div>
-              <div className="text-[11px] text-ink-faint">PDF, image, Word or Excel · up to 25 MB</div>
-              <input type="file" className="hidden" accept={ALLOWED_EXT.map((x) => "." + x).join(",")} onChange={(e) => pickFile(e.target.files?.[0] || null)} aria-label="File" />
+              <div className="text-[11px] text-ink-faint">PDF, Word, JPG or PNG · up to 25 MB</div>
+              <input type="file" className="hidden" accept={DOC_UPLOAD_EXT.map((x) => "." + x).join(",")} onChange={(e) => pickFile(e.target.files?.[0] || null)} aria-label="File" />
             </label>
           )}
         </Field>
