@@ -13,10 +13,9 @@ import { useAuth } from "@/stores/auth";
 import { fmtDate } from "@/lib/utils";
 import { useAsync } from "@/lib/hooks";
 import { DocumentUploadView } from "@/components/providers/DocumentUploadView";
-import { DownloadButton, ViewFileButton, isWordFile } from "@/components/providers/ProviderOverview";
-import { ValField } from "@/components/providers/shared";
+import { DownloadButton, MandatoryMark, ViewFileButton } from "@/components/providers/ProviderOverview";
 import { AddMoreDocumentModal, AdditionalDocuments } from "@/components/providers/AdditionalDocuments";
-import type { DocumentRow, MyEnrollment, ProviderDetail } from "@/types/providers";
+import type { MyEnrollment, ProviderDetail } from "@/types/providers";
 
 /** Loads GET /me/provider; a 404 means no provider profile is linked to this account. */
 function useMyProvider() {
@@ -169,8 +168,6 @@ export function MyDocumentsView() {
 function MyDocuments({ provider }: { provider: ProviderDetail }) {
   const docs = nonNa(provider);
   const approved = docs.filter((d) => d.status === "approved").length;
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const selected = docs.find((d) => d.id === selectedId) || null;
   const [adding, setAdding] = useState(false);
   const [extraKey, setExtraKey] = useState(0);
   return (
@@ -179,77 +176,57 @@ function MyDocuments({ provider }: { provider: ProviderDetail }) {
         title="My Documents"
         subtitle={approved + " of " + docs.length + " requirements met"}
         actions={
-          <div className="flex items-center gap-2 flex-wrap">
-            <button className="btn btn-secondary" onClick={() => setAdding(true)}>
-              <Icon name="Plus" size={14} /> Add More Document
-            </button>
-            <Link href="/my-documents/upload" className="btn btn-primary">
-              <Icon name="Upload" size={14} /> Upload Documents
-            </Link>
-          </div>
+          <button className="btn btn-primary" onClick={() => setAdding(true)}>
+            <Icon name="Plus" size={14} /> Add More Document
+          </button>
         }
       />
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
-        <div className="lg:col-span-3 card overflow-hidden">
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Document</th>
-                  <th>Status</th>
-                  <th>Expires</th>
-                  <th>Last Updated</th>
-                  <th className="text-right">View</th>
-                </tr>
-              </thead>
-              <tbody>
-                {docs.map((doc) => (
-                  <tr
-                    key={doc.id}
-                    className={doc.hasFile ? "cursor-pointer" : ""}
-                    onClick={() => doc.hasFile && setSelectedId(doc.id)}
-                    style={selectedId === doc.id ? { background: "var(--accent-soft)" } : undefined}
-                  >
-                    <td className="font-medium">
-                      {doc.label}
-                      {doc.fileName && <div className="text-[10px] text-ink-faint font-normal truncate" style={{ maxWidth: 260 }}>{doc.fileName}</div>}
-                    </td>
-                    <td>
-                      <DocStatusBadge status={doc.status} />
-                    </td>
-                    <td className="text-ink-light text-xs">{doc.expiresAt ? fmtDate(doc.expiresAt) : "—"}</td>
-                    <td className="text-ink-light text-xs">{doc.uploadedAt ? fmtDate(doc.uploadedAt) : "—"}</td>
-                    <td className="text-right">
-                      <button
-                        className="btn-ghost p-1"
-                        title={doc.hasFile ? "Details" : "No file uploaded"}
-                        aria-label={"Details for " + doc.label}
-                        disabled={!doc.hasFile}
-                        style={doc.hasFile ? undefined : { opacity: 0.35, cursor: "not-allowed" }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (doc.hasFile) setSelectedId(doc.id);
-                        }}
+      <div className="card overflow-hidden">
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Document</th>
+                <th>Status</th>
+                <th>Mandatory</th>
+                <th>Expires</th>
+                <th>Last Updated</th>
+                <th className="text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {docs.map((doc) => (
+                <tr key={doc.id}>
+                  <td className="font-medium">
+                    {doc.label}
+                    {doc.fileName && <div className="text-[10px] text-ink-faint font-normal truncate" style={{ maxWidth: 320 }}>{doc.fileName}</div>}
+                  </td>
+                  <td>
+                    <DocStatusBadge status={doc.status} />
+                  </td>
+                  <td className="text-xs">
+                    <MandatoryMark yes={doc.critical} />
+                  </td>
+                  <td className="text-ink-light text-xs">{doc.expiresAt ? fmtDate(doc.expiresAt) : "—"}</td>
+                  <td className="text-ink-light text-xs">{doc.uploadedAt ? fmtDate(doc.uploadedAt) : "—"}</td>
+                  <td className="text-right whitespace-nowrap">
+                    <div className="inline-flex items-center gap-1">
+                      {doc.hasFile && <ViewFileButton doc={doc} eye />}
+                      {doc.hasFile && <DownloadButton doc={doc} />}
+                      <Link
+                        href={"/my-documents/upload?docType=" + encodeURIComponent(doc.docType)}
+                        className="btn btn-secondary ml-1"
+                        style={{ fontSize: 11, padding: "5px 10px" }}
+                        aria-label={(doc.hasFile ? "Replace " : "Upload ") + doc.label}
                       >
-                        <Icon name="Eye" size={13} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-        <div className="lg:col-span-2 card">
-          <div className="p-5 pb-3 border-b border-line flex items-center gap-2">
-            <Icon name="FileText" size={16} style={{ color: "var(--accent)" }} />
-            <h3 className="font-display font-semibold text-ink">Document Details</h3>
-          </div>
-          {selected ? (
-            <MyDocumentDetails key={selected.id} doc={selected} onClose={() => setSelectedId(null)} />
-          ) : (
-            <EmptyState icon="FileText" title="Select a document" description="Click a document you have uploaded to see its details." />
-          )}
+                        <Icon name={doc.hasFile ? "RefreshCw" : "Upload"} size={11} /> {doc.hasFile ? "Replace" : "Upload"}
+                      </Link>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
       <AdditionalDocuments providerId={provider.id} reloadKey={extraKey} />
@@ -263,45 +240,6 @@ function MyDocuments({ provider }: { provider: ProviderDetail }) {
           }}
         />
       )}
-    </div>
-  );
-}
-
-/** The provider's view of one document: its details, View File and Download (no review actions). */
-function MyDocumentDetails({ doc, onClose }: { doc: DocumentRow; onClose: () => void }) {
-  const daysLeft = doc.daysUntilExpiry;
-  return (
-    <div className="p-5">
-      <div className="flex items-center justify-between mb-3">
-        <div className="font-semibold text-ink">{doc.label}</div>
-        <button onClick={onClose} className="btn-ghost p-1" aria-label="Close details"><Icon name="X" size={14} /></button>
-      </div>
-      <div className="space-y-3 text-sm">
-        <ValField label="File Name" val={doc.fileName} />
-        {doc.expiresAt && (
-          <ValField
-            label="Expiration"
-            val={
-              <span style={daysLeft !== null && daysLeft < 0 ? { color: "var(--danger)" } : undefined}>
-                {fmtDate(doc.expiresAt)}
-                {daysLeft !== null && <span className="text-xs text-ink-faint"> · {daysLeft < 0 ? Math.abs(daysLeft) + " days ago" : daysLeft + " days left"}</span>}
-              </span>
-            }
-          />
-        )}
-        {doc.uploadedAt && <ValField label="Uploaded" val={fmtDate(doc.uploadedAt)} />}
-        <ValField label="Status" val={<DocStatusBadge status={doc.status} />} />
-      </div>
-      {isWordFile(doc.fileName) && (
-        <div className="mt-4 text-xs rounded-md px-3 py-2 flex items-start gap-2" style={{ background: "var(--bg-soft)", color: "var(--ink-light)" }}>
-          <Icon name="Info" size={13} className="mt-0.5" />
-          <span>Word documents can&apos;t be viewed in the browser — please download the file to open it.</span>
-        </div>
-      )}
-      <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-line">
-        <ViewFileButton doc={doc} label />
-        <DownloadButton doc={doc} label />
-      </div>
     </div>
   );
 }
@@ -362,6 +300,6 @@ export function MyEnrollmentsView() {
 }
 
 /** /my-documents/upload — reuses the staff DocumentUploadView with the provider's own record. */
-export function MyDocumentsUploadView() {
-  return <PortalGate title="Document Upload">{(p) => <DocumentUploadView providerId={p.id} portal />}</PortalGate>;
+export function MyDocumentsUploadView({ docType }: { docType?: string | null }) {
+  return <PortalGate title="Document Upload">{(p) => <DocumentUploadView providerId={p.id} portal lockedDocType={docType || null} />}</PortalGate>;
 }

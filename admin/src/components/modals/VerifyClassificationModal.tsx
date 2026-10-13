@@ -29,6 +29,7 @@ export type DocStatusChoice = "approved" | "expired" | "pending_review";
 export function VerifyClassificationModal({
   classified,
   docTypes,
+  lockedDocType,
   staffUpload,
   busy,
   onClose,
@@ -36,6 +37,8 @@ export function VerifyClassificationModal({
 }: {
   classified: ClassifiedItem[];
   docTypes: DocumentRow[];
+  /** the file belongs to this document (My Documents row Upload): shown read-only */
+  lockedDocType?: string;
   staffUpload: boolean;
   busy?: boolean;
   onClose: () => void;
@@ -131,7 +134,7 @@ export function VerifyClassificationModal({
         <div className="lg:col-span-2">
           <div className="flex items-center justify-between mb-2 gap-2">
             <div className="font-semibold text-ink text-sm truncate">{cur.file.name}</div>
-            {cur.detected && cur.docType ? (
+            {lockedDocType ? null : cur.detected && cur.docType ? (
               <Pill type="success">
                 <Icon name="Sparkles" size={10} /> Auto-detected from filename
               </Pill>
@@ -162,6 +165,11 @@ export function VerifyClassificationModal({
 
         {/* Classification fields */}
         <div className="space-y-4">
+          {lockedDocType ? (
+            <Field label="Document Type" required>
+              <input value={curType?.label || lockedDocType} readOnly disabled className="input" aria-label="Document Type" title="This file is uploaded for this document" />
+            </Field>
+          ) : (
           <Field label="Document Type" required error={curProblems.docType}>
             <select
               value={cur.docType}
@@ -184,6 +192,7 @@ export function VerifyClassificationModal({
               <div className="text-[10px] text-ink-faint mt-1">{cur.detected ? "Auto-detected from filename — change it if it's wrong." : "Pick the checklist item this file belongs to."}</div>
             )}
           </Field>
+          )}
           {curType?.expires && (
             <Field label="Expiration Date" required error={curProblems.expiresAt}>
               <input

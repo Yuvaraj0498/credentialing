@@ -15,6 +15,7 @@ import { useAuth } from "@/stores/auth";
 import { useAsync } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
 import { fileExt, MAX_FILE_BYTES } from "./shared";
+import { todayISO } from "@/lib/utils";
 
 /** Like the prototype: documents are PDF or images. */
 const UPLOAD_EXT = ["pdf", "doc", "docx", "jpg", "jpeg", "png"];
@@ -24,8 +25,9 @@ import type { ClassifyResult, DocumentRow, ProviderDetail, UploadResult } from "
 /**
  * Prototype DocumentUploadView (L2236).
  * Staff: /providers/{id}/upload. Provider portal: /my-documents/upload (portal=true, own provider id).
+ * `lockedDocType`: upload one file for that document (My Documents row Upload / Replace); its type can't be changed.
  */
-export function DocumentUploadView({ providerId, portal = false }: { providerId: number; portal?: boolean }) {
+export function DocumentUploadView({ providerId, portal = false, lockedDocType = null }: { providerId: number; portal?: boolean; lockedDocType?: string | null }) {
   const router = useRouter();
   const toast = useToast();
   const { can, user } = useAuth();
@@ -57,14 +59,22 @@ export function DocumentUploadView({ providerId, portal = false }: { providerId:
       else accepted.push(f);
     });
     setFileError(rejected.length ? "Skipped: " + rejected.join(", ") : null);
-    setFiles((prev) => [...prev, ...accepted]);
+    // a fixed document takes one file: the newest choice replaces the previous one
+    if (locked) setFiles((prev) => (accepted.length ? [accepted[accepted.length - 1]] : prev));
+    else setFiles((prev) => [...prev, ...accepted]);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const docTypes = provider?.documents || [];
+  const locked = lockedDocType ? docTypes.find((d) => d.docType === lockedDocType) || null : null;
 
   const handleClassify = async () => {
     if (!provider) return;
+    if (locked) {
+      setClassified(files.map((f) => ({ file: f, docType: locked.docType, detected: false, expiresAt: locked.expiresAt && locked.expiresAt >= todayISO() ? locked.expiresAt : "", confirmed: false })));
+      setShowVerify(true);
+      return;
+    }
     if (mode === "manual") {
       setClassified(files.map((f) => ({ file: f, docType: "", detected: false, expiresAt: "", confirmed: false })));
       setShowVerify(true);
@@ -149,8 +159,17 @@ export function DocumentUploadView({ providerId, portal = false }: { providerId:
               </>
             )}
             <Icon name="ChevronRight" size={12} className="text-ink-faint" />
-            <span className="text-ink font-medium">Document Upload</span>
+            <span className="text-ink font-medium">{locked ? (locked.hasFile ? "Replace " : "Upload ") + locked.label : "Document Upload"}</span>
           </div>
+          {locked && (
+            <div className="mb-4 px-4 py-3 rounded-lg flex items-center gap-2 text-sm" style={{ background: "var(--accent-soft)" }}>
+              <Icon name="FileText" size={15} className="text-accent" />
+              <span>
+                {locked.hasFile ? "Replacing" : "Uploading"} <strong>{locked.label}</strong>
+                {locked.hasFile && locked.fileName && <span className="text-ink-light"> — current file: {locked.fileName}</span>}
+              </span>
+            </div>
+          )}
 
           {/* Provider header card */}
           <div className="card card-pad mb-4">
@@ -287,14 +306,14 @@ export function DocumentUploadView({ providerId, portal = false }: { providerId:
                       ))}
                     </div>
                     <button onClick={() => fileInputRef.current?.click()} className="btn btn-secondary mt-3" style={{ width: "100%" }} disabled={classifying}>
-                      <Icon name="Plus" size={13} /> Add more files
+                      <Icon name={locked ? "RefreshCw" : "Plus"} size={13} /> {locked ? "Choose a different file" : "Add more files"}
                     </button>
                   </div>
                 )}
                 <input
                   ref={fileInputRef}
                   type="file"
-                  multiple
+                  multiple={!locked}
                   hidden
                   accept={UPLOAD_EXT.map((e) => "." + e).join(",")}
                   onChange={(e) => handleFilesSelected(e.target.files)}
@@ -349,6 +368,7 @@ export function DocumentUploadView({ providerId, portal = false }: { providerId:
             <VerifyClassificationModal
               classified={classified}
               docTypes={docTypes}
+              lockedDocType={locked?.docType}
               staffUpload={staff}
               busy={uploading}
               onClose={() => {

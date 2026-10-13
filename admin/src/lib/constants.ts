@@ -22,7 +22,7 @@ export const PROVIDER_STATUS: Record<string, { label: string; pill: string }> = 
 
 export const DOC_STATUS: Record<string, { label: string; pill: string }> = {
   approved: { label: "Approved", pill: "success" },
-  missing: { label: "Missing", pill: "neutral" },
+  missing: { label: "Missing", pill: "danger" },
   expired: { label: "Expired", pill: "danger" },
   pending_review: { label: "Pending Review", pill: "warn" },
   na: { label: "N/A", pill: "neutral" },

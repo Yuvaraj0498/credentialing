@@ -96,6 +96,7 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
               <tr>
                 <th>Document Type</th>
                 <th>Expiration</th>
+                <th>Mandatory</th>
                 <th>Status</th>
                 <th className="text-right">Actions</th>
               </tr>
@@ -111,7 +112,7 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
                   <Fragment key={key}>
                     {doc.extra && !docs[i - 1]?.extra && (
                       <tr className="no-hover">
-                        <td colSpan={4} style={{ background: "var(--bg-soft)" }}>
+                        <td colSpan={5} style={{ background: "var(--bg-soft)" }}>
                           <div className="flex items-center gap-2 text-xs font-semibold text-ink">
                             <Icon name="FilePlus" size={13} className="text-accent" /> Additional Documents
                             <span className="font-normal text-ink-faint">added by the provider</span>
@@ -124,11 +125,13 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
                         <div className="flex items-center gap-2">
                           {hasFile ? <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={13} className="text-ink-faint" /> : <span style={{ width: 13 }}></span>}
                           <span className="font-medium">{doc.label}</span>
-                          {doc.critical && doc.status !== "approved" && doc.status !== "na" && <span className="text-[10px] text-ink-faint">· required</span>}
                         </div>
                       </td>
                       <td className={"text-xs " + expClass} style={expDays !== null && expDays < 0 ? { color: "var(--danger)" } : undefined}>
                         {doc.expiresAt ? fmtDateShort(doc.expiresAt) : <span className="text-ink-faint">No expiration</span>}
+                      </td>
+                      <td className="text-xs">
+                        <MandatoryMark yes={doc.critical} />
                       </td>
                       <td>
                         <DocStatusBadge status={doc.status} />
@@ -151,7 +154,7 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
                     </tr>
                     {isExpanded && hasFile && (
                       <tr className="no-hover">
-                        <td colSpan={4} style={{ background: "var(--bg-soft)", padding: 0 }}>
+                        <td colSpan={5} style={{ background: "var(--bg-soft)", padding: 0 }}>
                           <div className="px-12 py-3 flex items-center gap-3">
                             <Icon name="FileText" size={14} className="text-accent" />
                             <div className="flex-1 min-w-0">
@@ -249,11 +252,16 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
   );
 }
 
+/** Mandatory column: Yes for a required document, otherwise No. */
+export function MandatoryMark({ yes }: { yes: boolean }) {
+  return yes ? <span className="font-semibold text-ink">Yes</span> : <span className="text-ink-faint">No</span>;
+}
+
 /** Word documents can't be shown in the browser: they are downloaded instead of viewed. */
 export const isWordFile = (name: string | null | undefined) => /\.(docx?|dot|dotx|rtf)$/i.test(name || "");
 
 /** Opens the uploaded file in a new browser tab (any status, as long as a file is stored; not for Word files). */
-export function ViewFileButton({ doc, label }: { doc: DocumentRow; label?: boolean }) {
+export function ViewFileButton({ doc, label, eye }: { doc: DocumentRow; label?: boolean; eye?: boolean }) {
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   if (!doc.hasFile || isWordFile(doc.fileName)) return null;
@@ -276,7 +284,7 @@ export function ViewFileButton({ doc, label }: { doc: DocumentRow; label?: boole
         }
       }}
     >
-      {busy ? <span className="loader" style={{ width: 11, height: 11 }} /> : <Icon name="ExternalLink" size={label ? 11 : 13} />} {label && "View File"}
+      {busy ? <span className="loader" style={{ width: 11, height: 11 }} /> : <Icon name={eye ? "Eye" : "ExternalLink"} size={label ? 11 : 13} />} {label && "View File"}
     </button>
   );
 }
