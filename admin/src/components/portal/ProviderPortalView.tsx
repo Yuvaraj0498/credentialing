@@ -15,7 +15,7 @@ import { useAsync } from "@/lib/hooks";
 import { DocumentUploadView } from "@/components/providers/DocumentUploadView";
 import { DownloadButton, ViewFileButton, isWordFile } from "@/components/providers/ProviderOverview";
 import { ValField } from "@/components/providers/shared";
-import { AdditionalDocuments, docTypeOptions } from "@/components/providers/AdditionalDocuments";
+import { AddMoreDocumentModal, AdditionalDocuments, docTypeOptions } from "@/components/providers/AdditionalDocuments";
 import type { DocumentRow, MyEnrollment, ProviderDetail } from "@/types/providers";
 
 /** Loads GET /me/provider; a 404 means no provider profile is linked to this account. */
@@ -171,15 +171,22 @@ function MyDocuments({ provider }: { provider: ProviderDetail }) {
   const approved = docs.filter((d) => d.status === "approved").length;
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const selected = docs.find((d) => d.id === selectedId) || null;
+  const [adding, setAdding] = useState(false);
+  const [extraKey, setExtraKey] = useState(0);
   return (
     <div>
       <PageHeader
         title="My Documents"
         subtitle={approved + " of " + docs.length + " requirements met"}
         actions={
-          <Link href="/my-documents/upload" className="btn btn-primary">
-            <Icon name="Upload" size={14} /> Upload Documents
-          </Link>
+          <div className="flex items-center gap-2 flex-wrap">
+            <button className="btn btn-secondary" onClick={() => setAdding(true)}>
+              <Icon name="Plus" size={14} /> Add More Document
+            </button>
+            <Link href="/my-documents/upload" className="btn btn-primary">
+              <Icon name="Upload" size={14} /> Upload Documents
+            </Link>
+          </div>
         }
       />
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 items-start">
@@ -245,7 +252,18 @@ function MyDocuments({ provider }: { provider: ProviderDetail }) {
           )}
         </div>
       </div>
-      <AdditionalDocuments providerId={provider.id} types={docTypeOptions(provider.documents)} canAdd />
+      <AdditionalDocuments providerId={provider.id} reloadKey={extraKey} />
+      {adding && (
+        <AddMoreDocumentModal
+          providerId={provider.id}
+          types={docTypeOptions(provider.documents)}
+          onClose={() => setAdding(false)}
+          onSaved={() => {
+            setAdding(false);
+            setExtraKey((k) => k + 1);
+          }}
+        />
+      )}
     </div>
   );
 }

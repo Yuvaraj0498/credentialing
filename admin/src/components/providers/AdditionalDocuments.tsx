@@ -2,8 +2,7 @@
 
 import { useState } from "react";
 import { DocStatusBadge } from "@/components/Pill";
-import { EmptyState } from "@/components/EmptyState";
-import { ErrorState, Loading } from "@/components/AsyncState";
+import { ErrorState } from "@/components/AsyncState";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
@@ -24,35 +23,23 @@ export function docTypeOptions(rows: DocumentRow[]) {
 }
 
 /**
- * Extra documents of a provider, besides the required list. The provider adds them on My Documents
- * (Add More Document); staff see them on the provider's page.
+ * Extra documents of a provider, besides the required list. The provider adds them with Add More Document
+ * (My Documents header); staff see them on the provider's page. Shown only once there is at least one.
+ * `reloadKey` changes after a document was added, to load the list again.
  */
-export function AdditionalDocuments({ providerId, types, canAdd }: { providerId: number; types: { docType: string; label: string }[]; canAdd?: boolean }) {
-  const state = useAsync(() => api.get<AdditionalDocument[]>("/providers/" + providerId + "/additional-documents"), [providerId]);
-  const [adding, setAdding] = useState(false);
+export function AdditionalDocuments({ providerId, reloadKey = 0 }: { providerId: number; reloadKey?: number }) {
+  const state = useAsync(() => api.get<AdditionalDocument[]>("/providers/" + providerId + "/additional-documents"), [providerId, reloadKey]);
   const docs = state.data || [];
+  if (!state.error && docs.length === 0) return null;
   return (
     <div className="card mt-4" id="additional-documents">
       <div className="p-5 pb-3 border-b border-line flex items-center gap-2 flex-wrap">
         <Icon name="FilePlus" size={16} style={{ color: "var(--accent)" }} />
         <h3 className="font-display font-semibold text-ink">Additional Documents</h3>
         <span className="text-xs text-ink-faint">{docs.length ? docs.length + (docs.length === 1 ? " document" : " documents") : ""}</span>
-        {canAdd && (
-          <button className="btn btn-primary ml-auto" onClick={() => setAdding(true)}>
-            <Icon name="Plus" size={14} /> Add More Document
-          </button>
-        )}
       </div>
-      {state.loading && !state.data ? (
-        <Loading />
-      ) : state.error ? (
+      {state.error ? (
         <ErrorState message={state.error} onRetry={state.reload} />
-      ) : docs.length === 0 ? (
-        <EmptyState
-          icon="FilePlus"
-          title="No additional documents"
-          description={canAdd ? "Use Add More Document to give your credentialing team any other document." : "The provider has not added any other documents."}
-        />
       ) : (
         <div className="table-scroll">
           <table>
@@ -90,17 +77,6 @@ export function AdditionalDocuments({ providerId, types, canAdd }: { providerId:
           </table>
         </div>
       )}
-      {adding && (
-        <AddMoreDocumentModal
-          providerId={providerId}
-          types={types}
-          onClose={() => setAdding(false)}
-          onSaved={() => {
-            setAdding(false);
-            state.reload();
-          }}
-        />
-      )}
     </div>
   );
 }
@@ -134,7 +110,7 @@ function ExtraFileButton({ doc, inline }: { doc: AdditionalDocument; inline?: bo
   );
 }
 
-function AddMoreDocumentModal({ providerId, types, onClose, onSaved }: { providerId: number; types: { docType: string; label: string }[]; onClose: () => void; onSaved: () => void }) {
+export function AddMoreDocumentModal({ providerId, types, onClose, onSaved }: { providerId: number; types: { docType: string; label: string }[]; onClose: () => void; onSaved: () => void }) {
   const toast = useToast();
   const [form, setForm] = useState({ docType: "", title: "", expiresAt: "", notes: "" });
   const [file, setFile] = useState<File | null>(null);
