@@ -13,6 +13,9 @@ import { todayISO } from "@/lib/utils";
 import { fetchProvidersLite, providerName, STATUS_OPTIONS } from "@/components/enrollments/shared";
 import type { Enrollment, EnrollmentRequest, EnrollmentStatus, Payer } from "@/types/enrollments";
 
+/** The later of two ISO dates (an empty one is ignored). */
+const laterOf = (a: string, b: string) => (b && b > a ? b : a);
+
 interface FormState {
   providerId: string;
   payerId: string;
@@ -75,6 +78,9 @@ export function EnrollmentFormModal({
     const approvedStatus = form.status === "approved";
     if (!approvedStatus && form.followUpDate && form.followUpDate < today && form.followUpDate !== (enrollment?.followUpDate || "")) e.followUpDate = "Choose today or a later date";
     if (!approvedStatus && form.estApprovedDate && form.estApprovedDate < today && form.estApprovedDate !== (enrollment?.estApprovedDate || "")) e.estApprovedDate = "Choose today or a later date";
+    // follow-up and estimated approval dates are on or after the submitted date too
+    if (!approvedStatus && !e.followUpDate && form.submittedDate && form.followUpDate && form.followUpDate < form.submittedDate) e.followUpDate = "Follow up date must be on or after the submitted date";
+    if (!approvedStatus && !e.estApprovedDate && form.submittedDate && form.estApprovedDate && form.estApprovedDate < form.submittedDate) e.estApprovedDate = "Est approved date must be on or after the submitted date";
     // Approved date: required when the status is Approved
     if (form.status === "approved") {
       if (!form.effectiveDate) e.effectiveDate = "Approved date is required";
@@ -158,19 +164,26 @@ export function EnrollmentFormModal({
           </Field>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Submitted Date" error={errors.submittedDate}>
-              <input type="date" value={form.submittedDate || ""} onChange={(e) => setForm({ ...form, submittedDate: e.target.value })} className="input" />
+              <input
+                type="date"
+                max={form.status === "approved" && form.effectiveDate ? form.effectiveDate : undefined}
+                value={form.submittedDate || ""}
+                onChange={(e) => setForm({ ...form, submittedDate: e.target.value })}
+                className="input"
+              />
             </Field>
             <Field label="Follow Up Date" error={errors.followUpDate}>
-              <input type="date" min={todayISO()} value={form.status === "approved" ? "" : form.followUpDate || ""} onChange={(e) => setForm({ ...form, followUpDate: e.target.value })} className="input" disabled={form.status === "approved"} title={form.status === "approved" ? "Not used for an approved enrollment" : undefined} />
+              <input type="date" min={laterOf(todayISO(), form.submittedDate)} value={form.status === "approved" ? "" : form.followUpDate || ""} onChange={(e) => setForm({ ...form, followUpDate: e.target.value })} className="input" disabled={form.status === "approved"} title={form.status === "approved" ? "Not used for an approved enrollment" : undefined} />
             </Field>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Est Approved Date" error={errors.estApprovedDate}>
-              <input type="date" min={todayISO()} value={form.status === "approved" ? "" : form.estApprovedDate || ""} onChange={(e) => setForm({ ...form, estApprovedDate: e.target.value })} className="input" disabled={form.status === "approved"} title={form.status === "approved" ? "Not used for an approved enrollment" : undefined} />
+              <input type="date" min={laterOf(todayISO(), form.submittedDate)} value={form.status === "approved" ? "" : form.estApprovedDate || ""} onChange={(e) => setForm({ ...form, estApprovedDate: e.target.value })} className="input" disabled={form.status === "approved"} title={form.status === "approved" ? "Not used for an approved enrollment" : undefined} />
             </Field>
             {form.status === "approved" && (
               <Field label="Approved Date *" error={errors.effectiveDate}>
-                <input type="date" value={form.effectiveDate || ""} onChange={(e) => setForm({ ...form, effectiveDate: e.target.value })} className="input" />
+                {/* on or after the submitted date */}
+                <input type="date" min={form.submittedDate || undefined} value={form.effectiveDate || ""} onChange={(e) => setForm({ ...form, effectiveDate: e.target.value })} className="input" />
               </Field>
             )}
           </div>

@@ -358,8 +358,17 @@ public class EnrollmentService {
         if (r.applicationType() != null && !EnrollmentSupport.APPLICATION_TYPES.contains(r.applicationType())) {
             throw new BadRequestException("Unknown application type " + r.applicationType());
         }
-        if (r.submittedDate() != null && r.effectiveDate() != null && r.effectiveDate().isBefore(r.submittedDate())) {
-            throw new BadRequestException("Effective date cannot be before the submitted date");
+        // approved, follow-up and estimated approval dates: on or after the submitted date
+        if (r.submittedDate() != null) {
+            if (r.effectiveDate() != null && r.effectiveDate().isBefore(r.submittedDate())) {
+                throw BadRequestException.onField("effectiveDate", "Approved date must be on or after the submitted date");
+            }
+            if (r.followUpDate() != null && r.followUpDate().isBefore(r.submittedDate())) {
+                throw BadRequestException.onField("followUpDate", "Follow up date must be on or after the submitted date");
+            }
+            if (r.estApprovedDate() != null && r.estApprovedDate().isBefore(r.submittedDate())) {
+                throw BadRequestException.onField("estApprovedDate", "Est approved date must be on or after the submitted date");
+            }
         }
         Long practiceId = r.practiceId();
         if (practiceId != null) {
