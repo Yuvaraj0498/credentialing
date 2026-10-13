@@ -256,8 +256,9 @@ public class PayerService {
         p.setFullName(r.fullName().trim());
         p.setCategory(r.category().trim());
         p.setAvgTatDays(r.avgTatDays());
-        p.setIntegration(r.integration());
-        p.setAppForm(r.appForm().trim());
+        // optional; the integration column always has a value (portal when none is chosen)
+        p.setIntegration(r.integration() == null || r.integration().isBlank() ? "portal" : r.integration());
+        p.setAppForm(r.appForm() == null || r.appForm().isBlank() ? null : r.appForm().trim());
         boolean portal = Boolean.TRUE.equals(portalAvailable);
         String portalUrl = r.portalUrl() == null || r.portalUrl().isBlank() ? null : r.portalUrl().trim();
         if (portal && portalUrl == null) {

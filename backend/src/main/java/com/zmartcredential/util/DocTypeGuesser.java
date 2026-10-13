@@ -20,6 +20,7 @@ public final class DocTypeGuesser {
         rule("csr_license", "\\b(csr|cds)\\b|\\bcontrolled substances?\\b");
         rule("ecfmg", "\\becfmg\\b");
         rule("clia", "\\bclia\\b");
+        rule("irs_letter", "\\b(irs|147 ?c|cp ?575|ein letter|ein confirmation)\\b");
         rule("gov_id", "\\b(passport|drivers?|driver ?s|dl|identification|id|id card|photo id)\\b");
         rule("medical_license", "\\b(medical )?licen[cs]es?\\b");
         rule("malpractice", "\\b(malpractice|liability|coi|insurance|face ?sheet)\\b");

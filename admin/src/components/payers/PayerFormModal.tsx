@@ -78,10 +78,7 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
     if (!form.fullName.trim()) e.fullName = "Insurance company name is required";
     if (!form.category) e.category = "Payer category is required";
     const tat = Number(form.avgTatDays);
-    if (!form.avgTatDays) e.avgTatDays = "Avg TAT is required";
-    else if (!Number.isInteger(tat) || tat < 1 || tat > 365) e.avgTatDays = "1-365 days";
-    if (!form.integration) e.integration = "Integration is required";
-    if (!form.appForm.trim()) e.appForm = "Form is required";
+    if (form.avgTatDays && (!Number.isInteger(tat) || tat < 1 || tat > 365)) e.avgTatDays = "1-365 days";
     // the portal login URL is asked only when the payer has a portal
     const url = form.portalUrl.trim();
     if (form.portalAvailable && !url) e.portalUrl = "Portal login URL is required when a portal is available";
@@ -97,7 +94,7 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
       name: form.name.trim(),
       fullName: form.fullName.trim(),
       category: form.category,
-      avgTatDays: Number(form.avgTatDays),
+      avgTatDays: form.avgTatDays ? Number(form.avgTatDays) : null,
       integration: form.integration,
       appForm: form.appForm.trim(),
       portalAvailable: form.portalAvailable,
@@ -202,10 +199,10 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
           <input value={form.fullName} onChange={(e) => set("fullName", e.target.value.replace(/^\s+/, ""))} className={"input" + (errors.fullName ? " input-error" : "")} maxLength={200} placeholder="e.g. Blue Cross Blue Shield of Texas" />
         </Field>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Avg TAT (days)" required error={errors.avgTatDays}>
+          <Field label="Avg TAT (days)" error={errors.avgTatDays}>
             <input value={form.avgTatDays} onChange={(e) => set("avgTatDays", e.target.value.replace(/\D/g, "").slice(0, 3))} className={"input font-mono" + (errors.avgTatDays ? " input-error" : "")} inputMode="numeric" placeholder="e.g. 49" />
           </Field>
-          <Field label="Integration" required error={errors.integration}>
+          <Field label="Integration" error={errors.integration}>
             <select value={form.integration} onChange={(e) => set("integration", e.target.value)} className={"input" + (errors.integration ? " input-error" : "")}>
               <option value="">— Select integration —</option>
               {INTEGRATIONS.map((i) => (
@@ -214,7 +211,7 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
             </select>
           </Field>
         </div>
-        <Field label="Form" required error={errors.appForm}>
+        <Field label="Form" error={errors.appForm}>
           <input value={form.appForm} onChange={(e) => set("appForm", e.target.value.replace(/^\s+/, ""))} className={"input" + (errors.appForm ? " input-error" : "")} maxLength={150} placeholder="e.g. Ambetter Provider Set-up Form" />
         </Field>
         {/* last: the portal login URL is asked only when the payer has a portal */}

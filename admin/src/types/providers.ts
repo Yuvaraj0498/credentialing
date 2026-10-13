@@ -3,7 +3,7 @@
 export type ProviderStatus = "draft" | "in_progress" | "active" | "on_hold" | "terminated";
 export type DocStatus = "approved" | "missing" | "expired" | "pending_review" | "na";
 export type DocType =
-  | "diploma" | "medical_license" | "dea" | "malpractice" | "cv" | "board_cert" | "w9" | "gov_id"
+  | "diploma" | "medical_license" | "dea" | "malpractice" | "cv" | "board_cert" | "w9" | "irs_letter" | "gov_id"
   | "csr_license" | "cme" | "claim_history" | "clia" | "collaborative" | "ecfmg";
 export type ProviderSource = "manual" | "caqh" | "invite" | "self_signup";
 
