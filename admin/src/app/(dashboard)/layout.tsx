@@ -44,7 +44,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex min-h-screen bg-soft">
         <Sidebar open={navOpen} onNavigate={() => setNavOpen(false)} />
         {navOpen && <div className="sidebar-scrim" onClick={() => setNavOpen(false)} />}
-        <main className="flex-1 overflow-x-hidden min-w-0">
+        {/* overflow-x: clip (not hidden) keeps the page from scrolling sideways without breaking position: sticky inside */}
+        <main className="flex-1 min-w-0" style={{ overflowX: "clip" }}>
           <div className="mobile-topbar">
             <button className="btn btn-ghost" style={{ padding: 6 }} onClick={() => setNavOpen(true)} aria-label="Open menu">
               <Icon name="Menu" size={20} />

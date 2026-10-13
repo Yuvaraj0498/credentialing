@@ -44,7 +44,7 @@ export function PayerChecklist({ onChanged }: { onChanged: () => void }) {
   };
 
   return (
-    <aside className="card w-full lg:w-64 flex-shrink-0 lg:sticky lg:top-4 flex flex-col" style={{ maxHeight: "calc(100vh - 120px)" }}>
+    <aside className="card w-full lg:w-64 flex-shrink-0 lg:sticky lg:top-4 flex flex-col" style={{ maxHeight: "calc(100vh - 32px)" }}>
       <div className="px-3 pt-3 pb-2 border-b border-line">
         <div className="flex items-center justify-between">
           <h3 className="font-display font-semibold text-ink text-sm">Payers</h3>
