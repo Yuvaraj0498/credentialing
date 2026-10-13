@@ -324,9 +324,6 @@ export function SecureLinkPortal({ token }: { token: string }) {
               fixed={{
                 email: info?.profile.loginEmail || info?.email || "",
                 status: info?.profile.status || null,
-                clientName: info?.profile.clientName || null,
-                practiceName: info?.profile.practiceName || null,
-                locationName: info?.profile.locationName || null,
               }}
               onChange={(p) => {
                 // a field's message goes away once that field is changed
@@ -454,9 +451,6 @@ export function SecureLinkPortal({ token }: { token: string }) {
 interface FixedInfo {
   email: string;
   status: string | null;
-  clientName: string | null;
-  practiceName: string | null;
-  locationName: string | null;
 }
 
 /** A value set by the staff member who sent the link: shown in a field, not editable. */
@@ -468,7 +462,7 @@ function Fixed({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-/** The same fields, names and order as Add Provider Manually (email, status and organization are set by the staff). */
+/** The same fields, names and order as Add Provider Manually (email and status are set by the staff). */
 function ProfileForm({ profile, errors, loginEmail, fixed, onChange }: { profile: Profile; errors: Record<string, string>; loginEmail: string | null; fixed: FixedInfo; onChange: (p: Profile) => void }) {
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => onChange({ ...profile, [k]: v });
   const suffixOptions = profile.suffix && !SUFFIXES.includes(profile.suffix) ? [profile.suffix, ...SUFFIXES] : SUFFIXES;
@@ -571,17 +565,6 @@ function ProfileForm({ profile, errors, loginEmail, fixed, onChange }: { profile
           </Field>
         </div>
       )}
-      <div className="pt-3 mt-3 border-t border-line">
-        <div className="text-xs font-semibold text-ink mb-2 flex items-center gap-1.5">
-          <Icon name="Building2" size={13} className="text-accent" />
-          Assign to Organization
-        </div>
-        <div className="grid grid-cols-1 gap-3">
-          <Fixed label="Client" value={fixed.clientName} />
-          <Fixed label="Practice" value={fixed.practiceName} />
-          <Fixed label="Location" value={fixed.locationName} />
-        </div>
-      </div>
     </div>
   );
 }

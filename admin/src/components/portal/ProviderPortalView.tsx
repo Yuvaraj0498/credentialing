@@ -15,6 +15,7 @@ import { useAsync } from "@/lib/hooks";
 import { DocumentUploadView } from "@/components/providers/DocumentUploadView";
 import { DownloadButton, ViewFileButton, isWordFile } from "@/components/providers/ProviderOverview";
 import { ValField } from "@/components/providers/shared";
+import { AdditionalDocuments, docTypeOptions } from "@/components/providers/AdditionalDocuments";
 import type { DocumentRow, MyEnrollment, ProviderDetail } from "@/types/providers";
 
 /** Loads GET /me/provider; a 404 means no provider profile is linked to this account. */
@@ -244,6 +245,7 @@ function MyDocuments({ provider }: { provider: ProviderDetail }) {
           )}
         </div>
       </div>
+      <AdditionalDocuments providerId={provider.id} types={docTypeOptions(provider.documents)} canAdd />
     </div>
   );
 }

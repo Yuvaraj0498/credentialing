@@ -18,6 +18,21 @@ export interface EnrollmentCounts {
   approved: number;
 }
 
+/** An extra document the provider added (My Documents → Add More Document). */
+export interface AdditionalDocument {
+  id: number;
+  providerId: number;
+  docType: string;
+  docTypeLabel: string;
+  title: string | null;
+  notes: string | null;
+  expiresAt: string | null;
+  fileName: string | null;
+  sizeBytes: number | null;
+  status: string;
+  uploadedAt: string;
+}
+
 export interface DocumentRow {
   id: number;
   providerId: number;

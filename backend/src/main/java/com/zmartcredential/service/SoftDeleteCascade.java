@@ -18,7 +18,7 @@ public class SoftDeleteCascade {
     /** Rows that belonged to the provider (they were removed with it before). */
     private static final List<String> PROVIDER_CHILDREN = List.of("Enrollment", "ProviderDocument", "PayerSubmission",
             "PayerCredential", "ProviderInvite", "TimeEntry", "ProviderPrivilege", "FollowUp", "GeneratedLetter",
-            "VerificationCheck", "CaqhPayerAuthorization", "AttestationReminderLog");
+            "VerificationCheck", "CaqhPayerAuthorization", "AttestationReminderLog", "ProviderAdditionalDocument");
 
     public void provider(Long providerId) {
         for (String entity : PROVIDER_CHILDREN) softDeleteWhere(entity, "providerId", providerId);
