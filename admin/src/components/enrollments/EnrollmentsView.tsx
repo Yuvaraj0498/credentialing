@@ -141,7 +141,7 @@ export function EnrollmentsView() {
                       <th>Payer</th>
                       <th>Status</th>
                       <th>Submitted</th>
-                      <th>Effective</th>
+                      <th>Approved</th>
                       <th>TAT</th>
                       <th className="text-right">Actions</th>
                     </tr>

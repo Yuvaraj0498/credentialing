@@ -26,9 +26,10 @@ interface OrgPayer {
  * Super admin → Organizations → one admin → Payers: every payer is on for every admin by default; switching one off
  * hides it from that admin's organization (their Payers page, pickers, payer logins).
  */
-export function OrgPayersPanel({ orgId, adminName }: { orgId: number; adminName: string }) {
+export function OrgPayersPanel({ orgId, adminName, mine = false, onChanged }: { orgId?: number; adminName: string; /** the admin's own organization */ mine?: boolean; onChanged?: () => void }) {
   const toast = useToast();
-  const payers = useAsync<OrgPayer[]>(() => api.get<OrgPayer[]>("/platform/organizations/" + orgId + "/payers"), [orgId]);
+  const listUrl = mine ? "/payers/org-settings" : "/platform/organizations/" + orgId + "/payers";
+  const payers = useAsync<OrgPayer[]>(() => api.get<OrgPayer[]>(listUrl), [listUrl]);
   const [search, setSearch] = useState("");
   const [busy, setBusy] = useState<number | null>(null);
   const all = payers.data || [];
@@ -38,9 +39,10 @@ export function OrgPayersPanel({ orgId, adminName }: { orgId: number; adminName:
   const toggle = async (p: OrgPayer) => {
     setBusy(p.id);
     try {
-      await api.patch("/platform/organizations/" + orgId + "/payers/" + p.id, { enabled: !p.enabled });
+      await api.patch(mine ? "/payers/" + p.id + "/org-enabled" : "/platform/organizations/" + orgId + "/payers/" + p.id, { enabled: !p.enabled });
       payers.setData(all.map((x) => (x.id === p.id ? { ...x, enabled: !p.enabled } : x)));
       toast(p.name + (p.enabled ? " disabled for " : " enabled for ") + adminName);
+      onChanged?.();
     } catch (e) {
       toast(errorMessage(e), "error");
     } finally {
@@ -64,7 +66,7 @@ export function OrgPayersPanel({ orgId, adminName }: { orgId: number; adminName:
         </div>
         {payers.data && (
           <div className="text-xs text-ink-light">
-            <strong className="text-ink">{enabledCount}</strong> of {all.length} payers enabled for this admin
+            <strong className="text-ink">{enabledCount}</strong> of {all.length} payers enabled for {mine ? "your organization" : "this admin"}
           </div>
         )}
       </div>

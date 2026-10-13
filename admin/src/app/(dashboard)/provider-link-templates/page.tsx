@@ -1,7 +1,5 @@
-"use client";
-
-import { MailTemplatesView } from "@/components/email/MailTemplatesView";
+import { redirect } from "next/navigation";
 
 export default function ProviderLinkTemplatesPage() {
-  return <MailTemplatesView type="provider_link" />;
+  redirect("/custom-templates");
 }

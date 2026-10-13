@@ -68,7 +68,7 @@ const SAMPLE: Record<string, string> = {
 const fill = (text: string) => text.replace(/\{\{\s*([a-z_]+)\s*\}\}/g, (m, k: string) => SAMPLE[k] ?? m);
 
 /** Admin → Provider Link Templates / Enrollment Mail Templates: add, edit, delete and pick the template in use. */
-export function MailTemplatesView({ type }: { type: MailTemplateType }) {
+export function MailTemplatesView({ type, embedded = false }: { type: MailTemplateType; /** inside Custom Templates (no page title) */ embedded?: boolean }) {
   const toast = useToast();
   const copy = COPY[type];
   const list = useAsync<MailTemplateList>(() => api.get<MailTemplateList>("/mail-templates", { type }), [type]);
@@ -112,18 +112,27 @@ export function MailTemplatesView({ type }: { type: MailTemplateType }) {
 
   return (
     <div>
-      <PageHeader
-        title={copy.title}
-        subtitle={copy.subtitle}
-        actions={
+      {embedded ? (
+        <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+          <p className="text-sm text-ink-light">{copy.subtitle}</p>
           <button onClick={() => setEditing("new")} className="btn btn-primary">
             <Icon name="Plus" size={14} /> Add Template
           </button>
-        }
-      />
+        </div>
+      ) : (
+        <PageHeader
+          title={copy.title}
+          subtitle={copy.subtitle}
+          actions={
+            <button onClick={() => setEditing("new")} className="btn btn-primary">
+              <Icon name="Plus" size={14} /> Add Template
+            </button>
+          }
+        />
+      )}
       <div className="relative mb-4">
         <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
-        <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder="Search templates..." className="input" style={{ paddingLeft: 32 }} aria-label="Search templates" />
+        <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder={"Search " + copy.title.toLowerCase() + "..."} className="input" style={{ paddingLeft: 32 }} aria-label="Search templates" />
       </div>
       <AsyncBoundary loading={list.loading && !list.data} error={list.error} onRetry={list.reload}>
         {templates.length === 0 ? (

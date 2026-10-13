@@ -75,7 +75,7 @@ export function EnrollmentHistory({ enrollmentId, onBack, onChanged }: { enrollm
                 <div className="text-right">
                   <StatusPill status={e.status} />
                   {e.submittedDate && <div className="text-xs text-ink-light mt-2">Submitted {fmtDate(e.submittedDate)}</div>}
-                  {e.effectiveDate && <div className="text-xs text-ink-light">Effective {fmtDate(e.effectiveDate)}</div>}
+                  {e.effectiveDate && <div className="text-xs text-ink-light">Approved {fmtDate(e.effectiveDate)}</div>}
                   {e.tatDays != null && <div className="text-xs font-semibold mt-1">TAT: {e.tatDays} days</div>}
                 </div>
               </div>

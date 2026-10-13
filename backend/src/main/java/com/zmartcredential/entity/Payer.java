@@ -74,6 +74,13 @@ public class Payer {
     /** Whether the payer has a provider portal. */
     private Boolean portalAvailable = true;
 
+    /** API access: key and token, encrypted (never sent back to the browser). */
+    @Column(columnDefinition = "TEXT")
+    private String apiKeyEnc;
+
+    @Column(columnDefinition = "TEXT")
+    private String apiTokenEnc;
+
     /** The organization whose admin added this payer (null = added by the super admin). */
     private Long addedByOrgId;
 

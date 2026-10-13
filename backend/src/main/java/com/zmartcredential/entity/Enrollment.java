@@ -38,7 +38,14 @@ public class Enrollment {
 
     private LocalDate submittedDate;
 
+    /** The approved date (kept in effective_date; the turnaround is submitted → approved). */
     private LocalDate effectiveDate;
+
+    /** Next follow-up with the payer (today or later when set). */
+    private LocalDate followUpDate;
+
+    /** Estimated approval date (today or later when set). */
+    private LocalDate estApprovedDate;
 
     private Integer tatDays;
 

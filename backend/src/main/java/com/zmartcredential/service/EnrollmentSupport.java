@@ -145,7 +145,8 @@ public class EnrollmentSupport {
                 p.getPortalUrl(), p.getAvgTatDays(), p.getPricingCategory(), p.getPricingMult(), p.getRecredCycleMonths(),
                 p.getSortOrder(), p.getActive(),
                 forms == null ? List.of() : forms.stream().map(EnrollmentSupport::toFormResponse).toList(),
-                p.getCreatedAt(), p.getUpdatedAt(), p.getLogo(), !Boolean.FALSE.equals(p.getPortalAvailable()));
+                p.getCreatedAt(), p.getUpdatedAt(), p.getLogo(), !Boolean.FALSE.equals(p.getPortalAvailable()),
+                p.getApiKeyEnc() != null, p.getApiTokenEnc() != null);
     }
 
     public static PayerFormResponse toFormResponse(PayerForm f) {

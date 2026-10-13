@@ -1,7 +1,5 @@
-"use client";
-
-import { MailTemplatesView } from "@/components/email/MailTemplatesView";
+import { redirect } from "next/navigation";
 
 export default function EnrollmentMailTemplatesPage() {
-  return <MailTemplatesView type="enrollment_approved" />;
+  redirect("/custom-templates?tab=enrollment");
 }

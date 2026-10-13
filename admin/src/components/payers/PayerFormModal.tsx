@@ -5,6 +5,7 @@ import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { ConfirmDialog, Modal } from "@/components/Modal";
 import { PayerLogo } from "@/components/payers/PayerLogo";
+import { PasswordInput } from "@/components/PasswordInput";
 import { ApiError, api, errorMessage } from "@/lib/api";
 import { useToast } from "@/stores/toast";
 import type { Payer } from "@/types/enrollments";
@@ -29,6 +30,11 @@ interface PayerForm {
   portalAvailable: boolean;
   portalUrl: string;
   logo: string;
+  /** "yes" | "no" | "" */
+  caqhUpdate: string;
+  apiAccess: boolean;
+  apiKey: string;
+  apiToken: string;
 }
 
 const URL_RE = /^https?:\/\/[^\s/$.?#][^\s]*$/i;
@@ -53,7 +59,12 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
     portalAvailable: payer ? payer.portalAvailable : false,
     portalUrl: payer?.portalUrl || "",
     logo: payer?.logo || "",
+    caqhUpdate: payer ? (payer.caqhParticipating ? "yes" : "no") : "",
+    apiAccess: !!payer?.apiAvailable,
+    apiKey: "",
+    apiToken: "",
   });
+  const keySaved = !!payer?.hasApiKey, tokenSaved = !!payer?.hasApiToken;
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -83,6 +94,9 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
     const url = form.portalUrl.trim();
     if (form.portalAvailable && !url) e.portalUrl = "Portal login URL is required when a portal is available";
     else if (form.portalAvailable && !URL_RE.test(url)) e.portalUrl = "Enter a full address starting with https://";
+    // API access: key and token required (a saved one may stay blank on edit)
+    if (form.apiAccess && !form.apiKey.trim() && !keySaved) e.apiKey = "API key is required";
+    if (form.apiAccess && !form.apiToken.trim() && !tokenSaved) e.apiToken = "API token is required";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -100,6 +114,10 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
       portalAvailable: form.portalAvailable,
       portalUrl: form.portalAvailable ? form.portalUrl.trim() || null : null,
       logo: form.logo || null,
+      apiAccess: form.apiAccess,
+      apiKey: form.apiAccess ? form.apiKey.trim() || null : null,
+      apiToken: form.apiAccess ? form.apiToken.trim() || null : null,
+      caqhUpdate: form.caqhUpdate === "" ? null : form.caqhUpdate === "yes",
     };
     try {
       if (org) {
@@ -195,9 +213,18 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
             </select>
           </Field>
         </div>
-        <Field label="Insurance Company Name" required error={errors.fullName}>
-          <input value={form.fullName} onChange={(e) => set("fullName", e.target.value.replace(/^\s+/, ""))} className={"input" + (errors.fullName ? " input-error" : "")} maxLength={200} placeholder="e.g. Blue Cross Blue Shield of Texas" />
-        </Field>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <Field label="Insurance Company Name" required error={errors.fullName}>
+            <input value={form.fullName} onChange={(e) => set("fullName", e.target.value.replace(/^\s+/, ""))} className={"input" + (errors.fullName ? " input-error" : "")} maxLength={200} placeholder="e.g. Blue Cross Blue Shield of Texas" />
+          </Field>
+          <Field label="CAQH Update" error={errors.caqhUpdate}>
+            <select value={form.caqhUpdate} onChange={(e) => set("caqhUpdate", e.target.value)} className="input">
+              <option value="">— Select —</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </Field>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Avg TAT (days)" error={errors.avgTatDays}>
             <input value={form.avgTatDays} onChange={(e) => set("avgTatDays", e.target.value.replace(/\D/g, "").slice(0, 3))} className={"input font-mono" + (errors.avgTatDays ? " input-error" : "")} inputMode="numeric" placeholder="e.g. 49" />
@@ -215,17 +242,30 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
           <input value={form.appForm} onChange={(e) => set("appForm", e.target.value.replace(/^\s+/, ""))} className={"input" + (errors.appForm ? " input-error" : "")} maxLength={150} placeholder="e.g. Ambetter Provider Set-up Form" />
         </Field>
         {/* last: the portal login URL is asked only when the payer has a portal */}
-        <label className="flex items-center gap-2 text-sm font-medium text-ink">
-          <input
-            type="checkbox"
-            checked={form.portalAvailable}
-            onChange={(e) => {
-              set("portalAvailable", e.target.checked);
-              if (!e.target.checked) setErrors((er) => ({ ...er, portalUrl: "" }));
-            }}
-          />
-          Is portal available
-        </label>
+        <div className="flex items-center gap-6 flex-wrap">
+          <label className="flex items-center gap-2 text-sm font-medium text-ink">
+            <input
+              type="checkbox"
+              checked={form.portalAvailable}
+              onChange={(e) => {
+                set("portalAvailable", e.target.checked);
+                if (!e.target.checked) setErrors((er) => ({ ...er, portalUrl: "" }));
+              }}
+            />
+            Is portal available
+          </label>
+          <label className="flex items-center gap-2 text-sm font-medium text-ink">
+            <input
+              type="checkbox"
+              checked={form.apiAccess}
+              onChange={(e) => {
+                set("apiAccess", e.target.checked);
+                if (!e.target.checked) setErrors((er) => ({ ...er, apiKey: "", apiToken: "" }));
+              }}
+            />
+            API access
+          </label>
+        </div>
         {form.portalAvailable && (
           <Field label="Portal Login URL" required error={errors.portalUrl}>
             <input
@@ -239,6 +279,16 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
               autoFocus
             />
           </Field>
+        )}
+        {form.apiAccess && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="API Key" required={!keySaved} error={errors.apiKey} hint={keySaved ? "Saved — leave blank to keep it" : undefined}>
+              <PasswordInput value={form.apiKey} onChange={(e) => set("apiKey", e.target.value.trim())} className={"input font-mono" + (errors.apiKey ? " input-error" : "")} maxLength={2000} autoComplete="off" placeholder={keySaved ? "••••••••" : "API key"} />
+            </Field>
+            <Field label="API Token" required={!tokenSaved} error={errors.apiToken} hint={tokenSaved ? "Saved — leave blank to keep it" : undefined}>
+              <PasswordInput value={form.apiToken} onChange={(e) => set("apiToken", e.target.value.trim())} className={"input font-mono" + (errors.apiToken ? " input-error" : "")} maxLength={4000} autoComplete="off" placeholder={tokenSaved ? "••••••••" : "API token"} />
+            </Field>
+          </div>
         )}
         <div className="flex justify-end gap-2 pt-3 border-t border-line">
           <button onClick={onClose} className="btn btn-secondary" disabled={busy}>Cancel</button>

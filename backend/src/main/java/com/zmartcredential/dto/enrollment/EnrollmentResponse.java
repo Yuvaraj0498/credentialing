@@ -27,5 +27,7 @@ public record EnrollmentResponse(
         int eventCount,
         LocalDateTime lastActivityAt,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt) {
+        LocalDateTime updatedAt,
+        LocalDate followUpDate,
+        LocalDate estApprovedDate) {
 }

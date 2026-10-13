@@ -16,6 +16,8 @@ import { providerName, useProvidersLite } from "@/components/enrollments/shared"
 import type { ProviderLite } from "@/types/enrollments";
 import { ProviderPayerLoginModal } from "@/components/modals/ProviderPayerLoginModal";
 import { PayerFormModal } from "@/components/payers/PayerFormModal";
+import { BorderTabs } from "@/components/BorderTabs";
+import { OrgPayersPanel } from "@/components/superadmin/OrgPayersPanel";
 import type { CredentialMatrix, Payer, PayerOverviewItem } from "@/types/payers";
 
 interface PayerRow {
@@ -40,6 +42,8 @@ export function PayersView() {
   // the organization admin can add payers of their own (also visible to the super admin)
   const canAdd = user?.role === "org_admin";
   const [adding, setAdding] = useState(false);
+  // Enabled Payers (the cards) | All Payers (switch payers on / off for the organization; admins only)
+  const [tab, setTab] = useState<"enabled" | "all">("enabled");
   const canCreds = can("list", "credential_vault");
   const canEditCreds = can("update", "credential_vault") || can("create", "credential_vault");
   const [selectedProviderId, setSelectedProviderId] = useState("");
@@ -100,6 +104,20 @@ export function PayersView() {
         />
       )}
 
+      {canAdd && (
+        <BorderTabs
+          tabs={[
+            { id: "enabled", label: "Enabled Payers", icon: "CreditCard", count: rows.data?.length },
+            { id: "all", label: "All Payers", icon: "ToggleRight" },
+          ]}
+          value={tab}
+          onChange={setTab}
+        />
+      )}
+      {canAdd && tab === "all" ? (
+        <OrgPayersPanel mine adminName="your organization" onChanged={() => { rows.reload(); matrix.reload(); }} />
+      ) : (
+      <>
       {/* Provider selector bar */}
       {canCreds && (
         <div
@@ -217,6 +235,8 @@ export function PayersView() {
             );
           })}
         </div>
+      )}
+      </>
       )}
 
       {provModal && (

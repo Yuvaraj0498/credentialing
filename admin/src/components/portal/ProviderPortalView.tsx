@@ -313,7 +313,7 @@ export function MyEnrollmentsView() {
                     <th>Payer</th>
                     <th>Status</th>
                     <th>Submitted</th>
-                    <th>Effective</th>
+                    <th>Approved</th>
                   </tr>
                 </thead>
                 <tbody>

@@ -26,6 +26,14 @@ public record PlatformPayerRequest(
         String appForm,
         @NotNull(message = "Choose whether a portal is available")
         Boolean portalAvailable,
+        /* API access: when ticked, the API key and token are required (blank on edit = keep the saved ones) */
+        Boolean apiAccess,
+        @Size(max = 2000, message = "At most 2000 characters")
+        String apiKey,
+        @Size(max = 4000, message = "At most 4000 characters")
+        String apiToken,
+        /* CAQH update: whether the payer takes its provider data from CAQH */
+        Boolean caqhUpdate,
         /* the payer's provider portal login page (required when portalAvailable; checked in PayerService) */
         @Size(max = 500, message = "At most 500 characters")
         @Pattern(regexp = "^$|^https?://\\S+$", message = "Enter a full address starting with https://")

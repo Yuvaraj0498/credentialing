@@ -32,5 +32,8 @@ public record PayerResponse(
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         String logo,
-        Boolean portalAvailable) {
+        Boolean portalAvailable,
+        /* API access: whether a key / token is saved (the values are never returned) */
+        boolean hasApiKey,
+        boolean hasApiToken) {
 }

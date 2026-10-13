@@ -46,6 +46,7 @@ public class PayerService {
     private final OrgPayerAccess orgPayerAccess;
     private final com.zmartcredential.repository.OrgPayerSettingRepository orgPayerSettingRepository;
     private final SoftDeleteCascade softDeleteCascade;
+    private final CryptoService cryptoService;
 
     @Transactional(readOnly = true)
     public List<PayerResponse> list(boolean activeOnly) {
@@ -267,6 +268,21 @@ public class PayerService {
         p.setPortalAvailable(portal);
         // the portal login URL is kept only for payers with a portal
         p.setPortalUrl(portal ? portalUrl : null);
+        // API access: key and token required (kept when left blank on edit), encrypted
+        boolean api = Boolean.TRUE.equals(r.apiAccess());
+        if (api) {
+            String key = r.apiKey() == null ? "" : r.apiKey().trim();
+            String token = r.apiToken() == null ? "" : r.apiToken().trim();
+            if (key.isEmpty() && p.getApiKeyEnc() == null) throw com.zmartcredential.exception.BadRequestException.onField("apiKey", "API key is required");
+            if (token.isEmpty() && p.getApiTokenEnc() == null) throw com.zmartcredential.exception.BadRequestException.onField("apiToken", "API token is required");
+            if (!key.isEmpty()) p.setApiKeyEnc(cryptoService.encrypt(key));
+            if (!token.isEmpty()) p.setApiTokenEnc(cryptoService.encrypt(token));
+        } else {
+            p.setApiKeyEnc(null);
+            p.setApiTokenEnc(null);
+        }
+        p.setApiAvailable(api);
+        if (r.caqhUpdate() != null) p.setCaqhParticipating(r.caqhUpdate());
         if (id == null) p.setAddedByOrgId(addedByOrgId);
         p.setLogo(r.logo() == null || r.logo().isBlank() ? null : r.logo());
         p = payerRepository.save(p);
@@ -277,6 +293,24 @@ public class PayerService {
     @Transactional(readOnly = true)
     public List<OrgPayerItem> orgPayers(Long orgId) {
         authContext.requireRole(com.zmartcredential.security.Role.PLATFORM_ADMIN);
+        return orgPayerItems(orgId);
+    }
+
+    /** Admin → Payers → All Payers: every payer with whether it is on for the admin's organization. */
+    @Transactional(readOnly = true)
+    public List<OrgPayerItem> myOrgPayers() {
+        authContext.requireRole(com.zmartcredential.security.Role.ORG_ADMIN);
+        return orgPayerItems(authContext.orgId());
+    }
+
+    /** Admin → Payers → All Payers: switch a payer on / off for the admin's organization (the super admin sees it too). */
+    @Transactional
+    public OrgPayerItem setMyOrgPayer(Long payerId, boolean enabled) {
+        authContext.requireRole(com.zmartcredential.security.Role.ORG_ADMIN);
+        return saveOrgSetting(authContext.orgId(), payerId, enabled);
+    }
+
+    private List<OrgPayerItem> orgPayerItems(Long orgId) {
         Map<Long, Boolean> settings = orgPayerAccess.settings(orgId);
         return payerRepository.findByActiveTrueOrderBySortOrderAsc().stream()
                 .sorted(java.util.Comparator.comparing(Payer::getName, String.CASE_INSENSITIVE_ORDER))
@@ -288,6 +322,10 @@ public class PayerService {
     @Transactional
     public OrgPayerItem setOrgPayer(Long orgId, Long payerId, boolean enabled) {
         authContext.requireRole(com.zmartcredential.security.Role.PLATFORM_ADMIN);
+        return saveOrgSetting(orgId, payerId, enabled);
+    }
+
+    private OrgPayerItem saveOrgSetting(Long orgId, Long payerId, boolean enabled) {
         Payer p = load(payerId);
         var setting = orgPayerSettingRepository.findByOrgIdAndPayerId(orgId, payerId).orElseGet(() -> {
             var s = new com.zmartcredential.entity.OrgPayerSetting();

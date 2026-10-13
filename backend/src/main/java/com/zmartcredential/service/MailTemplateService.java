@@ -62,7 +62,7 @@ public class MailTemplateService {
             ENROLLMENT_APPROVED, List.of(
                     new VariableInfo("provider_name", "Provider name", false),
                     new VariableInfo("payer_name", "Payer name", false),
-                    new VariableInfo("effective_date", "Effective date", false),
+                    new VariableInfo("approved_date", "Approved date", false),
                     new VariableInfo("status", "Status", false),
                     new VariableInfo("organization_name", "Organization name", false)));
     private static final Pattern VAR = Pattern.compile("\\{\\{\\s*([a-z_]+)\\s*}}");
@@ -239,7 +239,9 @@ public class MailTemplateService {
             Map<String, String> vars = new LinkedHashMap<>();
             vars.put("provider_name", name);
             vars.put("payer_name", payer == null ? "" : payer.getName());
-            vars.put("effective_date", e.getEffectiveDate() == null ? "to be confirmed" : e.getEffectiveDate().format(DATE));
+            String approvedOn = (e.getEffectiveDate() == null ? java.time.LocalDate.now() : e.getEffectiveDate()).format(DATE);
+            vars.put("approved_date", approvedOn);
+            vars.put("effective_date", approvedOn); // older templates
             vars.put("status", "Approved");
             vars.put("organization_name", org);
             EmailTemplate t = resolve(e.getOrgId(), ENROLLMENT_APPROVED).orElse(null);
@@ -276,7 +278,8 @@ public class MailTemplateService {
         boolean dup = visible(orgId, req.type()).stream()
                 .anyMatch(t -> !t.getId().equals(id) && name.equalsIgnoreCase(t.getName()));
         if (dup) throw ConflictException.onField("name", "A template named \"" + name + "\" already exists");
-        List<String> known = VARIABLES.get(req.type()).stream().map(VariableInfo::key).toList();
+        List<String> known = new ArrayList<>(VARIABLES.get(req.type()).stream().map(VariableInfo::key).toList());
+        if (ENROLLMENT_APPROVED.equals(req.type())) known.add("effective_date"); // older templates keep working
         for (String text : List.of(req.subject(), req.body())) {
             Matcher m = VAR.matcher(text);
             while (m.find()) {

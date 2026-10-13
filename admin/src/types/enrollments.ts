@@ -18,7 +18,10 @@ export interface Enrollment {
   applicationType: ApplicationType;
   status: EnrollmentStatus;
   submittedDate: string | null;
+  /** the approved date */
   effectiveDate: string | null;
+  followUpDate?: string | null;
+  estApprovedDate?: string | null;
   tatDays: number | null;
   notes: string | null;
   assignedUserId: number | null;
@@ -79,6 +82,8 @@ export interface EnrollmentRequest {
   formId?: number;
   submittedDate?: string | null;
   effectiveDate?: string | null;
+  followUpDate?: string | null;
+  estApprovedDate?: string | null;
   notes?: string;
   assignedUserId?: number;
 }
@@ -141,6 +146,9 @@ export interface Payer {
   /** Card image (data: URL) set by the super admin; the name's letters are shown without it. */
   logo: string | null;
   portalAvailable: boolean;
+  /** API access: whether a key / token is saved (the values are never sent to the browser) */
+  hasApiKey?: boolean;
+  hasApiToken?: boolean;
 }
 
 // ---------- Providers (owned by the providers module; only the lite list is used here) ----------

@@ -33,6 +33,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -223,7 +224,8 @@ public class EnrollmentService {
                 Boolean.TRUE.equals(req.clearSubmittedDate()) ? null : (req.submittedDate() != null ? req.submittedDate() : e.getSubmittedDate()),
                 Boolean.TRUE.equals(req.clearEffectiveDate()) ? null : (req.effectiveDate() != null ? req.effectiveDate() : e.getEffectiveDate()),
                 req.notes() != null ? req.notes() : e.getNotes(),
-                Boolean.TRUE.equals(req.clearAssignedUser()) ? null : (req.assignedUserId() != null ? req.assignedUserId() : e.getAssignedUserId()));
+                Boolean.TRUE.equals(req.clearAssignedUser()) ? null : (req.assignedUserId() != null ? req.assignedUserId() : e.getAssignedUserId()),
+                e.getFollowUpDate(), e.getEstApprovedDate());
         return update(id, merged);
     }
 
@@ -277,7 +279,7 @@ public class EnrollmentService {
                     throw new ConflictException("A re-credentialing application is already open (#" + x.getId() + ")");
                 });
         EnrollmentRequest req = new EnrollmentRequest(src.getProviderId(), src.getPayerId(), "draft", "recred",
-                src.getPracticeId(), src.getFormId(), null, null, null, src.getAssignedUserId());
+                src.getPracticeId(), src.getFormId(), null, null, null, src.getAssignedUserId(), null, null);
         Enrollment created = createEntity(req, false, "Re-credentialing started from enrollment #" + src.getId());
         support.addEvent(src.getId(), "recredential_started", "Re-credentialing application #" + created.getId() + " created", null);
         return toResponse(created);
@@ -387,7 +389,20 @@ public class EnrollmentService {
         if (r.applicationType() != null) e.setApplicationType(r.applicationType());
         else if (creating) e.setApplicationType("initial");
         e.setSubmittedDate(r.submittedDate());
-        e.setEffectiveDate(r.effectiveDate());
+        // the approved date: required when the status is Approved (today when a quick status change leaves it out)
+        LocalDate approved = r.effectiveDate();
+        if ("approved".equals(e.getStatus()) && approved == null) approved = LocalDate.now();
+        e.setEffectiveDate(approved);
+        // follow-up and estimated approval dates: today or later (an unchanged earlier date is left alone)
+        LocalDate today = LocalDate.now();
+        if (r.followUpDate() != null && !r.followUpDate().equals(e.getFollowUpDate()) && r.followUpDate().isBefore(today)) {
+            throw BadRequestException.onField("followUpDate", "Choose today or a later date");
+        }
+        if (r.estApprovedDate() != null && !r.estApprovedDate().equals(e.getEstApprovedDate()) && r.estApprovedDate().isBefore(today)) {
+            throw BadRequestException.onField("estApprovedDate", "Choose today or a later date");
+        }
+        e.setFollowUpDate(r.followUpDate());
+        e.setEstApprovedDate(r.estApprovedDate());
         // always recomputed: clearing a date clears the TAT (prototype kept a stale value)
         e.setTatDays(EnrollmentSupport.tat(r.submittedDate(), r.effectiveDate()));
         e.setNotes(blankToNull(r.notes()));
@@ -491,7 +506,8 @@ public class EnrollmentService {
                     e.getApplicationType(), e.getStatus(), e.getSubmittedDate(), e.getEffectiveDate(),
                     EnrollmentSupport.tat(e.getSubmittedDate(), e.getEffectiveDate()), e.getNotes(),
                     e.getAssignedUserId(), e.getAssignedUserId() == null ? null : ctx.users().get(e.getAssignedUserId()),
-                    fileCounts.getOrDefault(e.getId(), 0L).intValue(), evs.size(), last, e.getCreatedAt(), e.getUpdatedAt());
+                    fileCounts.getOrDefault(e.getId(), 0L).intValue(), evs.size(), last, e.getCreatedAt(), e.getUpdatedAt(),
+                    e.getFollowUpDate(), e.getEstApprovedDate());
         }).toList();
     }
 

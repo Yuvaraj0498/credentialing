@@ -216,7 +216,7 @@ export function ProviderEnrollmentsTab({ providerId, onUploadDocs }: { providerI
                   <th>Practice</th>
                   <th>Status</th>
                   <th>Submission Date</th>
-                  <th>Effective Date</th>
+                  <th>Approved Date</th>
                   <th>Assigned To</th>
                   <th>Recredential Date</th>
                   <th>Turnaround Time</th>
