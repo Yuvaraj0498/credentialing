@@ -1,6 +1,7 @@
 "use client";
 
 import { RequiredMark } from "@/components/Field";
+import { useMasterList, withCurrent } from "@/lib/masterLists";
 import { Fragment, useEffect, useState } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
 import { PHONE_RE } from "@/lib/validation";
@@ -16,11 +17,6 @@ import { useToast } from "@/stores/toast";
 import type { AuthResponse } from "@/types";
 import { EMAIL_RE, FALLBACK_STATES, loadStates, type StateOption } from "@/types/signup";
 
-const SUFFIXES = ["MD", "DO", "NP", "PA", "DDS", "PhD", "LCSW", "LPC", "BCBA"];
-const SPECIALTIES = [
-  "Family Medicine", "Internal Medicine", "Pediatrics", "Cardiology", "Interventional Cardiology", "Psychiatry", "OB/GYN",
-  "Orthopedic Surgery", "Emergency Medicine", "Anesthesiology", "Radiology", "Dermatology", "Applied Behavior Analysis", "Other",
-];
 
 interface ProviderSignupData {
   firstName: string; lastName: string; suffix: string; email: string; phone: string;
@@ -39,6 +35,10 @@ type CodeCheck = { status: "idle" | "checking" | "ok" | "invalid" | "error"; org
 const Err = ({ msg }: { msg?: string }) => (msg ? <div className="field-error">{msg}</div> : null);
 
 export function ProviderSignupFlow() {
+  // Master Data lists (public); "Other" opens a text box
+  const suffixOptions = useMasterList("suffix", { isPublic: true });
+  const specialtyOptions = useMasterList("specialty", { isPublic: true });
+  const [otherSpecialty, setOtherSpecialty] = useState("");
   const router = useRouter();
   const { completeAuth } = useAuth();
   const toast = useToast();
@@ -107,6 +107,7 @@ export function ProviderSignupFlow() {
       if (!data.npi) e.npi = "NPI is required";
       else if (data.npi.length !== 10) e.npi = "NPI must be 10 digits";
       if (!data.specialty) e.specialty = "Specialty is required";
+      else if (data.specialty === "__other__" && !otherSpecialty.trim()) e.specialty = "Type the specialty";
     }
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -136,7 +137,7 @@ export function ProviderSignupFlow() {
         phone: data.phone || undefined,
         password: data.password,
         npi: data.npi,
-        specialty: data.specialty,
+        specialty: data.specialty === "__other__" ? otherSpecialty.trim() : data.specialty,
         licenseState: data.licenseState,
         ...(code ? { organizationCode: code } : {}),
       });
@@ -210,7 +211,7 @@ export function ProviderSignupFlow() {
                   <div className="col-span-1">
                     <label className="label">Title</label>
                     <select value={data.suffix} onChange={(e) => set("suffix", e.target.value)} className="input">
-                      {SUFFIXES.map((s) => <option key={s} value={s}>{s}</option>)}
+                      {withCurrent(suffixOptions, data.suffix).map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                     </select>
                     <Err msg={errors.suffix} />
                   </div>
@@ -280,8 +281,12 @@ export function ProviderSignupFlow() {
                   <label className="label">Primary Specialty<RequiredMark /></label>
                   <select value={data.specialty} onChange={(e) => set("specialty", e.target.value)} className={"input" + (errors.specialty ? " input-error" : "")}>
                     <option value="">— Select —</option>
-                    {SPECIALTIES.map((s) => <option key={s}>{s}</option>)}
+                    {specialtyOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+                    <option value="__other__">Other</option>
                   </select>
+                  {data.specialty === "__other__" && (
+                    <input value={otherSpecialty} onChange={(e) => setOtherSpecialty(e.target.value)} className="input mt-2" maxLength={120} placeholder="Type your specialty" aria-label="Other Specialty" />
+                  )}
                   <Err msg={errors.specialty} />
                 </div>
                 <div>

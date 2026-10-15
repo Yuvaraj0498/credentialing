@@ -42,12 +42,20 @@ public final class ProviderInviteDtos {
      */
     public record SecureLinkItem(Long id, Long providerId, String providerName, String email, String pin, String status,
                                  int attempts, int maxAttempts, String uploadUrl, LocalDateTime createdAt,
-                                 LocalDateTime expiresAt, LocalDateTime accessedAt, LocalDateTime submittedAt) {
+                                 LocalDateTime expiresAt, LocalDateTime accessedAt, LocalDateTime submittedAt,
+                                 /* profile (Send Link) | documents (Request Documents) */
+                                 String purpose) {
+    }
+
+    /** Provider page → Request Documents: the document types to ask for, and the template (default = in use). */
+    public record DocumentRequestBody(
+            @jakarta.validation.constraints.NotEmpty(message = "Choose at least one document") List<String> docTypes,
+            Long templateId) {
     }
 
     /** Pre-PIN state of a link. state: active | expired | locked | submitted | replaced. */
     public record PublicLinkStatus(String state, String firstName, String organizationName, LocalDateTime expiresAt,
-                                   int attemptsRemaining, LocalDateTime submittedAt) {
+                                   int attemptsRemaining, LocalDateTime submittedAt, String purpose) {
     }
 
     /** Current provider values, used to pre-fill the portal's profile step. */
@@ -57,7 +65,9 @@ public final class ProviderInviteDtos {
                                 /* false = the provider sets a password here to be able to sign in */
                                 boolean hasLogin, String loginEmail,
                                 /* set by the staff member who sent the link: shown, not editable */
-                                String status, String clientName, String practiceName, String locationName) {
+                                String status, String clientName, String practiceName, String locationName,
+                                /* more provider details */
+                                ProviderExtraDtos.ProviderExtraView extra) {
     }
 
     public record PublicProfileRequest(
@@ -84,7 +94,9 @@ public final class ProviderInviteDtos {
             Boolean pecosAccessGranted,
             @Size(max = 100, message = "At most 100 characters") String pecosUsername,
             /* sign-in password (required while the provider has no login; their email is the username) */
-            @Size(max = 100, message = "At most 100 characters") String password) {
+            @Size(max = 100, message = "At most 100 characters") String password,
+            /* more provider details (optional block) */
+            @jakarta.validation.Valid ProviderExtraDtos.ProviderExtraInput extra) {
     }
 
     /** emailStatus: sent | failed (emailError says why) | queued (sending disabled, only logged). */
@@ -104,7 +116,7 @@ public final class ProviderInviteDtos {
 
     public record PublicInviteInfo(String providerName, String organizationName, String email,
                                    List<PublicMissingDocument> missingDocuments, LocalDateTime expiresAt,
-                                   String firstName, String lastName, PublicProfile profile) {
+                                   String firstName, String lastName, PublicProfile profile, String purpose) {
     }
 
     public record PublicUploadedFile(String fileName, String docType, String label, LocalDate expiresAt) {

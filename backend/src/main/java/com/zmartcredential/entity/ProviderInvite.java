@@ -44,6 +44,12 @@ public class ProviderInvite {
 
     private Long createdBy;
 
+    /** profile = complete the profile + documents (Send Link); documents = upload only the requested documents. */
+    private String purpose = "profile";
+
+    /** document requests: the requested document types, comma separated */
+    private String requestedDocTypes;
+
     @CreationTimestamp
     @Column(updatable = false)
     private LocalDateTime createdAt;

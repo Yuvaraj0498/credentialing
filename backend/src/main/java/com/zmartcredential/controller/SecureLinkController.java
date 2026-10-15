@@ -30,6 +30,12 @@ public class SecureLinkController {
         return inviteService.list();
     }
 
+    @Operation(summary = "Resend: a new link + PIN by email; the earlier links stop working")
+    @org.springframework.web.bind.annotation.PostMapping("/{id}/resend")
+    public com.zmartcredential.dto.provider.ProviderInviteDtos.ProviderInviteResponse resend(@PathVariable Long id) {
+        return inviteService.resend(id);
+    }
+
     @Operation(summary = "Delete a secure link (its portal URL stops working)")
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)

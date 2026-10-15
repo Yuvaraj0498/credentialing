@@ -106,6 +106,78 @@ public class Provider {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 
+    // ---- more provider details (Add Provider / secure link; all optional) ----
+
+    private String groupName;
+
+    private String groupNpi;
+
+    private String taxId;
+
+    private String ssnEnc;
+
+    private String homeAddress;
+
+    private String homeCity;
+
+    private String homeState;
+
+    private String homeZip;
+
+    private String medicarePhone;
+
+    private String medicaidNumber;
+
+    private String medicarePtan;
+
+    private String drivingLicense;
+
+    private String pecosPasswordEnc;
+
+    private String practiceLegalName;
+
+    private String practiceDbaName;
+
+    private String practiceOwnerName;
+
+    private String practiceManagerName;
+
+    private String practiceManagerContact;
+
+    private String practiceAddress;
+
+    private String practiceCity;
+
+    private String practiceState;
+
+    private String practiceZip;
+
+    private String practicePhone;
+
+    private String practiceFax;
+
+    private String practiceEmail;
+
+    private LocalDate practiceStartDate;
+
+    private String officeHours;
+
+    private String billingAddress;
+
+    private String billingCity;
+
+    private String billingState;
+
+    private String billingZip;
+
+    private String billingPhone;
+
+    private String billingFax;
+
+    private String billingEmail;
+
+    private String billingContactPerson;
+
     /** 0 while the row is live; the row's id once deleted, so its unique values can be used again. */
     private Long delToken = 0L;
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import { useMasterList, withCurrent } from "@/lib/masterLists";
 import { useState } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
 import { AccessDenied } from "@/components/AlertBox";
@@ -17,7 +18,7 @@ import { useToast } from "@/stores/toast";
 import { useShell } from "@/stores/shell";
 import { ROLE_LABEL, US_STATES } from "@/lib/constants";
 import { addressChars, addressRule, cityChars, cityRule, digitsOnly, nameRule, npiRule, phoneDigits, phoneRule, validate as runRules, zipRule } from "@/lib/validation";
-import { blankToNull, LOCATION_TYPES, type DeleteResult, type Location, type LocationRequest, type LocationType, type Practice } from "@/types/organization";
+import { blankToNull, type DeleteResult, type Location, type LocationRequest, type LocationType, type Practice } from "@/types/organization";
 
 export function LocationsCrudView() {
   const user = useUser();
@@ -161,6 +162,7 @@ interface LocationForm {
 }
 
 export function LocationFormModal({ location, practices, onSaved, onClose }: { location: Location | null; practices: Practice[]; onSaved: () => void; onClose: () => void }) {
+  const locationTypes = useMasterList("location_type");
   const [form, setForm] = useState<LocationForm>(
     location
       ? {
@@ -243,7 +245,7 @@ export function LocationFormModal({ location, practices, onSaved, onClose }: { l
           </Field>
           <Field label="Type" error={errors.locationType}>
             <select value={form.locationType} onChange={(e) => setForm({ ...form, locationType: e.target.value as LocationType })} className="input">
-              {LOCATION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              {withCurrent(locationTypes, form.locationType).map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </Field>
         </div>

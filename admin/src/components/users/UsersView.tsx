@@ -321,7 +321,7 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
   );
   if (newProvider) {
     return (
-      <Modal title="Add User" onClose={onClose} maxWidth={720}>
+      <Modal title="Add User" onClose={onClose} maxWidth={880}>
         {org.error ? (
           <div className="field-error">{org.error}</div>
         ) : !org.data ? (

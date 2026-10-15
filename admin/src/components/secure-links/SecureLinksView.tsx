@@ -16,7 +16,8 @@ import { useAsync } from "@/lib/hooks";
 import { fmtDate, cleanSearch } from "@/lib/utils";
 import { useTopic } from "@/stores/shell";
 import { useToast } from "@/stores/toast";
-import type { SecureLinkItem, SecureLinkStatus } from "@/types/providers";
+import { ResultAlert, mailResult } from "@/components/ResultAlert";
+import type { InviteResponse, SecureLinkItem, SecureLinkStatus } from "@/types/providers";
 
 type Filter = "all" | "pending" | "accessed" | "submitted" | "expired" | "locked";
 
@@ -40,6 +41,8 @@ export function SecureLinksView() {
   const [search, setSearch] = useState("");
   const [deleting, setDeleting] = useState<SecureLinkItem | null>(null);
   const [busy, setBusy] = useState(false);
+  const [resending, setResending] = useState<number | null>(null);
+  const [alert, setAlert] = useState<ReturnType<typeof mailResult> | null>(null);
   const all = useMemo(() => links.data || [], [links.data]);
 
   const counts = useMemo(() => {
@@ -58,6 +61,20 @@ export function SecureLinksView() {
       () => toast("Portal URL copied"),
       () => toast("Could not copy the URL", "error")
     );
+  };
+
+  /** Resend: a new link + PIN by email; the provider's earlier links stop working. */
+  const resend = async (l: SecureLinkItem) => {
+    setResending(l.id);
+    try {
+      const res = await api.post<InviteResponse>("/secure-links/" + l.id + "/resend");
+      setAlert(mailResult(res));
+      links.reload();
+    } catch (err) {
+      setAlert({ type: "error", title: "Failed to send email", message: errorMessage(err) });
+    } finally {
+      setResending(null);
+    }
   };
 
   const confirmDelete = async () => {
@@ -142,7 +159,9 @@ export function SecureLinksView() {
                             <Avatar name={l.providerName} size={26} />
                             <div>
                               <Link href={"/providers/" + l.providerId} className="text-sm font-medium hover:underline">{l.providerName}</Link>
-                              <div className="text-[10px] text-ink-faint font-mono">Link #{l.id}</div>
+                              <div className="text-[10px] text-ink-faint font-mono">
+                                Link #{l.id} · {l.purpose === "documents" ? "Document request" : "Invitation"}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -163,6 +182,11 @@ export function SecureLinksView() {
                           <a href={l.uploadUrl} target="_blank" rel="noopener noreferrer" className="btn btn-ghost text-xs" title="Open portal">
                             <Icon name="ExternalLink" size={11} />
                           </a>
+                          {l.status !== "submitted" && l.status !== "replaced" && (
+                            <button onClick={() => resend(l)} className="btn btn-ghost text-xs" title="Resend: email a new link and PIN" aria-label="Resend secure link" disabled={resending !== null}>
+                              {resending === l.id ? <span className="loader" style={{ width: 11, height: 11 }} /> : <Icon name="Send" size={11} />}
+                            </button>
+                          )}
                           <button onClick={() => setDeleting(l)} className="btn-ghost p-1" title="Delete" aria-label="Delete secure link">
                             <Icon name="Trash2" size={11} />
                           </button>
@@ -185,6 +209,7 @@ export function SecureLinksView() {
         )}
       </AsyncBoundary>
 
+      {alert && <ResultAlert {...alert} onClose={() => setAlert(null)} />}
       {deleting && (
         <ConfirmDialog
           title="Delete secure link?"

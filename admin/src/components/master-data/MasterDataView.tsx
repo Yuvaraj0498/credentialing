@@ -1,0 +1,277 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { AsyncBoundary } from "@/components/AsyncState";
+import { BorderTabs } from "@/components/BorderTabs";
+import { EmptyState } from "@/components/EmptyState";
+import { Field } from "@/components/Field";
+import { Icon } from "@/components/Icon";
+import { ConfirmDialog, Modal } from "@/components/Modal";
+import { PageHeader } from "@/components/PageHeader";
+import { Pill } from "@/components/Pill";
+import { ApiError, api, errorMessage } from "@/lib/api";
+import { useAsync } from "@/lib/hooks";
+import { invalidateMasterList, type MasterListKey } from "@/lib/masterLists";
+import { matchesSearch } from "@/lib/search";
+import { cleanSearch } from "@/lib/utils";
+import { useAuth } from "@/stores/auth";
+import { useToast } from "@/stores/toast";
+
+interface ItemRow {
+  id: number;
+  code: string | null;
+  value: string;
+  sortOrder: number;
+  active: boolean;
+  /** true = every organization sees it */
+  everyone: boolean;
+  addedBy: string;
+  canEdit: boolean;
+}
+
+const TABS: { id: MasterListKey; label: string; icon: string; singular: string; hint: string }[] = [
+  { id: "specialty", label: "Specialty", icon: "Stethoscope", singular: "Specialty", hint: "Specialty dropdown when adding a provider (manual and secure link). \"Other\" is always offered last." },
+  { id: "suffix", label: "Suffix", icon: "BadgeCheck", singular: "Suffix", hint: "Suffix / credential dropdown when adding a provider (MD, DO, NP…)." },
+  { id: "payer_category", label: "Payer Category", icon: "CreditCard", singular: "Payer Category", hint: "Category dropdown when adding or editing a payer." },
+  { id: "location_type", label: "Location Type", icon: "MapPin", singular: "Location Type", hint: "Type dropdown when adding or editing a location." },
+  { id: "org_type", label: "Organization Type", icon: "Building", singular: "Organization Type", hint: "Organization type dropdown when creating an organization or signing up." },
+];
+
+/** Master Data: the lists behind the dropdowns, one tab per list (super admin and organization admins). */
+export function MasterDataView() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const tab = (TABS.find((t) => t.id === params.get("tab"))?.id || "specialty") as MasterListKey;
+  return (
+    <div>
+      <PageHeader title="Master Data" subtitle="The options of the dropdowns used across the app. Add your own and switch off the ones you don't use." />
+      <BorderTabs
+        tabs={TABS.map((t) => ({ id: t.id, label: t.label, icon: t.icon }))}
+        value={tab}
+        onChange={(t) => router.replace(pathname + (t === "specialty" ? "" : "?tab=" + t), { scroll: false })}
+      />
+      {/* keyed by tab: each tab has its own search and list */}
+      <MasterList key={tab} listKey={tab} />
+    </div>
+  );
+}
+
+function MasterList({ listKey }: { listKey: MasterListKey }) {
+  const toast = useToast();
+  const { user } = useAuth();
+  const meta = TABS.find((t) => t.id === listKey)!;
+  const superAdmin = user?.role === "platform_admin";
+  const items = useAsync<ItemRow[]>(() => api.get<ItemRow[]>("/master-lists/" + listKey + "/items"), [listKey]);
+  const [search, setSearch] = useState("");
+  const [editing, setEditing] = useState<ItemRow | "new" | null>(null);
+  const [deleting, setDeleting] = useState<ItemRow | null>(null);
+  const [busy, setBusy] = useState<number | "delete" | null>(null);
+  const all = useMemo(() => items.data || [], [items.data]);
+  const list = useMemo(() => (search.trim() ? all.filter((i) => matchesSearch(search, i.value, i.addedBy)) : all), [all, search]);
+  // who sees what this user adds
+  const addsForEveryone = superAdmin || listKey === "specialty";
+
+  const changed = () => {
+    invalidateMasterList(listKey);
+    items.reload();
+  };
+
+  const toggleActive = async (i: ItemRow) => {
+    setBusy(i.id);
+    try {
+      await api.put("/master-lists/" + listKey + "/items/" + i.id, { active: !i.active });
+      toast(i.value + (i.active ? " switched off" : " switched on"));
+      changed();
+    } catch (err) {
+      toast(errorMessage(err), "error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const remove = async () => {
+    if (!deleting) return;
+    setBusy("delete");
+    try {
+      await api.delete("/master-lists/" + listKey + "/items/" + deleting.id);
+      toast(deleting.value + " deleted");
+      setDeleting(null);
+      changed();
+    } catch (err) {
+      toast(errorMessage(err), "error");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div>
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <div className="relative flex-1 max-w-xs">
+          <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
+          <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder={"Search " + meta.label.toLowerCase() + "…"} className="input" style={{ paddingLeft: 32 }} aria-label="Search" />
+        </div>
+        <div className="text-xs text-ink-faint flex-1 min-w-[200px]">{meta.hint}</div>
+        <button className="btn btn-primary ml-auto" onClick={() => setEditing("new")}>
+          <Icon name="Plus" size={14} /> Add {meta.singular}
+        </button>
+      </div>
+      <AsyncBoundary loading={items.loading && !items.data} error={items.error} onRetry={items.reload}>
+        <div className="card overflow-hidden">
+          {list.length === 0 ? (
+            <EmptyState icon="List" title={all.length ? "No matches" : "No items yet"} description={all.length ? "Try another search." : "Add the first " + meta.singular.toLowerCase() + "."} />
+          ) : (
+            <div className="table-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Visible To</th>
+                    <th>Added By</th>
+                    <th>Status</th>
+                    <th className="text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {list.map((i) => (
+                    <tr key={i.id}>
+                      <td className="font-medium">
+                        {i.value}
+                        {i.code && <div className="text-[10px] text-ink-faint font-mono font-normal">{i.code}</div>}
+                      </td>
+                      <td className="text-xs">{i.everyone ? "Everyone" : superAdmin ? "One organization" : "Your organization"}</td>
+                      <td className="text-xs text-ink-light">{i.addedBy}</td>
+                      <td>
+                        <Pill type={i.active ? "success" : "neutral"}>{i.active ? "Active" : "Inactive"}</Pill>
+                      </td>
+                      <td className="text-right whitespace-nowrap">
+                        {i.canEdit ? (
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              className="btn btn-ghost text-xs"
+                              onClick={() => toggleActive(i)}
+                              disabled={busy !== null}
+                              title={i.active ? "Switch off (hidden from the dropdown)" : "Switch on"}
+                              aria-label={(i.active ? "Switch off " : "Switch on ") + i.value}
+                            >
+                              {busy === i.id ? <span className="loader" style={{ width: 11, height: 11 }} /> : <Icon name={i.active ? "ToggleRight" : "ToggleLeft"} size={16} style={{ color: i.active ? "var(--success)" : "var(--ink-faint)" }} />}
+                            </button>
+                            <button className="btn-ghost p-1" onClick={() => setEditing(i)} title="Edit" aria-label={"Edit " + i.value}>
+                              <Icon name="Pencil" size={13} />
+                            </button>
+                            <button className="btn-ghost p-1 hover:text-red-600" onClick={() => setDeleting(i)} title="Delete" aria-label={"Delete " + i.value}>
+                              <Icon name="Trash2" size={13} />
+                            </button>
+                          </div>
+                        ) : (
+                          <span className="text-[11px] text-ink-faint inline-flex items-center gap-1" title="Only the one who added it can change it">
+                            <Icon name="Lock" size={11} /> Read only
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </AsyncBoundary>
+      {editing && (
+        <ItemModal
+          listKey={listKey}
+          singular={meta.singular}
+          item={editing === "new" ? null : editing}
+          forEveryone={editing === "new" ? addsForEveryone : editing.everyone}
+          onClose={() => setEditing(null)}
+          onSaved={(name, isNew) => {
+            setEditing(null);
+            toast(name + (isNew ? " added" : " updated"));
+            changed();
+          }}
+        />
+      )}
+      {deleting && (
+        <ConfirmDialog
+          title={"Delete " + meta.singular.toLowerCase() + "?"}
+          message={<>&quot;{deleting.value}&quot; is removed from the dropdown. Records that already use it keep their value.</>}
+          busy={busy === "delete"}
+          onConfirm={remove}
+          onClose={() => setDeleting(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ItemModal({
+  listKey,
+  singular,
+  item,
+  forEveryone,
+  onClose,
+  onSaved,
+}: {
+  listKey: MasterListKey;
+  singular: string;
+  item: ItemRow | null;
+  forEveryone: boolean;
+  onClose: () => void;
+  onSaved: (name: string, isNew: boolean) => void;
+}) {
+  const [value, setValue] = useState(item?.value || "");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const max = { specialty: 120, suffix: 10, payer_category: 40, location_type: 30, org_type: 100 }[listKey];
+
+  const save = async () => {
+    const v = value.trim().replace(/\s+/g, " ");
+    if (!v) return setError("Required");
+    if (listKey === "specialty" && v.toLowerCase() === "other") return setError("\"Other\" is always offered — choose another name");
+    setBusy(true);
+    try {
+      if (item) await api.put("/master-lists/" + listKey + "/items/" + item.id, { value: v });
+      else await api.post("/master-lists/" + listKey + "/items", { value: v });
+      onSaved(v, !item);
+    } catch (err) {
+      setError(err instanceof ApiError && err.fieldErrors.value ? err.fieldErrors.value : errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal title={(item ? "Edit " : "Add ") + singular} onClose={busy ? undefined : onClose} maxWidth={460}>
+      <div className="space-y-3">
+        <Field label="Name *" error={error}>
+          <input
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setError("");
+            }}
+            onKeyDown={(e) => e.key === "Enter" && save()}
+            className="input"
+            maxLength={max}
+            autoFocus
+            aria-label="Name"
+          />
+        </Field>
+        <div className="text-xs text-ink-light flex items-center gap-1.5">
+          <Icon name={forEveryone ? "Globe" : "Building2"} size={12} />
+          {forEveryone ? "Every organization sees this option." : "Only your organization sees this option."}
+        </div>
+        <div className="flex justify-end gap-2 pt-3 border-t border-line">
+          <button className="btn btn-secondary" onClick={onClose} disabled={busy}>
+            Cancel
+          </button>
+          <button className="btn btn-primary" onClick={save} disabled={busy}>
+            {busy ? <span className="loader" /> : <Icon name={item ? "Save" : "Plus"} size={13} />} {item ? "Save" : "Add"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}

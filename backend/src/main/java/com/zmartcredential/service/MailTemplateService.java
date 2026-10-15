@@ -49,6 +49,7 @@ public class MailTemplateService {
 
     public static final String PROVIDER_LINK = "provider_link";
     public static final String ENROLLMENT_APPROVED = "enrollment_approved";
+    public static final String DOCUMENT_REQUEST = "document_request";
 
     private static final Map<String, List<VariableInfo>> VARIABLES = Map.of(
             PROVIDER_LINK, List.of(
@@ -64,6 +65,14 @@ public class MailTemplateService {
                     new VariableInfo("payer_name", "Payer name", false),
                     new VariableInfo("approved_date", "Approved date", false),
                     new VariableInfo("status", "Status", false),
+                    new VariableInfo("organization_name", "Organization name", false)),
+            DOCUMENT_REQUEST, List.of(
+                    new VariableInfo("provider_first_name", "Provider first name", false),
+                    new VariableInfo("provider_name", "Provider full name", false),
+                    new VariableInfo("requested_document_list", "Requested documents", false),
+                    new VariableInfo("upload_link", "Secure link", true),
+                    new VariableInfo("pin", "Access PIN", true),
+                    new VariableInfo("link_expires", "Link expiry date", false),
                     new VariableInfo("organization_name", "Organization name", false)));
     private static final Pattern VAR = Pattern.compile("\\{\\{\\s*([a-z_]+)\\s*}}");
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("MM/dd/yyyy");

@@ -44,6 +44,12 @@ public class ProviderPublicInviteController {
         return inviteService.submitProfile(token, req);
     }
 
+    @Operation(summary = "Document request: submit the uploaded documents and close the link")
+    @PostMapping("/{token}/finish")
+    public PublicLinkStatus finish(@PathVariable String token, @Valid @RequestBody PublicInviteVerifyRequest req) {
+        return inviteService.finishDocuments(token, req.pin());
+    }
+
     @Operation(summary = "Verify the PIN of a secure upload link")
     @PostMapping("/{token}/verify")
     public PublicInviteInfo verify(@PathVariable String token, @Valid @RequestBody PublicInviteVerifyRequest req) {

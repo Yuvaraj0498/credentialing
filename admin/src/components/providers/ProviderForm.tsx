@@ -8,11 +8,29 @@ import { PasswordInput } from "@/components/PasswordInput";
 import { Field, RequiredMark } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { ApiError, errorMessage } from "@/lib/api";
-import { SPECIALTIES, SUFFIXES } from "@/lib/constants";
 import { useToast } from "@/stores/toast";
 import { PHONE_RE, phoneDigits } from "@/lib/validation";
 import { EDIT_LICENSE_STATES, EMAIL_RE, NPI_RE, PROVIDER_STATUS_OPTIONS, type OrgStructure } from "@/components/providers/shared";
-import type { ProviderStatus } from "@/types/providers";
+import type { ProviderExtraView, ProviderStatus } from "@/types/providers";
+import {
+  BillingSection,
+  FormSection,
+  GroupRow,
+  HomeAddressBlock,
+  IdsRow,
+  OTHER,
+  PecosPasswordField,
+  PersonalRow,
+  PracticeSection,
+  SpecialtyField,
+  SuffixSelect,
+  extraFieldErrors,
+  extraFromView,
+  extraPayload,
+  extraProblems,
+  specialtyValue,
+  type ExtraForm,
+} from "./ProviderExtraFields";
 
 /** Starting values of the provider form (an existing provider, a CAQH profile, or blanks). */
 export interface ProviderFormValues {
@@ -38,6 +56,9 @@ export interface ProviderFormValues {
   clientId?: number | null;
   practiceId?: number | null;
   locationId?: number | null;
+  taxonomyCode?: string | null;
+  /** more provider details (group, IDs, home / practice / billing) */
+  extra?: ProviderExtraView | null;
 }
 
 /** What the form sends (the body of POST /providers, PUT /providers/{id} and the CAQH import "details"). */
@@ -69,6 +90,8 @@ export interface ProviderFormPayload {
   password?: string;
   /** Edit Provider → Change Password: a new sign-in password (only when one was typed) */
   newPassword?: string;
+  /** more provider details (all optional) */
+  extra: ReturnType<typeof extraPayload>;
 }
 
 const idStr = (v: number | null | undefined) => (v == null ? "" : String(v));
@@ -76,7 +99,7 @@ const num = (v: string) => (v ? Number(v) : null);
 
 /**
  * The one provider form used everywhere a provider is added or edited (Add Provider Manually, Organization →
- * Add Provider, Import from CAQH, Edit Provider): the same fields, and every one of them is required.
+ * Add Provider, Import from CAQH, Edit Provider): the same fields and sections as the provider's secure-link form.
  * Prototype ProviderEditModal (L14614) layout.
  */
 export function ProviderForm({
@@ -129,7 +152,8 @@ export function ProviderForm({
     lastName: initial.lastName || "",
     suffix: initial.suffix || "MD",
     npi: (initial.npi || "").replace(/\D/g, "").slice(0, 10),
-    specialty: initial.specialty || "",
+    specialty: initial.specialty === "Other" ? OTHER : initial.specialty || "",
+    specialtyOther: "",
     email: initial.email || "",
     phone: phoneDigits(initial.phone),
     license: initial.licenseNumber || "",
@@ -151,6 +175,11 @@ export function ProviderForm({
     confirmPassword: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [extra, setExtra] = useState<ExtraForm>(() => extraFromView(initial.extra, initial.taxonomyCode));
+  const setX = (k: keyof ExtraForm, v: string) => {
+    setExtra((x) => ({ ...x, [k]: v }));
+    setErrors((er) => (er[k] ? { ...er, [k]: "" } : er));
+  };
   const [busy, setBusy] = useState(false);
   const emailTaken = useEmailCheck(form.email, { kind: "provider", id: providerId });
   // Typing in a field clears its message.
@@ -201,6 +230,7 @@ export function ProviderForm({
     // CAQH ID is optional; when entered it must be 6-10 digits
     if (form.caqhId && !/^[0-9]{6,10}$/.test(form.caqhId)) e.caqhId = "6-10 digits";
     req("specialty", form.specialty);
+    if (form.specialty === OTHER && !form.specialtyOther.trim()) e.specialtyOther = "Required";
     if (!form.email.trim()) e.email = "Required";
     else if (!EMAIL_RE.test(form.email.trim())) e.email = "Valid email required";
     else if (emailTaken) e.email = emailTaken;
@@ -215,6 +245,7 @@ export function ProviderForm({
     req("status", form.status);
     if (!form.practiceId) e.practiceId = "Practice is required";
     if (!form.locationId) e.locationId = "Location is required";
+    Object.assign(e, extraProblems(extra));
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -231,7 +262,7 @@ export function ProviderForm({
         lastName: form.lastName.trim(),
         suffix: form.suffix,
         npi: form.npi,
-        specialty: form.specialty,
+        specialty: specialtyValue(form.specialty, form.specialtyOther),
         email: form.email.trim(),
         phone: form.phone,
         licenseNumber: form.license.trim(),
@@ -251,12 +282,13 @@ export function ProviderForm({
         locationId: num(form.locationId),
         ...(withLogin ? { password: form.password } : {}),
         ...(changePassword && form.password ? { newPassword: form.password } : {}),
+        extra: extraPayload(extra),
       });
     } catch (err) {
       if (err instanceof ApiError) {
         const fe: Record<string, string> = {};
         // errors of the nested provider ("provider.npi" / "details.npi") belong to the same fields
-        for (const [k, v] of Object.entries(err.fieldErrors)) fe[k.replace(/^(provider|details)\./, "")] = v;
+        for (const [k, v] of Object.entries(extraFieldErrors(err.fieldErrors))) fe[k.replace(/^(provider|details)\./, "")] = v;
         if (fe.licenseNumber) fe.license = fe.licenseNumber;
         // a 409 without a field (duplicate NPI) is shown under NPI
         if (err.status === 409 && Object.keys(fe).length === 0) fe.npi = err.message;
@@ -269,147 +301,168 @@ export function ProviderForm({
   };
 
   const stateOptions = form.licenseState && !EDIT_LICENSE_STATES.includes(form.licenseState) ? [form.licenseState, ...EDIT_LICENSE_STATES] : EDIT_LICENSE_STATES;
-  const specialtyOptions = form.specialty && !SPECIALTIES.includes(form.specialty) ? [form.specialty, ...SPECIALTIES] : SPECIALTIES;
-  const suffixOptions = form.suffix && !SUFFIXES.includes(form.suffix) ? [form.suffix, ...SUFFIXES] : SUFFIXES;
   const selectedLoc = form.locationId ? locations.find((l) => String(l.id) === form.locationId) : null;
   const err = (k: string) => errors[k];
 
   return (
     <div className="space-y-3">
       {top}
-      {/* the same fields, names and order as the provider's secure-link form */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Field label="First Name *" error={err("firstName")}>
-          <input value={form.firstName} onChange={(e) => set("firstName", e.target.value)} className="input" maxLength={80} />
-        </Field>
-        <Field label="Last Name *" error={err("lastName")}>
-          <input value={form.lastName} onChange={(e) => set("lastName", e.target.value)} className="input" maxLength={80} />
-        </Field>
-        <Field label="Suffix *" error={err("suffix")}>
-          <select value={form.suffix} onChange={(e) => set("suffix", e.target.value)} className="input">
-            {suffixOptions.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </Field>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Field label="NPI *" error={err("npi")}>
-          <input value={form.npi} onChange={(e) => set("npi", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="10 digits" inputMode="numeric" />
-        </Field>
-        <Field label="CAQH ID" error={err("caqhId")}>
-          <input
-            value={form.caqhId}
-            onChange={(e) => set("caqhId", e.target.value.replace(/\D/g, "").slice(0, 10))}
-            className="input font-mono"
-            placeholder="8 digits"
-            inputMode="numeric"
-            disabled={lockCaqhId}
-          />
-        </Field>
-        <Field label="Specialty *" error={err("specialty")}>
-          <select value={form.specialty} onChange={(e) => set("specialty", e.target.value)} className="input">
-            <option value="">— Select —</option>
-            {specialtyOptions.map((s) => (
-              <option key={s}>{s}</option>
-            ))}
-          </select>
-        </Field>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Field label="Email *" error={err("email") || emailTaken}>
-          <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="input" />
-        </Field>
-        <Field label="Ph.No *" error={err("phone")}>
-          <PhoneInput value={form.phone} onChange={(v) => set("phone", v)} invalid={!!err("phone")} />
-        </Field>
-        <Field label="Date of Birth" error={err("dateOfBirth")}>
-          <input type="date" max={todayISO()} value={form.dateOfBirth} onChange={(e) => set("dateOfBirth", e.target.value)} className="input" />
-        </Field>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Field label="License Number *" error={err("license")}>
-          <input value={form.license} onChange={(e) => set("license", e.target.value)} className="input font-mono" maxLength={40} />
-        </Field>
-        <Field label="License State *" error={err("licenseState")}>
-          <select value={form.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
-            {stateOptions.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="License Expiration *" error={err("licenseExpires")}>
-          <input type="date" min={todayISO()} value={form.licenseExpires} onChange={(e) => set("licenseExpires", e.target.value)} className="input" />
-        </Field>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Field label="DEA Number" error={err("deaNumber")}>
-          <input value={form.deaNumber} onChange={(e) => set("deaNumber", e.target.value.toUpperCase())} className="input font-mono" maxLength={20} placeholder="(optional for mid-levels)" />
-        </Field>
-        <Field label="DEA Expiration" error={err("deaExpires")}>
-          <input type="date" min={todayISO()} value={form.deaExpires} onChange={(e) => set("deaExpires", e.target.value)} className="input" />
-        </Field>
-        <Field label="Status *" error={err("status")}>
-          <select value={form.status} onChange={(e) => set("status", e.target.value)} className="input">
-            {PROVIDER_STATUS_OPTIONS.map((o) => (
-              <option key={o.id} value={o.id}>{o.label}</option>
-            ))}
-          </select>
-        </Field>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="CAQH Username" error={err("caqhUsername")}>
-          <input value={form.caqhUsername} onChange={(e) => set("caqhUsername", e.target.value.replace(/\s/g, ""))} className="input font-mono" maxLength={100} autoComplete="off" />
-        </Field>
-        <Field label="CAQH Password" error={err("caqhPassword")} hint={hasStoredPassword ? "Leave blank to keep the saved password" : undefined}>
-          <PasswordInput
-            value={form.caqhPassword}
-            onChange={(e) => set("caqhPassword", e.target.value)}
-            className="input font-mono"
-            maxLength={200}
-            autoComplete="new-password"
-            placeholder={hasStoredPassword ? "••••••••" : ""}
-          />
-        </Field>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="PECOS Access Granted" error={err("pecosAccess")}>
-          <select value={form.pecosAccess} onChange={(e) => set("pecosAccess", e.target.value)} className="input">
-            <option value="">— Select —</option>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </Field>
-        <Field label="PECOS User Name" error={err("pecosUsername")}>
-          <input
-            value={form.pecosUsername}
-            onChange={(e) => set("pecosUsername", e.target.value.replace(/\s/g, ""))}
-            className="input font-mono"
-            maxLength={100}
-            disabled={form.pecosAccess !== "yes"}
-            autoComplete="off"
-          />
-        </Field>
-      </div>
-      {withLogin && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Password *" error={err("password")} hint="Sign-in: the email + this password">
-            <PasswordInput value={form.password} onChange={(e) => set("password", e.target.value)} className="input" autoComplete="new-password" placeholder="At least 8 characters" />
+      {/* the same sections, fields and order as the provider's secure-link form */}
+      <FormSection icon="User" title="Provider Details">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="First Name *" error={err("firstName")}>
+            <input value={form.firstName} onChange={(e) => set("firstName", e.target.value)} className="input" maxLength={80} />
           </Field>
-          <Field label="Confirm Password *" error={err("confirmPassword")}>
-            <PasswordInput value={form.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} className="input" autoComplete="new-password" />
+          <Field label="Last Name *" error={err("lastName")}>
+            <input value={form.lastName} onChange={(e) => set("lastName", e.target.value)} className="input" maxLength={80} />
+          </Field>
+          <Field label="Suffix *" error={err("suffix")}>
+            <SuffixSelect value={form.suffix} onChange={(v) => set("suffix", v)} />
           </Field>
         </div>
-      )}
-      {changePassword && (
-        <Field
-          label="Change Password"
-          error={err("password")}
-          hint={changePassword.hasLogin ? "Leave blank to keep the current password" : "No sign-in yet — a password lets the provider sign in with their email"}
-        >
-          <PasswordInput value={form.password} onChange={(e) => set("password", e.target.value)} className="input" autoComplete="new-password" placeholder="New password" />
-        </Field>
-      )}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="NPI *" error={err("npi")}>
+            <input value={form.npi} onChange={(e) => set("npi", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="10 digits" inputMode="numeric" />
+          </Field>
+          <div className="sm:col-span-2">
+            <SpecialtyField
+              choice={form.specialty}
+              other={form.specialtyOther}
+              onChange={(c, o) => {
+                setForm((f) => ({ ...f, specialty: c, specialtyOther: o }));
+                setErrors((er) => ({ ...er, specialty: "", specialtyOther: "" }));
+              }}
+              error={err("specialty")}
+              otherError={err("specialtyOther")}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="Email *" error={err("email") || emailTaken}>
+            <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="input" />
+          </Field>
+          <Field label="Ph.No *" error={err("phone")}>
+            <PhoneInput value={form.phone} onChange={(v) => set("phone", v)} invalid={!!err("phone")} />
+          </Field>
+          <Field label="Date of Birth" error={err("dateOfBirth")}>
+            <input type="date" max={todayISO()} value={form.dateOfBirth} onChange={(e) => set("dateOfBirth", e.target.value)} className="input" />
+          </Field>
+        </div>
+        <GroupRow f={extra} set={setX} errors={errors} />
+        <PersonalRow f={extra} set={setX} errors={errors} hasSsn={!!initial.extra?.hasSsn} ssnLast4={initial.extra?.ssnLast4} />
+      </FormSection>
+      <FormSection icon="Home" title="Home Address">
+        <HomeAddressBlock f={extra} set={setX} errors={errors} />
+      </FormSection>
+      <FormSection icon="Award" title="License & IDs">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="License Number *" error={err("license")}>
+            <input value={form.license} onChange={(e) => set("license", e.target.value)} className="input font-mono" maxLength={40} />
+          </Field>
+          <Field label="License State *" error={err("licenseState")}>
+            <select value={form.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
+              {stateOptions.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="License Expiration *" error={err("licenseExpires")}>
+            <input type="date" min={todayISO()} value={form.licenseExpires} onChange={(e) => set("licenseExpires", e.target.value)} className="input" />
+          </Field>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="DEA Number" error={err("deaNumber")}>
+            <input value={form.deaNumber} onChange={(e) => set("deaNumber", e.target.value.toUpperCase())} className="input font-mono" maxLength={20} placeholder="(optional for mid-levels)" />
+          </Field>
+          <Field label="DEA Expiration" error={err("deaExpires")}>
+            <input type="date" min={todayISO()} value={form.deaExpires} onChange={(e) => set("deaExpires", e.target.value)} className="input" />
+          </Field>
+        </div>
+        <IdsRow f={extra} set={setX} errors={errors} />
+      </FormSection>
+      <FormSection icon="Database" title="CAQH">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="CAQH ID" error={err("caqhId")}>
+            <input
+              value={form.caqhId}
+              onChange={(e) => set("caqhId", e.target.value.replace(/\D/g, "").slice(0, 10))}
+              className="input font-mono"
+              placeholder="8 digits"
+              inputMode="numeric"
+              disabled={lockCaqhId}
+            />
+          </Field>
+          <Field label="CAQH Username" error={err("caqhUsername")}>
+            <input value={form.caqhUsername} onChange={(e) => set("caqhUsername", e.target.value.replace(/\s/g, ""))} className="input font-mono" maxLength={100} autoComplete="off" />
+          </Field>
+          <Field label="CAQH Password" error={err("caqhPassword")} hint={hasStoredPassword ? "Leave blank to keep the saved password" : undefined}>
+            <PasswordInput
+              value={form.caqhPassword}
+              onChange={(e) => set("caqhPassword", e.target.value)}
+              className="input font-mono"
+              maxLength={200}
+              autoComplete="new-password"
+              placeholder={hasStoredPassword ? "••••••••" : ""}
+            />
+          </Field>
+        </div>
+      </FormSection>
+      <FormSection icon="ShieldCheck" title="PECOS">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="PECOS Access Granted" error={err("pecosAccess")}>
+            <select value={form.pecosAccess} onChange={(e) => set("pecosAccess", e.target.value)} className="input">
+              <option value="">— Select —</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </Field>
+          <Field label="PECOS User Name" error={err("pecosUsername")}>
+            <input
+              value={form.pecosUsername}
+              onChange={(e) => set("pecosUsername", e.target.value.replace(/\s/g, ""))}
+              className="input font-mono"
+              maxLength={100}
+              disabled={form.pecosAccess !== "yes"}
+              autoComplete="off"
+            />
+          </Field>
+          <PecosPasswordField f={extra} set={setX} errors={errors} hasStored={!!initial.extra?.hasPecosPassword} disabled={form.pecosAccess !== "yes"} />
+        </div>
+      </FormSection>
+      <PracticeSection f={extra} set={setX} errors={errors} />
+      <BillingSection f={extra} set={setX} errors={errors} />
+      <FormSection icon="KeyRound" title="Status & Sign-in">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="Status *" error={err("status")}>
+            <select value={form.status} onChange={(e) => set("status", e.target.value)} className="input">
+              {PROVIDER_STATUS_OPTIONS.map((o) => (
+                <option key={o.id} value={o.id}>{o.label}</option>
+              ))}
+            </select>
+          </Field>
+          {withLogin && (
+            <>
+              <Field label="Password *" error={err("password")} hint="Sign-in: the email + this password">
+                <PasswordInput value={form.password} onChange={(e) => set("password", e.target.value)} className="input" autoComplete="new-password" placeholder="At least 8 characters" />
+              </Field>
+              <Field label="Confirm Password *" error={err("confirmPassword")}>
+                <PasswordInput value={form.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} className="input" autoComplete="new-password" />
+              </Field>
+            </>
+          )}
+          {changePassword && (
+            <div className="sm:col-span-2">
+              <Field
+                label="Change Password"
+                error={err("password")}
+                hint={changePassword.hasLogin ? "Leave blank to keep the current password" : "No sign-in yet — a password lets the provider sign in with their email"}
+              >
+                <PasswordInput value={form.password} onChange={(e) => set("password", e.target.value)} className="input" autoComplete="new-password" placeholder="New password" />
+              </Field>
+            </div>
+          )}
+        </div>
+      </FormSection>
       <div className="pt-3 mt-3 border-t border-line">
         <div className="text-xs font-semibold text-ink mb-2 flex items-center gap-1.5">
           <Icon name="Building2" size={13} className="text-accent" />

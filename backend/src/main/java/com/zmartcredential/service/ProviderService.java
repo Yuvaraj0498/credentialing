@@ -66,6 +66,7 @@ public class ProviderService {
             "npi", "npi", "dateadded", "dateAdded", "createdat", "createdAt", "email", "email", "name", "lastName");
 
     private final ProviderRepository providerRepository;
+    private final ProviderExtraMapper extraMapper;
     private final com.zmartcredential.repository.OrganizationRepository organizationRepository;
     private final EmailRegistry emailRegistry;
     private final ProviderDocumentRepository documentRepository;
@@ -233,6 +234,7 @@ public class ProviderService {
         p.setLicenseExpires(req.licenseExpires());
         p.setPractitionerType(blankToNull(req.practitionerType()));
         p.setTaxonomyCode(blankToNull(req.taxonomyCode()));
+        extraMapper.apply(p, req.extra());
         p.setGender(blankToNull(req.gender()));
         p.setDateOfBirth(req.dateOfBirth());
         p.setDeaNumber(blankToNull(req.deaNumber()));
@@ -312,6 +314,7 @@ public class ProviderService {
             p.setLicenseExpires(req.licenseExpires());
         }
         if (req.taxonomyCode() != null) p.setTaxonomyCode(blankToNull(req.taxonomyCode()));
+        extraMapper.apply(p, req.extra());
         if (req.deaNumber() != null) p.setDeaNumber(blankToNull(req.deaNumber()));
         if (req.deaExpires() != null) {
             if (!req.deaExpires().equals(p.getDeaExpires()) && req.deaExpires().isBefore(LocalDate.now())) {
@@ -479,7 +482,7 @@ public class ProviderService {
                 p.getCreatedAt(), p.getUpdatedAt(),
                 support.progressFromRows(rows), enrollmentCounts(enrollments), rows,
                 p.getCaqhPasswordEnc() != null, p.getPecosAccessGranted(), p.getPecosUsername(),
-                userRepository.findByProviderId(p.getId()).isPresent());
+                userRepository.findByProviderId(p.getId()).isPresent(), extraMapper.view(p));
     }
 
     record Hierarchy(Long clientId, Long practiceId, Long locationId) {

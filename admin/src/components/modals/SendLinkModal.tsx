@@ -2,13 +2,12 @@
 
 import { useState } from "react";
 import { useEmailCheck } from "@/lib/useEmailCheck";
-import { AlertBox, DeferredNotice } from "@/components/AlertBox";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
+import { ResultAlert, mailResult } from "@/components/ResultAlert";
 import { OrgAssignmentFields, assignmentPayload, type OrgAssignment, placementAssignment } from "@/components/OrgAssignmentFields";
 import { ApiError, api, errorMessage } from "@/lib/api";
-import { fmtDate } from "@/lib/utils";
 import { useToast } from "@/stores/toast";
 import { EMAIL_RE } from "@/components/providers/shared";
 import type { InviteResponse } from "@/types/providers";
@@ -48,7 +47,6 @@ export function SendLinkModal({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<InviteResponse | null>(null);
-  const [copied, setCopied] = useState(false);
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }));
 
   const handleSend = async () => {
@@ -85,63 +83,10 @@ export function SendLinkModal({
 
   const back = onBack || onClose;
 
+  // after sending: only "Mail sent" / "Failed to send email" (the link and PIN go by email)
   if (sent) {
-    const link = (typeof window !== "undefined" ? window.location.origin : "") + sent.uploadUrl;
-    const emailed = sent.emailStatus === "sent";
-    const failed = sent.emailStatus === "failed";
-    return (
-      <Modal
-        title={failed ? "Secure Link Created" : "Secure Link Sent"}
-        subtitle={emailed ? "The provider has been emailed their secure link and PIN." : "Share the link and PIN below with the provider."} onClose={() => onSent(sent)} maxWidth={520}>
-        <div className="space-y-4 mt-2">
-          <div className="card-pad rounded-lg" style={{ background: failed ? "var(--warn-soft)" : "var(--success-soft)", border: "1px solid " + (failed ? "var(--warn)" : "var(--success)") }}>
-            <div className="flex items-center gap-2 mb-3">
-              <Icon name={failed ? "MailWarning" : "MailCheck"} size={18} style={{ color: failed ? "#a16207" : "var(--success)" }} />
-              <div className="font-semibold text-ink">
-                {emailed ? "Email sent to " + sent.email : failed ? "Email could not be sent to " + sent.email : "Email queued for " + sent.email}
-              </div>
-            </div>
-            <div className="text-xs text-ink-light mb-3">The provider will use this PIN to access the upload portal:</div>
-            <div className="bg-paper rounded-lg p-4 text-center border border-line">
-              <div className="text-[10px] font-medium text-ink-faint uppercase tracking-wider mb-2">Secure Access PIN</div>
-              <div className="font-display text-4xl font-bold text-ink tracking-widest">{sent.pin}</div>
-            </div>
-            <div className="text-xs text-ink-light mt-3 text-center">Link expires: {fmtDate(sent.expiresAt)}</div>
-            <div className="flex items-center gap-2 mt-3">
-              <input readOnly value={link} className="input input-sm font-mono" style={{ fontSize: 11 }} onFocus={(e) => e.target.select()} aria-label="Secure upload link" />
-              <button
-                type="button"
-                className="btn btn-secondary"
-                style={{ fontSize: 11, padding: "5px 10px" }}
-                onClick={() => {
-                  navigator.clipboard?.writeText(link).then(() => setCopied(true), () => {});
-                }}
-              >
-                <Icon name={copied ? "Check" : "Copy"} size={11} /> {copied ? "Copied" : "Copy"}
-              </button>
-              <a href={link} target="_blank" rel="noopener noreferrer" className="btn btn-primary" style={{ fontSize: 11, padding: "5px 10px" }} title="Open the provider portal">
-                <Icon name="ExternalLink" size={11} />
-              </a>
-            </div>
-          </div>
-          {failed && (
-            <AlertBox type="warn">
-              <span>
-                The mail server refused the message{sent.emailError ? ": " + sent.emailError : "."} Share the link and PIN with the provider directly, or send the link again later.
-              </span>
-            </AlertBox>
-          )}
-          {sent.emailStatus === "queued" && (
-            <DeferredNotice>
-              Email sending is switched off on this server, so the message was only recorded in the email log. Share the link and PIN with the provider directly. The PIN is shown only once.
-            </DeferredNotice>
-          )}
-          <div className="flex justify-end gap-2 pt-3 border-t border-line">
-            <button onClick={() => onSent(sent)} className="btn btn-primary">Done</button>
-          </div>
-        </div>
-      </Modal>
-    );
+    const r = mailResult(sent);
+    return <ResultAlert {...r} onClose={() => onSent(sent)} />;
   }
 
   return (

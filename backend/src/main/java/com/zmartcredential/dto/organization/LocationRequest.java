@@ -14,7 +14,7 @@ public record LocationRequest(
         Long practiceId,
         @Size(max = 200, message = "Max 200 characters") String legalName,
         @Pattern(regexp = "^$|[0-9]{10}", message = "NPI must be 10 digits") String npi,
-        @Pattern(regexp = "^$|Primary|Satellite|Hospital|Admin Office", message = "Choose a valid location type") String locationType,
+        @jakarta.validation.constraints.Size(max = 30, message = "At most 30 characters") String locationType,
         /* optional, as in the prototype; when given: 5-255 characters including a street name */
         @Size(max = 255, message = "Max 255 characters")
         @Pattern(regexp = "^$|(?=.{5,})[\\p{L}0-9 #,.:'/&()-]*\\p{L}[\\p{L}0-9 #,.:'/&()-]*", message = "Address may contain letters, digits and # , . : - / ' & ( ), be at least 5 characters and include a street name") String address,

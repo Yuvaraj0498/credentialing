@@ -22,6 +22,11 @@ public class SecureLinkIssuer {
     private final CryptoService cryptoService;
 
     public ProviderInvite issue(Provider provider, String email, Long createdBy) {
+        return issue(provider, email, createdBy, "profile", null);
+    }
+
+    /** A new link replaces the provider's earlier open links (their link and PIN stop working). */
+    public ProviderInvite issue(Provider provider, String email, Long createdBy, String purpose, java.util.List<String> docTypes) {
         for (ProviderInvite old : inviteRepository.findByProviderIdAndStatusIn(provider.getId(), Set.of("sent", "opened"))) {
             old.setStatus("revoked");
         }
@@ -34,6 +39,8 @@ public class SecureLinkIssuer {
         inv.setExpiresAt(LocalDateTime.now().plusDays(VALID_DAYS));
         inv.setStatus("sent");
         inv.setCreatedBy(createdBy);
+        inv.setPurpose(purpose);
+        inv.setRequestedDocTypes(docTypes == null || docTypes.isEmpty() ? null : String.join(",", docTypes));
         return inviteRepository.save(inv);
     }
 

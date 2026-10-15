@@ -2,7 +2,6 @@
 
 import { Fragment, useRef, useState } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
-import { SPECIALTIES, SUFFIXES } from "@/lib/constants";
 import { PasswordInput } from "@/components/PasswordInput";
 import { Loading } from "@/components/AsyncState";
 import { Field } from "@/components/Field";
@@ -12,12 +11,33 @@ import { ApiError, api, errorMessage } from "@/lib/api";
 import { US_STATES } from "@/lib/constants";
 import { fmtDate, fmtTs, todayISO } from "@/lib/utils";
 import { ALLOWED_EXT, fileExt, MAX_FILE_BYTES, NPI_RE, PROVIDER_STATUS_OPTIONS } from "@/components/providers/shared";
+import {
+  BillingSection,
+  FormSection,
+  GroupRow,
+  HomeAddressBlock,
+  IdsRow,
+  OTHER,
+  PecosPasswordField,
+  PersonalRow,
+  PracticeSection,
+  SpecialtyField,
+  SuffixSelect,
+  extraFieldErrors,
+  extraFromView,
+  extraPayload,
+  extraProblems,
+  specialtyValue,
+  type ExtraForm,
+} from "@/components/providers/ProviderExtraFields";
 import { useAsync } from "@/lib/hooks";
 import { PHONE_RE, phoneDigits } from "@/lib/validation";
 import type { PublicInviteInfo, PublicLinkStatus, PublicMissingDoc, PublicUploadResult } from "@/types/providers";
 
 type Step = "profile" | "docs" | "review" | "done";
-const STEPS: Step[] = ["profile", "docs", "review", "done"];
+const PROFILE_STEPS: Step[] = ["profile", "docs", "review", "done"];
+/** Request Documents links: only the requested documents, then submit */
+const DOCUMENT_STEPS: Step[] = ["docs", "done"];
 
 interface Profile {
   firstName: string;
@@ -26,6 +46,8 @@ interface Profile {
   caqhId: string;
   suffix: string;
   specialty: string;
+  /** the typed specialty when "Other" is chosen */
+  specialtyOther: string;
   phone: string;
   dateOfBirth: string;
   licenseNumber: string;
@@ -51,7 +73,7 @@ interface Uploaded {
 
 /**
  * Prototype v2 SecureLinkPortal — the provider-facing page behind a secure link (/admin/upload/{token}):
- * PIN → profile → documents → review & submit.
+ * PIN → profile → documents → review & submit. A document request (Request Documents) skips to the requested documents.
  */
 export function SecureLinkPortal({ token }: { token: string }) {
   const base = "/public/invites/" + encodeURIComponent(token);
@@ -65,6 +87,7 @@ export function SecureLinkPortal({ token }: { token: string }) {
   const [step, setStep] = useState<Step>("profile");
   const [profile, setProfile] = useState<Profile | null>(null);
   const [profileErrors, setProfileErrors] = useState<Record<string, string>>({});
+  const [extra, setExtra] = useState<ExtraForm>(() => extraFromView(null));
   const [docs, setDocs] = useState<PublicMissingDoc[]>([]);
   const [uploaded, setUploaded] = useState<Record<string, Uploaded>>({});
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -87,7 +110,8 @@ export function SecureLinkPortal({ token }: { token: string }) {
         npi: p.npi || "",
         caqhId: p.caqhId || "",
         suffix: p.suffix || "",
-        specialty: p.specialty || "",
+        specialty: p.specialty === "Other" ? OTHER : p.specialty || "",
+        specialtyOther: "",
         phone: phoneDigits(p.phone),
         dateOfBirth: p.dateOfBirth || "",
         licenseNumber: p.licenseNumber || "",
@@ -102,7 +126,8 @@ export function SecureLinkPortal({ token }: { token: string }) {
         password: "",
         confirmPassword: "",
       });
-      setStep("profile");
+      setExtra(extraFromView(p.extra));
+      setStep(res.purpose === "documents" ? "docs" : "profile");
     } catch (err) {
       setAuthError(errorMessage(err));
       setPin("");
@@ -125,7 +150,7 @@ export function SecureLinkPortal({ token }: { token: string }) {
         npi: profile.npi,
         caqhId: orNull(profile.caqhId),
         suffix: orNull(profile.suffix),
-        specialty: orNull(profile.specialty),
+        specialty: orNull(specialtyValue(profile.specialty, profile.specialtyOther)),
         phone: orNull(profile.phone),
         dateOfBirth: orNull(profile.dateOfBirth),
         licenseNumber: profile.licenseNumber.trim(),
@@ -138,12 +163,13 @@ export function SecureLinkPortal({ token }: { token: string }) {
         pecosAccessGranted: profile.pecosAccess === "yes",
         pecosUsername: profile.pecosAccess === "yes" ? profile.pecosUsername.trim() : undefined,
         password: needsLogin ? profile.password : undefined,
+        extra: extraPayload(extra),
       });
       statusQuery.setData(res);
       setStep("done");
     } catch (err) {
       if (err instanceof ApiError && Object.keys(err.fieldErrors).length) {
-        setProfileErrors(err.fieldErrors);
+        setProfileErrors(extraFieldErrors(err.fieldErrors));
         setStep("profile");
       }
       setSubmitError(errorMessage(err));
@@ -165,6 +191,7 @@ export function SecureLinkPortal({ token }: { token: string }) {
     if (p.caqhId && !/^[0-9]{6,10}$/.test(p.caqhId)) e.caqhId = "CAQH ID must be 6–10 digits (or leave it empty)";
     if (!p.suffix) e.suffix = "Required";
     if (!p.specialty.trim()) e.specialty = "Required";
+    else if (p.specialty === OTHER && !p.specialtyOther.trim()) e.specialtyOther = "Required";
     if (!PHONE_RE.test(p.phone)) e.phone = p.phone ? "Ph.No must be 10 digits" : "Required";
     if (!p.firstName.trim()) e.firstName = "Required";
     if (!p.lastName.trim()) e.lastName = "Required";
@@ -179,6 +206,7 @@ export function SecureLinkPortal({ token }: { token: string }) {
       if (!p.confirmPassword) e.confirmPassword = "Required";
       else if (p.confirmPassword !== p.password) e.confirmPassword = "Passwords do not match";
     }
+    Object.assign(e, extraProblems(extra));
     return e;
   };
   const continueToDocs = () => {
@@ -195,6 +223,22 @@ export function SecureLinkPortal({ token }: { token: string }) {
   };
   const authenticated = !!info;
   const blocked = status && !authenticated && status.state !== "active";
+  const docRequest = (info?.purpose || status?.purpose) === "documents";
+  const STEPS = docRequest ? DOCUMENT_STEPS : PROFILE_STEPS;
+  const uploadedCount = docs.filter((d) => uploaded[d.docType]).length;
+  const finishDocuments = async () => {
+    setBusy(true);
+    setSubmitError(null);
+    try {
+      const res = await api.post<PublicLinkStatus>(base + "/finish", { pin });
+      statusQuery.setData(res);
+      setStep("done");
+    } catch (err) {
+      setSubmitError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  };
 
   return (
     <div className="min-h-screen" style={{ background: "linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)" }}>
@@ -203,8 +247,12 @@ export function SecureLinkPortal({ token }: { token: string }) {
           <div className="inline-flex items-center gap-2 font-display font-bold text-lg text-accent">
             <span style={{ fontSize: 20 }}>▲</span> ZmartCredential
           </div>
-          <h1 className="font-display text-3xl font-bold text-ink mt-3">Provider Onboarding</h1>
-          {firstName && <p className="text-sm text-ink-light mt-1">Hello {firstName}, please complete your credentialing profile.</p>}
+          <h1 className="font-display text-3xl font-bold text-ink mt-3">{docRequest ? "Document Request" : "Provider Onboarding"}</h1>
+          {firstName && (
+            <p className="text-sm text-ink-light mt-1">
+              Hello {firstName}, {docRequest ? "please upload the documents requested below." : "please complete your credentialing profile."}
+            </p>
+          )}
           {status?.organizationName && <p className="text-xs text-ink-faint mt-1">Requested by {status.organizationName}</p>}
         </div>
 
@@ -245,9 +293,9 @@ export function SecureLinkPortal({ token }: { token: string }) {
         {blocked && status.state === "submitted" && (
           <div className="card card-pad text-center">
             <Icon name="CheckCircle2" size={40} className="mx-auto mb-3" style={{ color: "var(--success)" }} />
-            <h2 className="font-display text-xl font-bold text-ink">Profile already submitted</h2>
+            <h2 className="font-display text-xl font-bold text-ink">{docRequest ? "Documents already submitted" : "Profile already submitted"}</h2>
             <p className="text-sm text-ink-light mt-2">
-              Thank you! Your profile was submitted{status.submittedAt ? " on " + fmtTs(status.submittedAt) : ""}. The credentialing team will reach out if any additional
+              Thank you! Your {docRequest ? "documents were" : "profile was"} submitted{status.submittedAt ? " on " + fmtTs(status.submittedAt) : ""}. The credentialing team will reach out if any additional
               information is needed.
             </p>
           </div>
@@ -319,6 +367,12 @@ export function SecureLinkPortal({ token }: { token: string }) {
             <p className="text-sm text-ink-light mb-4">Confirm or update your professional details below.</p>
             <ProfileForm
               profile={profile}
+              extra={extra}
+              onExtra={(k, v) => {
+                setExtra((x) => ({ ...x, [k]: v }));
+                setProfileErrors((er) => (er[k] ? { ...er, [k]: "" } : er));
+              }}
+              token={token}
               errors={profileErrors}
               loginEmail={needsLogin ? info?.profile.loginEmail || info?.email || "" : null}
               fixed={{
@@ -352,8 +406,12 @@ export function SecureLinkPortal({ token }: { token: string }) {
             <h2 className="font-display text-xl font-bold text-ink mb-1">Upload Documents</h2>
             <p className="text-sm text-ink-light mb-4">
               {docs.length === 0
-                ? "Your credentialing team already has every required document on file."
-                : "Upload each required document. " + uploadedRequired + " of " + requiredDocs.length + " required documents uploaded."}
+                ? docRequest
+                  ? "The requested documents are already with your credentialing team."
+                  : "Your credentialing team already has every required document on file."
+                : docRequest
+                  ? "Upload the documents your credentialing team requested. " + uploadedCount + " of " + docs.length + " uploaded."
+                  : "Upload each required document. " + uploadedRequired + " of " + requiredDocs.length + " required documents uploaded."}
             </p>
             <div className="space-y-2">
               {docs.map((doc) => (
@@ -367,14 +425,25 @@ export function SecureLinkPortal({ token }: { token: string }) {
                 />
               ))}
             </div>
-            <div className="flex justify-between gap-2 pt-4 border-t border-line mt-4">
-              <button onClick={() => setStep("profile")} className="btn btn-secondary">
-                <Icon name="ArrowLeft" size={13} /> Back
-              </button>
-              <button onClick={() => setStep("review")} disabled={uploadedRequired < requiredDocs.length} className="btn btn-primary">
-                Review Submission <Icon name="ArrowRight" size={13} />
-              </button>
-            </div>
+            {docRequest ? (
+              <>
+                {submitError && <div className="field-error mt-3">{submitError}</div>}
+                <div className="flex justify-end gap-2 pt-4 border-t border-line mt-4">
+                  <button onClick={finishDocuments} disabled={busy || uploadedCount === 0} className="btn btn-primary" title={uploadedCount === 0 ? "Upload at least one document first" : undefined}>
+                    {busy ? <span className="loader" style={{ borderTopColor: "white" }} /> : <Icon name="Send" size={13} />} Submit Documents
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="flex justify-between gap-2 pt-4 border-t border-line mt-4">
+                <button onClick={() => setStep("profile")} className="btn btn-secondary">
+                  <Icon name="ArrowLeft" size={13} /> Back
+                </button>
+                <button onClick={() => setStep("review")} disabled={uploadedRequired < requiredDocs.length} className="btn btn-primary">
+                  Review Submission <Icon name="ArrowRight" size={13} />
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -388,7 +457,7 @@ export function SecureLinkPortal({ token }: { token: string }) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-1 text-xs">
                   <div><span className="text-ink-faint">Name:</span> {profile.firstName} {profile.lastName}{profile.suffix ? ", " + profile.suffix : ""}</div>
                   <div><span className="text-ink-faint">NPI:</span> <span className="font-mono">{profile.npi}</span></div>
-                  <div><span className="text-ink-faint">Specialty:</span> {profile.specialty || "—"}</div>
+                  <div><span className="text-ink-faint">Specialty:</span> {specialtyValue(profile.specialty, profile.specialtyOther) || "—"}</div>
                   <div><span className="text-ink-faint">Ph.No:</span> {profile.phone || "—"}</div>
                   <div><span className="text-ink-faint">License:</span> <span className="font-mono">{profile.licenseNumber}{profile.licenseState ? " (" + profile.licenseState + ")" : ""}</span></div>
                   <div><span className="text-ink-faint">DEA:</span> <span className="font-mono">{profile.deaNumber || "—"}</span></div>
@@ -434,7 +503,7 @@ export function SecureLinkPortal({ token }: { token: string }) {
             <Icon name="CheckCircle2" size={48} className="mx-auto mb-3" style={{ color: "var(--success)" }} />
             <h2 className="font-display text-2xl font-bold text-ink">Thank you!</h2>
             <p className="text-sm text-ink-light mt-2">
-              Your profile has been submitted successfully. The credentialing team at {status?.organizationName || "this organization"} will contact you if any additional
+              {docRequest ? "Your documents have been submitted successfully." : "Your profile has been submitted successfully."} The credentialing team at {status?.organizationName || "this organization"} will contact you if any additional
               information is needed.
             </p>
           </div>
@@ -462,109 +531,145 @@ function Fixed({ label, value }: { label: string; value: string | null }) {
   );
 }
 
-/** The same fields, names and order as Add Provider Manually (email and status are set by the staff). */
-function ProfileForm({ profile, errors, loginEmail, fixed, onChange }: { profile: Profile; errors: Record<string, string>; loginEmail: string | null; fixed: FixedInfo; onChange: (p: Profile) => void }) {
+/** The same sections, fields and order as Add Provider Manually (email and status are set by the staff). */
+function ProfileForm({
+  profile,
+  extra,
+  onExtra,
+  token,
+  errors,
+  loginEmail,
+  fixed,
+  onChange,
+}: {
+  profile: Profile;
+  extra: ExtraForm;
+  onExtra: (k: keyof ExtraForm, v: string) => void;
+  token: string;
+  errors: Record<string, string>;
+  loginEmail: string | null;
+  fixed: FixedInfo;
+  onChange: (p: Profile) => void;
+}) {
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => onChange({ ...profile, [k]: v });
-  const suffixOptions = profile.suffix && !SUFFIXES.includes(profile.suffix) ? [profile.suffix, ...SUFFIXES] : SUFFIXES;
   const statusLabel = PROVIDER_STATUS_OPTIONS.find((o) => o.id === fixed.status)?.label || fixed.status;
+  const xp = { f: extra, set: onExtra, errors };
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Field label="First Name" required error={errors.firstName}>
-          <input value={profile.firstName} onChange={(e) => set("firstName", e.target.value)} className="input" maxLength={80} />
-        </Field>
-        <Field label="Last Name" required error={errors.lastName}>
-          <input value={profile.lastName} onChange={(e) => set("lastName", e.target.value)} className="input" maxLength={80} />
-        </Field>
-        <Field label="Suffix" required error={errors.suffix}>
-          <select value={profile.suffix} onChange={(e) => set("suffix", e.target.value)} className="input">
-            <option value="">— Select —</option>
-            {suffixOptions.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </Field>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Field label="NPI" required error={errors.npi}>
-          <input value={profile.npi} onChange={(e) => set("npi", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="10 digits" inputMode="numeric" />
-        </Field>
-        <Field label="CAQH ID" error={errors.caqhId}>
-          <input value={profile.caqhId} onChange={(e) => set("caqhId", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="8 digits" inputMode="numeric" />
-        </Field>
-        <Field label="Specialty" required error={errors.specialty}>
-          <select value={profile.specialty} onChange={(e) => set("specialty", e.target.value)} className="input">
-            <option value="">— Select —</option>
-            {(profile.specialty && !SPECIALTIES.includes(profile.specialty) ? [profile.specialty, ...SPECIALTIES] : SPECIALTIES).map((sp) => (
-              <option key={sp}>{sp}</option>
-            ))}
-          </select>
-        </Field>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Fixed label="Email" value={fixed.email} />
-        <Field label="Ph.No" required error={errors.phone || (profile.phone && !PHONE_RE.test(profile.phone) ? "Ph.No must be 10 digits" : undefined)}>
-          <PhoneInput value={profile.phone} onChange={(v) => set("phone", v)} invalid={!!errors.phone} />
-        </Field>
-        <Field label="Date of Birth" error={errors.dateOfBirth}>
-          <input type="date" max={todayISO()} value={profile.dateOfBirth} onChange={(e) => set("dateOfBirth", e.target.value)} className="input" />
-        </Field>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Field label="License Number" required error={errors.licenseNumber}>
-          <input value={profile.licenseNumber} onChange={(e) => set("licenseNumber", e.target.value)} className="input font-mono" maxLength={40} />
-        </Field>
-        <Field label="License State" required error={errors.licenseState}>
-          <select value={profile.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
-            <option value="">— Select —</option>
-            {US_STATES.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
-        </Field>
-        <Field label="License Expiration" required error={errors.licenseExpires}>
-          <input type="date" min={todayISO()} value={profile.licenseExpires} onChange={(e) => set("licenseExpires", e.target.value)} className="input" />
-        </Field>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Field label="DEA Number" error={errors.deaNumber}>
-          <input value={profile.deaNumber} onChange={(e) => set("deaNumber", e.target.value.toUpperCase())} className="input font-mono" maxLength={20} placeholder="(optional for mid-levels)" />
-        </Field>
-        <Field label="DEA Expiration" error={errors.deaExpires}>
-          <input type="date" min={todayISO()} value={profile.deaExpires} onChange={(e) => set("deaExpires", e.target.value)} className="input" />
-        </Field>
-        <Fixed label="Status" value={statusLabel} />
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="CAQH Username" error={errors.caqhUsername}>
-          <input value={profile.caqhUsername} onChange={(e) => set("caqhUsername", e.target.value.replace(/\s/g, ""))} className="input font-mono" maxLength={100} autoComplete="off" />
-        </Field>
-        <Field label="CAQH Password" error={errors.caqhPassword}>
-          <PasswordInput value={profile.caqhPassword} onChange={(e) => set("caqhPassword", e.target.value)} className="input font-mono" maxLength={200} autoComplete="new-password" />
-        </Field>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <Field label="PECOS Access Granted" error={errors.pecosAccess || errors.pecosAccessGranted}>
-          <select value={profile.pecosAccess} onChange={(e) => set("pecosAccess", e.target.value)} className="input">
-            <option value="">— Select —</option>
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
-          </select>
-        </Field>
-        <Field label="PECOS User Name" error={errors.pecosUsername}>
-          <input value={profile.pecosUsername} onChange={(e) => set("pecosUsername", e.target.value.replace(/\s/g, ""))} className="input font-mono" maxLength={100} disabled={profile.pecosAccess !== "yes"} autoComplete="off" />
-        </Field>
-      </div>
-      {loginEmail != null && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="Password" required error={errors.password || (profile.password && profile.password.length < 8 ? "At least 8 characters" : undefined)} hint={"Sign-in: " + loginEmail + " + this password"}>
-            <PasswordInput value={profile.password} onChange={(e) => set("password", e.target.value)} className="input" maxLength={100} autoComplete="new-password" placeholder="At least 8 characters" />
+      <FormSection icon="User" title="Provider Details">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="First Name" required error={errors.firstName}>
+            <input value={profile.firstName} onChange={(e) => set("firstName", e.target.value)} className="input" maxLength={80} />
           </Field>
-          <Field label="Confirm Password" required error={errors.confirmPassword || (profile.confirmPassword && profile.confirmPassword !== profile.password ? "Passwords do not match" : undefined)}>
-            <PasswordInput value={profile.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} className="input" maxLength={100} autoComplete="new-password" />
+          <Field label="Last Name" required error={errors.lastName}>
+            <input value={profile.lastName} onChange={(e) => set("lastName", e.target.value)} className="input" maxLength={80} />
+          </Field>
+          <Field label="Suffix" required error={errors.suffix}>
+            <SuffixSelect value={profile.suffix} onChange={(v) => set("suffix", v)} publicToken={token} withEmpty />
           </Field>
         </div>
-      )}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="NPI" required error={errors.npi}>
+            <input value={profile.npi} onChange={(e) => set("npi", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="10 digits" inputMode="numeric" />
+          </Field>
+          <div className="sm:col-span-2">
+            <SpecialtyField
+              choice={profile.specialty}
+              other={profile.specialtyOther}
+              onChange={(c, o) => onChange({ ...profile, specialty: c, specialtyOther: o })}
+              error={errors.specialty}
+              otherError={errors.specialtyOther}
+              publicToken={token}
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Fixed label="Email" value={fixed.email} />
+          <Field label="Ph.No" required error={errors.phone || (profile.phone && !PHONE_RE.test(profile.phone) ? "Ph.No must be 10 digits" : undefined)}>
+            <PhoneInput value={profile.phone} onChange={(v) => set("phone", v)} invalid={!!errors.phone} />
+          </Field>
+          <Field label="Date of Birth" error={errors.dateOfBirth}>
+            <input type="date" max={todayISO()} value={profile.dateOfBirth} onChange={(e) => set("dateOfBirth", e.target.value)} className="input" />
+          </Field>
+        </div>
+        <GroupRow {...xp} />
+        <PersonalRow {...xp} />
+      </FormSection>
+      <FormSection icon="Home" title="Home Address">
+        <HomeAddressBlock {...xp} />
+      </FormSection>
+      <FormSection icon="Award" title="License & IDs">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="License Number" required error={errors.licenseNumber}>
+            <input value={profile.licenseNumber} onChange={(e) => set("licenseNumber", e.target.value)} className="input font-mono" maxLength={40} />
+          </Field>
+          <Field label="License State" required error={errors.licenseState}>
+            <select value={profile.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
+              <option value="">— Select —</option>
+              {US_STATES.map((s) => (
+                <option key={s} value={s}>{s}</option>
+              ))}
+            </select>
+          </Field>
+          <Field label="License Expiration" required error={errors.licenseExpires}>
+            <input type="date" min={todayISO()} value={profile.licenseExpires} onChange={(e) => set("licenseExpires", e.target.value)} className="input" />
+          </Field>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="DEA Number" error={errors.deaNumber}>
+            <input value={profile.deaNumber} onChange={(e) => set("deaNumber", e.target.value.toUpperCase())} className="input font-mono" maxLength={20} placeholder="(optional for mid-levels)" />
+          </Field>
+          <Field label="DEA Expiration" error={errors.deaExpires}>
+            <input type="date" min={todayISO()} value={profile.deaExpires} onChange={(e) => set("deaExpires", e.target.value)} className="input" />
+          </Field>
+        </div>
+        <IdsRow {...xp} />
+      </FormSection>
+      <FormSection icon="Database" title="CAQH">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="CAQH ID" error={errors.caqhId}>
+            <input value={profile.caqhId} onChange={(e) => set("caqhId", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="8 digits" inputMode="numeric" />
+          </Field>
+          <Field label="CAQH Username" error={errors.caqhUsername}>
+            <input value={profile.caqhUsername} onChange={(e) => set("caqhUsername", e.target.value.replace(/\s/g, ""))} className="input font-mono" maxLength={100} autoComplete="off" />
+          </Field>
+          <Field label="CAQH Password" error={errors.caqhPassword}>
+            <PasswordInput value={profile.caqhPassword} onChange={(e) => set("caqhPassword", e.target.value)} className="input font-mono" maxLength={200} autoComplete="new-password" />
+          </Field>
+        </div>
+      </FormSection>
+      <FormSection icon="ShieldCheck" title="PECOS">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Field label="PECOS Access Granted" error={errors.pecosAccess || errors.pecosAccessGranted}>
+            <select value={profile.pecosAccess} onChange={(e) => set("pecosAccess", e.target.value)} className="input">
+              <option value="">— Select —</option>
+              <option value="yes">Yes</option>
+              <option value="no">No</option>
+            </select>
+          </Field>
+          <Field label="PECOS User Name" error={errors.pecosUsername}>
+            <input value={profile.pecosUsername} onChange={(e) => set("pecosUsername", e.target.value.replace(/\s/g, ""))} className="input font-mono" maxLength={100} disabled={profile.pecosAccess !== "yes"} autoComplete="off" />
+          </Field>
+          <PecosPasswordField {...xp} disabled={profile.pecosAccess !== "yes"} />
+        </div>
+      </FormSection>
+      <PracticeSection {...xp} />
+      <BillingSection {...xp} />
+      <FormSection icon="KeyRound" title="Status & Sign-in">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Fixed label="Status" value={statusLabel} />
+          {loginEmail != null && (
+            <>
+              <Field label="Password" required error={errors.password || (profile.password && profile.password.length < 8 ? "At least 8 characters" : undefined)} hint={"Sign-in: " + loginEmail + " + this password"}>
+                <PasswordInput value={profile.password} onChange={(e) => set("password", e.target.value)} className="input" maxLength={100} autoComplete="new-password" placeholder="At least 8 characters" />
+              </Field>
+              <Field label="Confirm Password" required error={errors.confirmPassword || (profile.confirmPassword && profile.confirmPassword !== profile.password ? "Passwords do not match" : undefined)}>
+                <PasswordInput value={profile.confirmPassword} onChange={(e) => set("confirmPassword", e.target.value)} className="input" maxLength={100} autoComplete="new-password" />
+              </Field>
+            </>
+          )}
+        </div>
+      </FormSection>
     </div>
   );
 }

@@ -51,8 +51,8 @@ export function AddProviderModal({ onClose, onCreated, placement }: { onClose: (
         placement={placement}
         onClose={onClose}
         onBack={() => setStep("choose")}
-        onSent={(inv) => {
-          toast("Secure link sent to " + inv.email);
+        onSent={() => {
+          // the "Mail sent" alert already told the user
           publish("providers");
           onCreated();
         }}
@@ -172,7 +172,7 @@ function CaqhImportModal({
   if (profile && completing) {
     const p = profile;
     return (
-      <Modal title="Complete Provider Details" subtitle="Imported from CAQH — check the details and fill in anything CAQH did not provide. Every field is required." onClose={onClose} showBack onBack={() => setCompleting(false)} maxWidth={680}>
+      <Modal title="Complete Provider Details" subtitle="Imported from CAQH — check the details and fill in anything CAQH did not provide. Every field is required." onClose={onClose} showBack onBack={() => setCompleting(false)} maxWidth={880}>
         {!org.data ? (
           <Loading compact />
         ) : (
@@ -392,7 +392,7 @@ export function ManualAddModal({
       onClose={onClose}
       showBack={!!onBack}
       onBack={onBack}
-      maxWidth={680}
+      maxWidth={880}
     >
       {org.error ? (
         <AlertBox type="danger">{org.error}</AlertBox>

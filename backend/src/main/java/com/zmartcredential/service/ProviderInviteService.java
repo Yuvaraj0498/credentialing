@@ -1,5 +1,6 @@
 package com.zmartcredential.service;
 
+import com.zmartcredential.dto.provider.ProviderInviteDtos.DocumentRequestBody;
 import com.zmartcredential.dto.provider.ProviderInviteDtos.ProviderInviteNewRequest;
 import com.zmartcredential.dto.provider.ProviderInviteDtos.ProviderInviteRequest;
 import com.zmartcredential.dto.provider.ProviderInviteDtos.ProviderInviteResponse;
@@ -72,6 +73,7 @@ public class ProviderInviteService {
     private final MailService mailService;
     private final CryptoService cryptoService;
     private final SecureLinkIssuer linkIssuer;
+    private final ProviderExtraMapper extraMapper;
     private final AuthContext authContext;
     private final com.zmartcredential.repository.ClientRepository clientRepository;
     private final com.zmartcredential.repository.PracticeRepository practiceRepository;
@@ -116,35 +118,49 @@ public class ProviderInviteService {
     }
 
     private ProviderInviteResponse createInvite(Provider provider, String email) {
-        Long orgId = provider.getOrgId();
         // the link goes to this provider: the address must not belong to anybody else
         emailRegistry.requireFreeForProvider(email, provider.getId());
         if (provider.getEmail() == null) provider.setEmail(email);
         ProviderInvite inv = linkIssuer.issue(provider, email, authContext.userId());
-        String uploadUrl = SecureLinkIssuer.uploadPath(inv);
-
-        Organization org = organizationRepository.findById(orgId).orElse(null);
         List<ProviderDocumentRow> missing = support.documentRows(provider).stream()
                 .filter(r -> "missing".equals(r.status()) || "expired".equals(r.status())).toList();
-        Map<String, String> vars = Map.of(
-                "provider_first_name", provider.getFirstName(),
-                "provider_last_name", provider.getLastName(),
-                "provider_name", ((provider.getFirstName() == null ? "" : provider.getFirstName()) + " "
-                        + (provider.getLastName() == null ? "" : provider.getLastName())).trim(),
-                "pending_document_count", String.valueOf(missing.size()),
-                "missing_document_list", missing.isEmpty() ? "(none)"
-                        : String.join("\n", missing.stream().map(r -> "- " + r.label()).toList()),
-                "pin", inv.getPin(),
-                // emails need the full address; the API response keeps the relative path for the admin app
-                "upload_link", mailService.publicUrl() + uploadUrl,
-                "link_expires", inv.getExpiresAt().format(EXPIRY_FMT),
-                "organization_name", org == null ? "" : org.getName());
-        // Provider Link Templates: the template the organization chose ("Use this template")
-        EmailTemplate tpl = mailTemplateService.resolve(orgId, MailTemplateService.PROVIDER_LINK).orElse(null);
-        String subject = tpl == null ? "Please complete your credentialing profile" : MailTemplateService.render(tpl.getSubject(), vars);
+        return sendLinkEmail(provider, inv, email, MailTemplateService.PROVIDER_LINK, null, missing);
+    }
+
+    /** Emails a secure link (Send Link / Request Documents) with the organization's template of that type. */
+    private ProviderInviteResponse sendLinkEmail(Provider provider, ProviderInvite inv, String email, String type,
+                                                 Long templateId, List<ProviderDocumentRow> docs) {
+        Long orgId = provider.getOrgId();
+        String uploadUrl = SecureLinkIssuer.uploadPath(inv);
+        Organization org = organizationRepository.findById(orgId).orElse(null);
+        String docList = docs.isEmpty() ? "(none)" : String.join("\n", docs.stream().map(r -> "- " + r.label()).toList());
+        Map<String, String> vars = new java.util.HashMap<>();
+        vars.put("provider_first_name", provider.getFirstName());
+        vars.put("provider_last_name", provider.getLastName());
+        vars.put("provider_name", fullName(provider));
+        vars.put("pending_document_count", String.valueOf(docs.size()));
+        vars.put("missing_document_list", docList);
+        vars.put("requested_document_list", docList);
+        vars.put("pin", inv.getPin());
+        // emails need the full address; the API response keeps the relative path for the admin app
+        vars.put("upload_link", mailService.publicUrl() + uploadUrl);
+        vars.put("link_expires", inv.getExpiresAt().format(EXPIRY_FMT));
+        vars.put("organization_name", org == null ? "" : org.getName());
+        // the chosen template (when it belongs to this type and organization), else the one in use
+        EmailTemplate tpl = null;
+        if (templateId != null) {
+            tpl = mailTemplateService.visible(orgId, type).stream().filter(t -> t.getId().equals(templateId)).findFirst()
+                    .orElseThrow(() -> BadRequestException.onField("templateId", "Choose one of the listed templates"));
+        }
+        if (tpl == null) tpl = mailTemplateService.resolve(orgId, type).orElse(null);
+        boolean docRequest = MailTemplateService.DOCUMENT_REQUEST.equals(type);
+        String subject = tpl == null
+                ? (docRequest ? "Documents needed for your credentialing" : "Please complete your credentialing profile")
+                : MailTemplateService.render(tpl.getSubject(), vars);
         String body = tpl == null || tpl.getBody() == null
-                ? "Hi " + provider.getFirstName() + ",\n\nPlease complete your credentialing profile and upload your documents.\n\n"
-                  + "Secure Access PIN: " + inv.getPin() + "\n\nOpen your secure link: " + vars.get("upload_link")
+                ? "Hi " + provider.getFirstName() + ",\n\n"
+                  + (docRequest ? "Please upload these documents:\n" + docList : "Please complete your credentialing profile and upload your documents.")
+                  + "\n\nSecure Access PIN: " + inv.getPin() + "\n\nOpen your secure link: " + vars.get("upload_link")
                   + "\n\nLink expires: " + vars.get("link_expires")
                 : MailTemplateService.render(tpl.getBody(), vars);
         // the provider can't open the link without these: added when a template leaves them out
@@ -165,11 +181,103 @@ public class ProviderInviteService {
             case "failed" -> " could not be emailed to ";
             default -> " queued to ";
         };
-        notificationService.notifyOrg(orgId, "Secure link sent",
-                "Upload link for " + fullName(provider) + how + email + ".", "Send",
+        notificationService.notifyOrg(orgId, docRequest ? "Documents requested" : "Secure link sent",
+                (docRequest ? "Document request for " : "Upload link for ") + fullName(provider) + how + email + ".", "Send",
                 mail.sent() || "queued".equals(mail.status()) ? NotificationService.INFO : NotificationService.WARN);
         return new ProviderInviteResponse(inv.getId(), provider.getId(), fullName(provider), email, inv.getPin(),
                 inv.getExpiresAt(), uploadUrl, mail.status(), mail.error());
+    }
+
+    // ---------- Request Documents / Resend ----------
+
+    /** Provider page → Request Documents: a link that asks only for the chosen missing / expired documents. */
+    @Transactional
+    public ProviderInviteResponse requestDocuments(Long providerId, DocumentRequestBody req) {
+        permissionService.require("provider", "update");
+        authContext.requireStaff();
+        Provider provider = support.loadForStaff(providerId);
+        if (isDraftInvitee(provider)) {
+            throw new ConflictException(fullName(provider) + " hasn't completed their profile yet. Resend the invitation instead.");
+        }
+        if (blankToNull(provider.getEmail()) == null) throw new BadRequestException("Add the provider's email first");
+        List<ProviderDocumentRow> open = support.documentRows(provider).stream()
+                .filter(r -> "missing".equals(r.status()) || "expired".equals(r.status())).toList();
+        java.util.Set<String> wanted = new java.util.LinkedHashSet<>(req.docTypes());
+        List<ProviderDocumentRow> chosen = open.stream().filter(r -> wanted.contains(r.docType())).toList();
+        if (chosen.size() != wanted.size()) {
+            throw BadRequestException.onField("docTypes", "Choose only documents that are missing or expired");
+        }
+        ProviderInvite inv = linkIssuer.issue(provider, provider.getEmail(), authContext.userId(), "documents",
+                chosen.stream().map(ProviderDocumentRow::docType).toList());
+        return sendLinkEmail(provider, inv, provider.getEmail(), MailTemplateService.DOCUMENT_REQUEST, req.templateId(), chosen);
+    }
+
+    /** Secure Links → Resend: a new link + PIN for the same purpose; the earlier links stop working. */
+    @Transactional
+    public ProviderInviteResponse resend(Long inviteId) {
+        permissionService.require("provider", "update");
+        authContext.requireStaff();
+        ProviderInvite inv = inviteRepository.findByIdAndOrgId(inviteId, authContext.orgId())
+                .orElseThrow(() -> new NotFoundException("Secure link not found"));
+        return resendFor(support.loadForStaff(inv.getProviderId()), inv);
+    }
+
+    /** Provider page → Resend Invitation: resends the provider's latest link. */
+    @Transactional
+    public ProviderInviteResponse resendForProvider(Long providerId) {
+        permissionService.require("provider", "update");
+        authContext.requireStaff();
+        Provider provider = support.loadForStaff(providerId);
+        ProviderInvite last = inviteRepository.findByProviderIdOrderByCreatedAtDesc(providerId).stream().findFirst()
+                .orElseThrow(() -> new BadRequestException("No invitation was sent to this provider yet"));
+        return resendFor(provider, last);
+    }
+
+    private ProviderInviteResponse resendFor(Provider provider, ProviderInvite last) {
+        if ("documents".equals(last.getPurpose())) {
+            java.util.Set<String> requested = requestedTypes(last);
+            List<ProviderDocumentRow> still = support.documentRows(provider).stream()
+                    .filter(r -> requested.contains(r.docType()))
+                    .filter(r -> "missing".equals(r.status()) || "expired".equals(r.status())).toList();
+            if (still.isEmpty()) {
+                throw new ConflictException(fullName(provider) + " has already submitted all the requested documents. No email was sent.");
+            }
+            ProviderInvite inv = linkIssuer.issue(provider, last.getEmail(), authContext.userId(), "documents",
+                    still.stream().map(ProviderDocumentRow::docType).toList());
+            return sendLinkEmail(provider, inv, last.getEmail(), MailTemplateService.DOCUMENT_REQUEST, null, still);
+        }
+        // the invitation: only while the provider hasn't completed their profile
+        if (!isDraftInvitee(provider)) {
+            throw new ConflictException(fullName(provider) + " has already completed their profile. No email was sent.");
+        }
+        return createInvite(provider, last.getEmail());
+    }
+
+    /** Invited (Send Link) and hasn't submitted the profile yet. */
+    private boolean isDraftInvitee(Provider p) {
+        boolean submitted = inviteRepository.findByProviderIdOrderByCreatedAtDesc(p.getId()).stream()
+                .anyMatch(i -> !"documents".equals(i.getPurpose()) && i.getSubmittedAt() != null);
+        return !submitted && ("draft".equals(p.getStatus()) || "pending".equals(p.getStatus()))
+                && userRepository.findByProviderId(p.getId()).isEmpty();
+    }
+
+    private static java.util.Set<String> requestedTypes(ProviderInvite inv) {
+        if (inv.getRequestedDocTypes() == null || inv.getRequestedDocTypes().isBlank()) return java.util.Set.of();
+        return new java.util.LinkedHashSet<>(java.util.Arrays.asList(inv.getRequestedDocTypes().split(",")));
+    }
+
+    /** Document request portal → Submit Documents: closes the link (the uploads wait for review). */
+    @Transactional(noRollbackFor = ApiException.class)
+    public PublicLinkStatus finishDocuments(String token, String pin) {
+        ProviderInvite inv = checkInvite(token, pin);
+        if (!"documents".equals(inv.getPurpose())) throw new BadRequestException("Submit your profile to finish");
+        Provider provider = providerRepository.findById(inv.getProviderId())
+                .orElseThrow(() -> new NotFoundException("This link is no longer valid"));
+        inv.setStatus("submitted");
+        inv.setSubmittedAt(LocalDateTime.now());
+        notificationService.notifyOrg(provider.getOrgId(), "Requested documents submitted",
+                fullName(provider) + " submitted the requested documents through a secure link.", "FileCheck", NotificationService.SUCCESS);
+        return status(token);
     }
 
     private static String render(String text, Map<String, String> vars) {
@@ -199,7 +307,7 @@ public class ProviderInviteService {
                     return new SecureLinkItem(inv.getId(), inv.getProviderId(), p == null ? inv.getEmail() : fullName(p),
                             inv.getEmail(), inv.getPin(), linkStatus(inv, now), attempts(inv), maxAttempts(inv),
                             "/admin/upload/" + inv.getToken(), inv.getCreatedAt(), inv.getExpiresAt(), inv.getAccessedAt(),
-                            inv.getSubmittedAt());
+                            inv.getSubmittedAt(), inv.getPurpose());
                 })
                 .toList();
     }
@@ -247,7 +355,7 @@ public class ProviderInviteService {
         String firstName = providerRepository.findById(inv.getProviderId()).map(Provider::getFirstName).orElse(null);
         String orgName = organizationRepository.findById(inv.getOrgId()).map(Organization::getName).orElse(null);
         return new PublicLinkStatus(state, firstName, orgName, inv.getExpiresAt(),
-                Math.max(0, maxAttempts(inv) - attempts(inv)), inv.getSubmittedAt());
+                Math.max(0, maxAttempts(inv) - attempts(inv)), inv.getSubmittedAt(), inv.getPurpose());
     }
 
     @Transactional(noRollbackFor = ApiException.class)
@@ -265,15 +373,24 @@ public class ProviderInviteService {
                 provider.getStatus(),
                 provider.getClientId() == null ? null : clientRepository.findById(provider.getClientId()).map(com.zmartcredential.entity.Client::getName).orElse(null),
                 provider.getPracticeId() == null ? null : practiceRepository.findById(provider.getPracticeId()).map(com.zmartcredential.entity.Practice::getName).orElse(null),
-                provider.getLocationId() == null ? null : locationRepository.findById(provider.getLocationId()).map(com.zmartcredential.entity.Location::getName).orElse(null));
-        return new PublicInviteInfo(fullName(provider), orgName, inv.getEmail(), missing(provider), inv.getExpiresAt(),
-                provider.getFirstName(), provider.getLastName(), profile);
+                provider.getLocationId() == null ? null : locationRepository.findById(provider.getLocationId()).map(com.zmartcredential.entity.Location::getName).orElse(null),
+                extraMapper.view(provider));
+        List<PublicMissingDocument> docs = missing(provider);
+        if ("documents".equals(inv.getPurpose())) {
+            // a document request: only the requested documents, each one needed
+            java.util.Set<String> requested = requestedTypes(inv);
+            docs = docs.stream().filter(d -> requested.contains(d.docType()))
+                    .map(d -> new PublicMissingDocument(d.docType(), d.label(), true, d.expires(), d.status())).toList();
+        }
+        return new PublicInviteInfo(fullName(provider), orgName, inv.getEmail(), docs, inv.getExpiresAt(),
+                provider.getFirstName(), provider.getLastName(), profile, inv.getPurpose());
     }
 
     /** Portal "Review & Submit": saves the provider's professional details and closes the link. */
     @Transactional(noRollbackFor = ApiException.class)
     public PublicLinkStatus submitProfile(String token, PublicProfileRequest req) {
         ProviderInvite inv = checkInvite(token, req.pin());
+        if ("documents".equals(inv.getPurpose())) throw new BadRequestException("This link is for uploading documents only");
         Provider p = providerRepository.findById(inv.getProviderId())
                 .orElseThrow(() -> new NotFoundException("This link is no longer valid"));
         String npi = req.npi().trim();
@@ -313,6 +430,7 @@ public class ProviderInviteService {
         String dea = blankToNull(req.deaNumber());
         p.setDeaNumber(dea == null ? null : dea.toUpperCase());
         p.setDeaExpires(req.deaExpires());
+        extraMapper.apply(p, req.extra());
         if ("draft".equals(p.getStatus()) || "pending".equals(p.getStatus())) p.setStatus("active");
         // the provider's sign-in: their email + the password they chose (when they have no login yet)
         if (userRepository.findByProviderId(p.getId()).isEmpty()) {
@@ -384,7 +502,9 @@ public class ProviderInviteService {
             throw new BadRequestException("This link has been replaced by a newer one. Please use the latest email.");
         }
         if ("submitted".equals(inv.getStatus())) {
-            throw new BadRequestException("This profile has already been submitted. Contact your credentialing team for changes.");
+            throw new BadRequestException("documents".equals(inv.getPurpose())
+                    ? "These documents have already been submitted. Contact your credentialing team for changes."
+                    : "This profile has already been submitted. Contact your credentialing team for changes.");
         }
         if (inv.getExpiresAt().isBefore(LocalDateTime.now())) {
             if (!"expired".equals(inv.getStatus())) inv.setStatus("expired");

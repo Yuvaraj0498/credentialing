@@ -1,7 +1,7 @@
 // Response / request types for the organization module (docs/api/organization.md).
 
-export type LocationType = "Primary" | "Satellite" | "Hospital" | "Admin Office";
-export const LOCATION_TYPES: LocationType[] = ["Primary", "Satellite", "Hospital", "Admin Office"];
+/** Master Data → Location Type (Primary, Satellite, Hospital, Admin Office and any added there) */
+export type LocationType = string;
 
 export interface Organization {
   id: number;

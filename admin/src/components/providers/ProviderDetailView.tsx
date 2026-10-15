@@ -18,10 +18,12 @@ import { AssignProviderToLocationModal } from "@/components/modals/AssignProvide
 import { AppointmentLetterModal } from "@/components/modals/AppointmentLetterModal";
 import { FollowUpWidget, TimeTrackerWidget } from "@/components/widgets/ActivityWidgets";
 import { ProviderEditModal } from "@/components/modals/ProviderEditModal";
+import { RequestDocumentsModal } from "@/components/modals/RequestDocumentsModal";
+import { ResultAlert, mailResult } from "@/components/ResultAlert";
 import { ProviderInfo } from "./ProviderInfo";
 import { ProviderOverview } from "./ProviderOverview";
 import { providerStatusLabel, StatusDropdown } from "./shared";
-import type { ProviderDetail, ProviderStatus } from "@/types/providers";
+import type { InviteResponse, ProviderDetail, ProviderStatus } from "@/types/providers";
 
 type Tab = "overview" | "enrollments" | "activity" | "info";
 const TABS: Tab[] = ["overview", "enrollments", "activity", "info"];
@@ -40,8 +42,27 @@ export function ProviderDetailView({ providerId }: { providerId: number }) {
   useTopic("providers", reload);
   useTopic("enrollments", reload);
 
-  const [modal, setModal] = useState<null | "letter" | "assign" | "edit">(null);
+  const [modal, setModal] = useState<null | "letter" | "assign" | "edit" | "request">(null);
   const [statusBusy, setStatusBusy] = useState(false);
+  const [alert, setAlert] = useState<ReturnType<typeof mailResult> | null>(null);
+  const [resending, setResending] = useState(false);
+
+  const showMail = (res: InviteResponse) => {
+    setAlert(mailResult(res));
+    publish("providers");
+    publish("notifications");
+  };
+  /** Resend Invitation: a new link + PIN (the old ones stop working); refused once the profile is completed. */
+  const resendInvite = async () => {
+    setResending(true);
+    try {
+      showMail(await api.post<InviteResponse>("/providers/" + providerId + "/invites/resend"));
+    } catch (e) {
+      setAlert({ type: "error", title: "Failed to send email", message: errorMessage(e) });
+    } finally {
+      setResending(false);
+    }
+  };
 
   const setTab = (t: Tab) => router.replace("/providers/" + providerId + (t === "overview" ? "" : "?tab=" + t), { scroll: false });
 
@@ -62,6 +83,9 @@ export function ProviderDetailView({ providerId }: { providerId: number }) {
 
   const canUpdate = can("update", "provider");
   const canUpload = can("create", "document");
+  // invited through Send Link and hasn't completed the profile yet
+  const invitedOnly = !!provider && provider.source === "invite" && !provider.hasLogin && (provider.status === "draft" || (provider.status as string) === "pending");
+  const openDocs = provider ? provider.documents.filter((d) => d.status === "missing" || d.status === "expired").length : 0;
 
   return (
     <AsyncBoundary loading={loading && !provider} error={error} onRetry={reload}>
@@ -84,6 +108,20 @@ export function ProviderDetailView({ providerId }: { providerId: number }) {
               )}
               {canUpdate && (
                 <>
+                  {invitedOnly ? (
+                    <button onClick={resendInvite} className="btn btn-secondary" disabled={resending}>
+                      {resending ? <span className="loader" style={{ width: 13, height: 13 }} /> : <Icon name="Send" size={14} />} Resend Invitation
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setModal("request")}
+                      className="btn btn-secondary"
+                      disabled={openDocs === 0 || !provider.email}
+                      title={!provider.email ? "Add the provider's email first" : openDocs === 0 ? "No missing or expired documents" : "Email the provider a link to upload the missing documents"}
+                    >
+                      <Icon name="FileQuestion" size={14} /> Request Documents
+                    </button>
+                  )}
                   <button onClick={() => setModal("letter")} className="btn btn-secondary"><Icon name="FileText" size={14} /> Generate Letter</button>
                   <button onClick={() => setModal("assign")} className="btn btn-secondary"><Icon name="MapPin" size={14} /> Assign Location</button>
                   <button onClick={() => setModal("edit")} className="btn btn-secondary"><Icon name="Pencil" size={14} /> Edit Provider</button>
@@ -141,6 +179,17 @@ export function ProviderDetailView({ providerId }: { providerId: number }) {
           {tab === "info" && <ProviderInfo provider={provider} />}
 
           {modal === "letter" && <AppointmentLetterModal provider={provider} onClose={() => setModal(null)} />}
+          {modal === "request" && (
+            <RequestDocumentsModal
+              provider={provider}
+              onClose={() => setModal(null)}
+              onSent={(res) => {
+                setModal(null);
+                showMail(res);
+              }}
+            />
+          )}
+          {alert && <ResultAlert {...alert} onClose={() => setAlert(null)} />}
           {modal === "assign" && (
             <AssignProviderToLocationModal
               provider={provider}

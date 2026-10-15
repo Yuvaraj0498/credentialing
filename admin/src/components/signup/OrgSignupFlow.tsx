@@ -16,7 +16,7 @@ import { useAuth } from "@/stores/auth";
 import { useAsync, useDebounced } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
 import type { AuthResponse } from "@/types";
-import { ORG_TYPES } from "@/types/admin";
+import { useMasterList, withCurrent } from "@/lib/masterLists";
 import { calcSubscriptionTotal, detectCardBrand, EMAIL_RE, FALLBACK_STATES, isUnlimited, loadPackages, loadStates, overCap, type Package, type StateOption } from "@/types/signup";
 
 interface OrgSignupData {
@@ -54,6 +54,7 @@ export interface EmbeddedSignup {
 }
 
 export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) {
+  const orgTypes = useMasterList("org_type", { isPublic: true });
   const router = useRouter();
   const { completeAuth } = useAuth();
   const toast = useToast();
@@ -256,7 +257,7 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
                   <div>
                     <label className="label">Organization Type</label>
                     <select value={data.orgType} onChange={(e) => set("orgType", e.target.value)} className="input">
-                      {ORG_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+                      {withCurrent(orgTypes, data.orgType).map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
                     </select>
                     <Err msg={errors.orgType} />
                   </div>

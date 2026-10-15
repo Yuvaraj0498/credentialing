@@ -12,7 +12,7 @@ import { matchesSearch } from "@/lib/search";
 import { cleanSearch } from "@/lib/utils";
 import { useToast } from "@/stores/toast";
 
-export type MailTemplateType = "provider_link" | "enrollment_approved";
+export type MailTemplateType = "provider_link" | "enrollment_approved" | "document_request";
 
 interface MailTemplateItem {
   id: number;
@@ -44,6 +44,12 @@ const COPY: Record<MailTemplateType, { title: string; subtitle: string; used: st
     used: "Send Link emails use this template",
     icon: "MailPlus",
   },
+  document_request: {
+    title: "Document Request Templates",
+    subtitle: "The email a provider receives when you request missing documents from their page (Request Documents).",
+    used: "Document request emails use this template",
+    icon: "FileQuestion",
+  },
   enrollment_approved: {
     title: "Enrollment Mail Templates",
     subtitle: "The email a provider receives when one of their enrollments is approved.",
@@ -60,6 +66,7 @@ const SAMPLE: Record<string, string> = {
   pin: "482913",
   link_expires: "10/19/2026",
   missing_document_list: "- Medical License\n- DEA Certificate",
+  requested_document_list: "- Medical License\n- DEA Certificate",
   organization_name: "Your Organization",
   payer_name: "BCBS TX",
   effective_date: "11/01/2026",

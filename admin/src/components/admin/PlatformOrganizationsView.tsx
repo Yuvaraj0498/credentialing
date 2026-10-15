@@ -20,9 +20,12 @@ import { useToast } from "@/stores/toast";
 import { fmtDate, cleanSearch } from "@/lib/utils";
 import { ROLE_LABEL, US_STATES } from "@/lib/constants";
 import { loadPackages, type Package } from "@/types/signup";
-import { ORG_TYPES, orgTypeLabel, type AdminOrg, type AdminOrgCreate } from "@/types/admin";
+import { orgTypeLabel, type AdminOrg, type AdminOrgCreate } from "@/types/admin";
+import { useMasterList, withCurrent } from "@/lib/masterLists";
 
 export function PlatformOrganizationsView() {
+  const orgTypes = useMasterList("org_type");
+  const typeLabel = (id: string | null) => orgTypes.find((t) => t.value === id)?.label || orgTypeLabel(id);
   const user = useUser();
   const toast = useToast();
   const allowed = user.role === "platform_admin";
@@ -133,7 +136,7 @@ export function PlatformOrganizationsView() {
                                 {current && <Pill type="accent">Current</Pill>}
                               </div>
                               <div className="text-[10px] text-ink-light">
-                                {orgTypeLabel(o.orgType)}
+                                {typeLabel(o.orgType)}
                                 {o.city || o.state ? " · " + [o.city, o.state].filter(Boolean).join(", ") : ""}
                                 {o.selfSignup ? " · Self sign-up" : ""}
                               </div>
@@ -232,6 +235,7 @@ interface NewOrgForm {
 const serverKey = (k: string) => (k.startsWith("admin.") ? "admin" + k.charAt(6).toUpperCase() + k.slice(7) : k);
 
 function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onCreated: (o: AdminOrg) => void }) {
+  const orgTypes = useMasterList("org_type");
   const packages = useAsync<Package[]>(loadPackages, []);
   const [form, setForm] = useState<NewOrgForm>({
     name: "", orgType: "physician_group", taxId: "", website: "", address: "", city: "", state: "", zip: "", phone: "", email: "",
@@ -311,7 +315,7 @@ function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Field label="Organization Type" error={errors.orgType}>
             <select value={form.orgType} onChange={(e) => set("orgType", e.target.value)} className="input">
-              {ORG_TYPES.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+              {withCurrent(orgTypes, form.orgType).map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
             </select>
           </Field>
           <Field label="Tax ID (EIN)" error={errors.taxId}>

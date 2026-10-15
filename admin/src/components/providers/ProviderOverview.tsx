@@ -56,7 +56,6 @@ const PSV_CHECKS: { source: VerificationSource; icon: string; iconColor: string;
 export function ProviderOverview({ provider, onChanged }: { provider: ProviderDetail; onChanged: () => void }) {
   const { can } = useAuth();
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
-  const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
   const extras = useAsync(() => api.get<AdditionalDocument[]>("/providers/" + provider.id + "/additional-documents"), [provider.id]);
   const extraDocs = (extras.data || []).map(extraRow);
   const docs = [...provider.documents, ...extraDocs];
@@ -66,13 +65,6 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
     extras.reload();
   };
 
-  const toggle = (id: string) =>
-    setExpandedDocs((p) => {
-      const n = new Set(p);
-      if (n.has(id)) n.delete(id);
-      else n.add(id);
-      return n;
-    });
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -104,7 +96,6 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
             <tbody>
               {docs.map((doc, i) => {
                 const key = rowKey(doc);
-                const isExpanded = expandedDocs.has(key);
                 const hasFile = doc.hasFile;
                 const expDays = doc.daysUntilExpiry;
                 const expClass = expDays !== null && expDays < 0 ? "text-danger" : "text-ink-light";
@@ -120,10 +111,9 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
                         </td>
                       </tr>
                     )}
-                    <tr className={hasFile ? "cursor-pointer" : ""} onClick={() => hasFile && toggle(key)} style={selectedDocId === key ? { background: "var(--accent-soft)" } : undefined}>
+                    <tr className={hasFile ? "cursor-pointer" : ""} onClick={() => hasFile && setSelectedDocId(key)} style={selectedDocId === key ? { background: "var(--accent-soft)" } : undefined}>
                       <td>
                         <div className="flex items-center gap-2">
-                          {hasFile ? <Icon name={isExpanded ? "ChevronDown" : "ChevronRight"} size={13} className="text-ink-faint" /> : <span style={{ width: 13 }}></span>}
                           <span className="font-medium">{doc.label}</span>
                         </div>
                       </td>
@@ -152,43 +142,6 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
                         </button>
                       </td>
                     </tr>
-                    {isExpanded && hasFile && (
-                      <tr className="no-hover">
-                        <td colSpan={5} style={{ background: "var(--bg-soft)", padding: 0 }}>
-                          <div className="px-12 py-3 flex items-center gap-3">
-                            <Icon name="FileText" size={14} className="text-accent" />
-                            <div className="flex-1 min-w-0">
-                              <button
-                                className="text-accent text-sm font-medium hover:underline truncate max-w-full text-left"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedDocId(key);
-                                }}
-                              >
-                                {doc.fileName}
-                              </button>
-                              <div className="text-[10px] text-ink-faint mt-0.5">Uploaded {fmtDateShort(doc.uploadedAt)}</div>
-                            </div>
-                            {doc.expiresAt && <span className="text-xs text-ink-light font-mono">{fmtDateShort(doc.expiresAt)}</span>}
-                            <DocStatusBadge status={doc.status} />
-                            <div className="flex gap-1">
-                              <button
-                                className="btn-ghost p-1"
-                                title="View details"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setSelectedDocId(key);
-                                }}
-                              >
-                                <Icon name="Eye" size={13} />
-                              </button>
-                              <ViewFileButton doc={doc} />
-                              <DownloadButton doc={doc} />
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
-                    )}
                   </Fragment>
                 );
               })}

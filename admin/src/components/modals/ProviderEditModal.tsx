@@ -16,7 +16,7 @@ import type { ProviderDetail } from "@/types/providers";
 export function ProviderEditModal({ provider, onSaved, onClose }: { provider: ProviderDetail; onSaved: (p: ProviderDetail) => void; onClose: () => void }) {
   const org = useOrgStructure();
   return (
-    <Modal title={"Edit " + (provider.firstName || "") + " " + (provider.lastName || "")} subtitle={"NPI " + (provider.npi || "")} onClose={onClose} maxWidth={680}>
+    <Modal title={"Edit " + (provider.firstName || "") + " " + (provider.lastName || "")} subtitle={"NPI " + (provider.npi || "")} onClose={onClose} maxWidth={880}>
       {org.error ? (
         <div className="space-y-3">
           <AlertBox type="danger">{org.error}</AlertBox>

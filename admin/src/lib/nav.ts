@@ -26,6 +26,7 @@ export const MAIN_NAV: NavItem[] = [
   { href: "/reports", label: "Reports", icon: "BarChart3" },
   { href: "/email", label: "Email", icon: "Mail" },
   { href: "/custom-templates", label: "Custom Templates", icon: "Mails", roles: ["org_admin"] },
+  { href: "/master-data", label: "Master Data", icon: "ListChecks", roles: ["org_admin"] },
   { href: "/payers", label: "Payers", icon: "CreditCard" },
   { href: "/payer-submissions", label: "Payer Submissions", icon: "Send" },
   { href: "/credential-vault", label: "Credential Vault", icon: "KeyRound" },
@@ -74,7 +75,8 @@ export const SUPER_NAV: NavItem[] = [
   { href: "/organizations", label: "Organizations", icon: "Building2", roles: ["platform_admin"] },
   { href: "/all-providers", label: "Providers", icon: "Users", roles: ["platform_admin"] },
   { href: "/all-payers", label: "Payers", icon: "CreditCard", roles: ["platform_admin"] },
+  { href: "/master-data", label: "Master Data", icon: "ListChecks", roles: ["platform_admin"] },
 ];
 
 /** Routes the super admin may open; everything else redirects to /dashboard. */
-export const SUPER_ROUTES = ["/dashboard", "/create-admin", "/user-roles", "/organizations", "/all-providers", "/all-payers"];
+export const SUPER_ROUTES = ["/dashboard", "/create-admin", "/user-roles", "/organizations", "/all-providers", "/all-payers", "/master-data"];

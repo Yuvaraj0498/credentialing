@@ -55,7 +55,9 @@ public final class ProviderDtos {
             /* Credentials block: whether a CAQH password is stored (never the password itself), PECOS access */
             boolean hasCaqhPassword, Boolean pecosAccessGranted, String pecosUsername,
             /* the provider has a sign-in (username = their email) */
-            boolean hasLogin) {
+            boolean hasLogin,
+            /* more provider details (group, IDs, home / practice / billing) */
+            ProviderExtraDtos.ProviderExtraView extra) {
     }
 
     /** Edit Provider → Change Password: the provider's sign-in password (8-100 characters). */
@@ -97,7 +99,9 @@ public final class ProviderDtos {
             Boolean pecosAccessGranted,
             @Size(max = 100, message = "At most 100 characters") String pecosUsername,
             /* the provider's status (defaults to draft) */
-            @Pattern(regexp = "^$|" + STATUS_REGEX, message = "Status must be draft, in_progress, active, on_hold or terminated") String status) {
+            @Pattern(regexp = "^$|" + STATUS_REGEX, message = "Status must be draft, in_progress, active, on_hold or terminated") String status,
+            /* more provider details (optional block) */
+            @jakarta.validation.Valid ProviderExtraDtos.ProviderExtraInput extra) {
     }
 
     /**
@@ -135,7 +139,9 @@ public final class ProviderDtos {
             /* blank or null keeps the stored password */
             @Size(max = 200, message = "At most 200 characters") String caqhPassword,
             Boolean pecosAccessGranted,
-            @Size(max = 100, message = "At most 100 characters") String pecosUsername) {
+            @Size(max = 100, message = "At most 100 characters") String pecosUsername,
+            /* more provider details (null keeps them) */
+            @jakarta.validation.Valid ProviderExtraDtos.ProviderExtraInput extra) {
     }
 
     public record ProviderStatusRequest(

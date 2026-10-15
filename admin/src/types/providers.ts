@@ -55,6 +55,47 @@ export interface DocumentRow {
   extra?: boolean;
 }
 
+/** More provider details (group, IDs, home / practice / billing); the SSN only as its last 4 digits. */
+export interface ProviderExtraView {
+  taxonomyCode: string | null;
+  groupName: string | null;
+  groupNpi: string | null;
+  taxId: string | null;
+  homeAddress: string | null;
+  homeCity: string | null;
+  homeState: string | null;
+  homeZip: string | null;
+  medicarePhone: string | null;
+  medicaidNumber: string | null;
+  medicarePtan: string | null;
+  drivingLicense: string | null;
+  practiceLegalName: string | null;
+  practiceDbaName: string | null;
+  practiceOwnerName: string | null;
+  practiceManagerName: string | null;
+  practiceManagerContact: string | null;
+  practiceAddress: string | null;
+  practiceCity: string | null;
+  practiceState: string | null;
+  practiceZip: string | null;
+  practicePhone: string | null;
+  practiceFax: string | null;
+  practiceEmail: string | null;
+  practiceStartDate: string | null;
+  officeHours: string | null;
+  billingAddress: string | null;
+  billingCity: string | null;
+  billingState: string | null;
+  billingZip: string | null;
+  billingPhone: string | null;
+  billingFax: string | null;
+  billingEmail: string | null;
+  billingContactPerson: string | null;
+  hasSsn: boolean;
+  ssnLast4: string | null;
+  hasPecosPassword: boolean;
+}
+
 export interface ProviderDetail {
   /** the provider has a sign-in (username = their email) */
   hasLogin?: boolean;
@@ -103,6 +144,7 @@ export interface ProviderDetail {
   documentProgress: DocProgress;
   enrollments: EnrollmentCounts;
   documents: DocumentRow[];
+  extra?: ProviderExtraView | null;
 }
 
 export interface ProviderListItem {
@@ -333,6 +375,8 @@ export interface PublicInviteInfo {
   firstName: string;
   lastName: string;
   profile: PublicProfile;
+  /** profile = Send Link (profile + documents); documents = Request Documents (only the requested documents) */
+  purpose?: "profile" | "documents";
 }
 
 /** Current provider values used to pre-fill the portal profile step. */
@@ -356,6 +400,7 @@ export interface PublicProfile {
   clientName?: string | null;
   practiceName?: string | null;
   locationName?: string | null;
+  extra?: ProviderExtraView | null;
 }
 
 /** GET /public/invites/{token}: link state before the PIN is entered. */
@@ -366,6 +411,7 @@ export interface PublicLinkStatus {
   expiresAt: string;
   attemptsRemaining: number;
   submittedAt: string | null;
+  purpose?: "profile" | "documents";
 }
 
 export interface PublicUploadResult {
@@ -391,4 +437,6 @@ export interface SecureLinkItem {
   expiresAt: string;
   accessedAt: string | null;
   submittedAt: string | null;
+  /** profile = invitation (Send Link); documents = document request */
+  purpose?: "profile" | "documents";
 }

@@ -15,4 +15,6 @@ public interface ProviderInviteRepository extends JpaRepository<ProviderInvite, 
 
     // providers module
     List<ProviderInvite> findByProviderIdAndStatusIn(Long providerId, java.util.Collection<String> statuses);
+
+    List<ProviderInvite> findByProviderIdOrderByCreatedAtDesc(Long providerId);
 }

@@ -146,6 +146,20 @@ public class ProviderController {
         return inviteService.invite(id, req);
     }
 
+    @Operation(summary = "Request missing / expired documents: emails a secure link that asks only for them")
+    @PostMapping("/{id:\\d+}/document-requests")
+    @ResponseStatus(HttpStatus.CREATED)
+    public ProviderInviteResponse requestDocuments(@PathVariable Long id,
+            @Valid @RequestBody com.zmartcredential.dto.provider.ProviderInviteDtos.DocumentRequestBody req) {
+        return inviteService.requestDocuments(id, req);
+    }
+
+    @Operation(summary = "Resend the provider's latest secure link (new link + PIN; the old ones stop working)")
+    @PostMapping("/{id:\\d+}/invites/resend")
+    public ProviderInviteResponse resendInvite(@PathVariable Long id) {
+        return inviteService.resendForProvider(id);
+    }
+
     @Operation(summary = "Create a draft provider and send them a secure upload link")
     @PostMapping("/invite-new")
     @ResponseStatus(HttpStatus.CREATED)

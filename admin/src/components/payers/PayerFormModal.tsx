@@ -1,5 +1,6 @@
 "use client";
 
+import { useMasterList, withCurrent } from "@/lib/masterLists";
 import { useRef, useState } from "react";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
@@ -10,7 +11,6 @@ import { ApiError, api, errorMessage } from "@/lib/api";
 import { useToast } from "@/stores/toast";
 import type { Payer } from "@/types/enrollments";
 
-export const CATEGORIES = ["Commercial", "Federal", "State Medicaid", "Medicaid MCO", "Behavioral Health"];
 export const INTEGRATIONS: { value: string; label: string }[] = [
   { value: "caqh", label: "CAQH" },
   { value: "availity", label: "Availity" },
@@ -44,6 +44,7 @@ const URL_RE = /^https?:\/\/[^\s/$.?#][^\s]*$/i;
  * organization can be enabled instead).
  */
 export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: { payer: Payer | null; mode?: "platform" | "org"; onClose: () => void; onSaved: () => void }) {
+  const categoryOptions = useMasterList("payer_category");
   const org = mode === "org";
   const [enableAsk, setEnableAsk] = useState<{ payerId: number; name: string } | null>(null);
   const [enabling, setEnabling] = useState(false);
@@ -71,7 +72,8 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
     setForm((f) => ({ ...f, [k]: v }));
     setErrors((e) => (e[k] ? { ...e, [k]: "" } : e));
   };
-  const categories = form.category && !CATEGORIES.includes(form.category) ? [form.category, ...CATEGORIES] : CATEGORIES;
+  // Master Data → Payer Category (the payer's current category stays selectable)
+  const categories = withCurrent(categoryOptions, form.category).map((o) => o.value);
 
   const pickImage = (file: File | undefined) => {
     if (!file) return;
