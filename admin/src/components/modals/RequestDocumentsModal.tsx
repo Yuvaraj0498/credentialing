@@ -2,32 +2,22 @@
 
 import { useState } from "react";
 import { DocStatusBadge } from "@/components/Pill";
-import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
 import { ApiError, api, errorMessage } from "@/lib/api";
-import { useAsync } from "@/lib/hooks";
 import { fmtDate } from "@/lib/utils";
 import type { InviteResponse, ProviderDetail } from "@/types/providers";
 
-interface TemplateList {
-  templates: { id: number; name: string; inUse: boolean }[];
-}
-
 /**
  * Provider page → Request Documents: emails the provider a secure link + PIN that asks only for the chosen
- * missing / expired documents (uploads arrive as Pending Review). The email uses a Document Request template.
+ * missing / expired documents (uploads arrive as Pending Review). The email uses the Document Request template chosen
+ * in Custom Templates ("Use this template").
  */
 export function RequestDocumentsModal({ provider, onClose, onSent }: { provider: ProviderDetail; onClose: () => void; onSent: (res: InviteResponse) => void }) {
   const open = provider.documents.filter((d) => d.status === "missing" || d.status === "expired");
   const [chosen, setChosen] = useState<Set<string>>(() => new Set(open.map((d) => d.docType)));
-  const templates = useAsync<TemplateList>(() => api.get<TemplateList>("/mail-templates", { type: "document_request" }), []);
-  const list = templates.data?.templates || [];
-  const [templateId, setTemplateId] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const inUse = list.find((t) => t.inUse);
-  const selectedTemplate = templateId || (inUse ? String(inUse.id) : "");
 
   const toggle = (docType: string) =>
     setChosen((s) => {
@@ -48,7 +38,6 @@ export function RequestDocumentsModal({ provider, onClose, onSent }: { provider:
     try {
       const res = await api.post<InviteResponse>("/providers/" + provider.id + "/document-requests", {
         docTypes: open.filter((d) => chosen.has(d.docType)).map((d) => d.docType),
-        templateId: selectedTemplate ? Number(selectedTemplate) : null,
       });
       onSent(res);
     } catch (err) {
@@ -89,18 +78,6 @@ export function RequestDocumentsModal({ provider, onClose, onSent }: { provider:
             ))}
           </div>
         </div>
-        {list.length > 0 && (
-          <Field label="Email Template">
-            <select value={selectedTemplate} onChange={(e) => setTemplateId(e.target.value)} className="input" aria-label="Email Template">
-              {list.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                  {t.inUse ? " (in use)" : ""}
-                </option>
-              ))}
-            </select>
-          </Field>
-        )}
         <div className="px-3 py-2 rounded-lg text-xs flex items-start gap-2" style={{ background: "var(--info-soft)", color: "#1d4ed8" }}>
           <Icon name="Info" size={13} className="mt-0.5 shrink-0" />
           <span>The provider opens the link, enters the PIN and uploads only these documents. Each upload waits for your review (Pending Review). Earlier links stop working.</span>

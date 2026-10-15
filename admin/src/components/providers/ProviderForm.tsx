@@ -324,18 +324,16 @@ export function ProviderForm({
           <Field label="NPI *" error={err("npi")}>
             <input value={form.npi} onChange={(e) => set("npi", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="10 digits" inputMode="numeric" />
           </Field>
-          <div className="sm:col-span-2">
-            <SpecialtyField
-              choice={form.specialty}
-              other={form.specialtyOther}
-              onChange={(c, o) => {
-                setForm((f) => ({ ...f, specialty: c, specialtyOther: o }));
-                setErrors((er) => ({ ...er, specialty: "", specialtyOther: "" }));
-              }}
-              error={err("specialty")}
-              otherError={err("specialtyOther")}
-            />
-          </div>
+          <SpecialtyField
+            choice={form.specialty}
+            other={form.specialtyOther}
+            onChange={(c, o) => {
+              setForm((f) => ({ ...f, specialty: c, specialtyOther: o }));
+              setErrors((er) => ({ ...er, specialty: "", specialtyOther: "" }));
+            }}
+            error={err("specialty")}
+            otherError={err("specialtyOther")}
+          />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Field label="Email *" error={err("email") || emailTaken}>
@@ -382,7 +380,7 @@ export function ProviderForm({
       </FormSection>
       <FormSection icon="Database" title="CAQH">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field label="CAQH ID" error={err("caqhId")}>
+          <Field label="CAQH Number" error={err("caqhId")}>
             <input
               value={form.caqhId}
               onChange={(e) => set("caqhId", e.target.value.replace(/\D/g, "").slice(0, 10))}
@@ -392,7 +390,7 @@ export function ProviderForm({
               disabled={lockCaqhId}
             />
           </Field>
-          <Field label="CAQH Username" error={err("caqhUsername")}>
+          <Field label="CAQH User ID" error={err("caqhUsername")}>
             <input value={form.caqhUsername} onChange={(e) => set("caqhUsername", e.target.value.replace(/\s/g, ""))} className="input font-mono" maxLength={100} autoComplete="off" />
           </Field>
           <Field label="CAQH Password" error={err("caqhPassword")} hint={hasStoredPassword ? "Leave blank to keep the saved password" : undefined}>

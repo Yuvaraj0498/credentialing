@@ -50,6 +50,17 @@ public class ProviderPublicInviteController {
         return inviteService.finishDocuments(token, req.pin());
     }
 
+    public record RemoveUploadRequest(@jakarta.validation.constraints.NotBlank String pin,
+                                      @jakarta.validation.constraints.NotBlank String docType) {
+    }
+
+    @Operation(summary = "Remove a file uploaded through this link (wrong file); the document is Missing again")
+    @PostMapping("/{token}/remove")
+    public List<com.zmartcredential.dto.provider.ProviderInviteDtos.PublicMissingDocument> remove(@PathVariable String token,
+            @Valid @RequestBody RemoveUploadRequest req) {
+        return inviteService.removeUpload(token, req.pin(), req.docType());
+    }
+
     @Operation(summary = "Verify the PIN of a secure upload link")
     @PostMapping("/{token}/verify")
     public PublicInviteInfo verify(@PathVariable String token, @Valid @RequestBody PublicInviteVerifyRequest req) {

@@ -248,22 +248,42 @@ public class ProviderInviteService {
         }
         // the invitation: only while the provider hasn't completed their profile
         if (!isDraftInvitee(provider)) {
-            throw new ConflictException(fullName(provider) + " has already completed their profile. No email was sent.");
+            throw new ConflictException(fullName(provider) + " already has an account (user ID and password). No email was sent.");
         }
         return createInvite(provider, last.getEmail());
     }
 
-    /** Invited (Send Link) and hasn't submitted the profile yet. */
+    /**
+     * Invited through Send Link and hasn't created their account yet: no sign-in (user ID + password). The status
+     * doesn't matter. Providers added manually have their sign-in from the start.
+     */
     private boolean isDraftInvitee(Provider p) {
-        boolean submitted = inviteRepository.findByProviderIdOrderByCreatedAtDesc(p.getId()).stream()
-                .anyMatch(i -> !"documents".equals(i.getPurpose()) && i.getSubmittedAt() != null);
-        return !submitted && ("draft".equals(p.getStatus()) || "pending".equals(p.getStatus()))
-                && userRepository.findByProviderId(p.getId()).isEmpty();
+        if (userRepository.findByProviderId(p.getId()).isPresent()) return false;
+        return inviteRepository.findByProviderIdOrderByCreatedAtDesc(p.getId()).stream()
+                .anyMatch(i -> !"documents".equals(i.getPurpose()));
     }
 
     private static java.util.Set<String> requestedTypes(ProviderInvite inv) {
         if (inv.getRequestedDocTypes() == null || inv.getRequestedDocTypes().isBlank()) return java.util.Set.of();
         return new java.util.LinkedHashSet<>(java.util.Arrays.asList(inv.getRequestedDocTypes().split(",")));
+    }
+
+    /**
+     * Secure link → Remove: takes back a file the provider uploaded through this link (wrong file); the document
+     * goes back to Missing and its expiration date is cleared.
+     */
+    @Transactional(noRollbackFor = ApiException.class)
+    public List<PublicMissingDocument> removeUpload(String token, String pin, String docType) {
+        ProviderInvite inv = checkInvite(token, pin);
+        Provider provider = providerRepository.findById(inv.getProviderId())
+                .orElseThrow(() -> new NotFoundException("This link is no longer valid"));
+        ProviderDocument d = documentService.providerDocument(provider, docType)
+                .orElseThrow(() -> new NotFoundException("Document not found"));
+        boolean viaThisLink = d.getStorageKey() != null && d.getUploadedBy() == null && "pending_review".equals(d.getStatus())
+                && d.getUploadedAt() != null && inv.getCreatedAt() != null && !d.getUploadedAt().isBefore(inv.getCreatedAt());
+        if (!viaThisLink) throw new BadRequestException("Only a file you uploaded through this link can be removed");
+        documentService.clearFile(d);
+        return missing(provider);
     }
 
     /** Document request portal → Submit Documents: closes the link (the uploads wait for review). */
@@ -380,7 +400,7 @@ public class ProviderInviteService {
             // a document request: only the requested documents, each one needed
             java.util.Set<String> requested = requestedTypes(inv);
             docs = docs.stream().filter(d -> requested.contains(d.docType()))
-                    .map(d -> new PublicMissingDocument(d.docType(), d.label(), true, d.expires(), d.status())).toList();
+                    .map(d -> new PublicMissingDocument(d.docType(), d.label(), false, d.expires(), d.status())).toList();
         }
         return new PublicInviteInfo(fullName(provider), orgName, inv.getEmail(), docs, inv.getExpiresAt(),
                 provider.getFirstName(), provider.getLastName(), profile, inv.getPurpose());

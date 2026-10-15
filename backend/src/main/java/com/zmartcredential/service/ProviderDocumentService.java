@@ -234,6 +234,17 @@ public class ProviderDocumentService {
         permissionService.require("document", "delete");
         authContext.requireStaff();
         ProviderDocument d = loadDoc(docId);
+        clearFile(d);
+        return support.toRow(d, support.docTypes().get(d.getDocType()));
+    }
+
+    /** The provider's checklist row of a document type. */
+    java.util.Optional<ProviderDocument> providerDocument(Provider provider, String docType) {
+        return documentRepository.findByProviderIdAndDocType(provider.getId(), docType);
+    }
+
+    /** The document goes back to Missing and its file is deleted (no permission checks: callers check access). */
+    void clearFile(ProviderDocument d) {
         String key = d.getStorageKey();
         d.setStorageKey(null);
         d.setFileName(null);
@@ -247,7 +258,6 @@ public class ProviderDocumentService {
         documentRepository.save(d);
         documentRepository.flush();
         fileStorageService.delete(key);
-        return support.toRow(d, support.docTypes().get(d.getDocType()));
     }
 
     /**

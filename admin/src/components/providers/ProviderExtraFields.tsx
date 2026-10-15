@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { PasswordInput } from "@/components/PasswordInput";
@@ -279,9 +279,8 @@ export function PracticeSection(p: SectionProps) {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <Text {...p} k="practiceManagerName" label="Practice Manager / Administrator Name" max={150} />
-        <Phone {...p} k="practiceManagerContact" label="Manager / Administrator Contact #" />
+        <Phone {...p} k="practiceManagerContact" label="Manager / Administrator Contact" />
       </div>
-      <Address {...p} prefix="practice" />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Phone {...p} k="practicePhone" label="Practice Ph.No" />
         <Phone {...p} k="practiceFax" label="Practice Fax Number" />
@@ -293,6 +292,7 @@ export function PracticeSection(p: SectionProps) {
         </Field>
         <Text {...p} k="officeHours" label="Office Hours" max={255} placeholder="e.g. Mon–Fri 8:00 AM – 5:00 PM" />
       </div>
+      <Address {...p} prefix="practice" />
     </FormSection>
   );
 }
@@ -301,13 +301,13 @@ export function PracticeSection(p: SectionProps) {
 export function BillingSection(p: SectionProps) {
   return (
     <FormSection icon="Receipt" title="Billing Information">
-      <Address {...p} prefix="billing" />
+      <Text {...p} k="billingContactPerson" label="Billing Contact Person" max={150} />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Phone {...p} k="billingPhone" label="Billing Ph.No" />
         <Phone {...p} k="billingFax" label="Billing Fax Number" />
         <Text {...p} k="billingEmail" label="Billing Email" max={255} />
       </div>
-      <Text {...p} k="billingContactPerson" label="Billing Contact Person" max={150} />
+      <Address {...p} prefix="billing" />
     </FormSection>
   );
 }
@@ -326,7 +326,89 @@ export function specialtyParts(stored: string | null | undefined, options: Maste
 /** The specialty to save. */
 export const specialtyValue = (choice: string, other: string) => (choice === OTHER ? other.trim() : choice);
 
-/** Specialty dropdown (Master Data) with "Other" last; Other opens a text box next to it. */
+/**
+ * A dropdown whose list is exactly as wide as the field (long names are cut with "…" and shown in full on hover);
+ * the browser's own select list can grow wider than the field.
+ */
+export function OptionSelect({
+  value,
+  options,
+  onChange,
+  placeholder = "— Select —",
+  ariaLabel,
+  invalid,
+}: {
+  value: string;
+  options: MasterOption[];
+  onChange: (v: string) => void;
+  placeholder?: string;
+  ariaLabel: string;
+  invalid?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const listRef = useRef<HTMLUListElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    // the chosen option in view
+    listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+  const current = options.find((o) => o.value === value);
+  const all = [{ value: "", label: placeholder }, ...options];
+  return (
+    <div ref={ref} className="relative" onKeyDown={(e) => e.key === "Escape" && setOpen(false)}>
+      <button
+        type="button"
+        className={"input text-left flex items-center justify-between gap-2" + (invalid ? " input-error" : "")}
+        aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((o) => !o)}
+        title={current?.label}
+      >
+        <span className={"truncate " + (current ? "text-ink" : "text-ink-light")}>{current?.label || placeholder}</span>
+        <Icon name="ChevronDown" size={14} className="shrink-0 text-ink-light" />
+      </button>
+      {open && (
+        <ul
+          ref={listRef}
+          role="listbox"
+          aria-label={ariaLabel}
+          className="absolute left-0 right-0 mt-1 rounded-lg border border-line py-1 overflow-y-auto"
+          style={{ zIndex: 60, maxHeight: 260, background: "var(--paper, #fff)", boxShadow: "0 10px 25px rgba(0,0,0,.12)" }}
+        >
+          {all.map((o) => {
+            const sel = o.value === value;
+            return (
+              <li
+                key={o.value || "__empty__"}
+                role="option"
+                aria-selected={sel}
+                title={o.label}
+                className="px-3 py-1.5 text-sm cursor-pointer truncate hover:bg-soft"
+                style={sel ? { background: "var(--accent-soft)", color: "var(--accent-strong, var(--accent))", fontWeight: 500 } : undefined}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  onChange(o.value);
+                  setOpen(false);
+                }}
+              >
+                {o.label}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/** Specialty dropdown (Master Data) with "Other" last; Other opens a text box in the next column. */
 export function SpecialtyField({
   choice,
   other,
@@ -344,24 +426,18 @@ export function SpecialtyField({
   publicToken?: string | null;
 }) {
   const options = useMasterList("specialty", publicToken !== undefined ? { publicToken } : undefined);
-  const list = withCurrent(options, choice && choice !== OTHER ? choice : null);
+  const list = [...withCurrent(options, choice && choice !== OTHER ? choice : null), { value: OTHER, label: "Other" }];
   return (
-    <div className={"grid gap-3 " + (choice === OTHER ? "grid-cols-2" : "grid-cols-1")}>
+    <>
       <Field label="Specialty *" error={error}>
-        <select value={choice} onChange={(e) => onChange(e.target.value, e.target.value === OTHER ? other : "")} className="input" aria-label="Specialty">
-          <option value="">— Select —</option>
-          {list.map((o) => (
-            <option key={o.value} value={o.value}>{o.label}</option>
-          ))}
-          <option value={OTHER}>Other</option>
-        </select>
+        <OptionSelect value={choice} options={list} onChange={(v) => onChange(v, v === OTHER ? other : "")} ariaLabel="Specialty" invalid={!!error} />
       </Field>
       {choice === OTHER && (
         <Field label="Other Specialty *" error={otherError}>
           <input value={other} onChange={(e) => onChange(OTHER, e.target.value)} className="input" maxLength={120} placeholder="Type the specialty" aria-label="Other Specialty" autoFocus />
         </Field>
       )}
-    </div>
+    </>
   );
 }
 

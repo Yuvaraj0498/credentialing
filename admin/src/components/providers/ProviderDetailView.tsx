@@ -83,8 +83,9 @@ export function ProviderDetailView({ providerId }: { providerId: number }) {
 
   const canUpdate = can("update", "provider");
   const canUpload = can("create", "document");
-  // invited through Send Link and hasn't completed the profile yet
-  const invitedOnly = !!provider && provider.source === "invite" && !provider.hasLogin && (provider.status === "draft" || (provider.status as string) === "pending");
+  // invited through Send Link and hasn't created the account yet (no user ID + password); the status doesn't matter.
+  // Providers added manually have their sign-in from the start: they only get Request Documents.
+  const invitedOnly = !!provider && provider.source === "invite" && !provider.hasLogin;
   const openDocs = provider ? provider.documents.filter((d) => d.status === "missing" || d.status === "expired").length : 0;
 
   return (

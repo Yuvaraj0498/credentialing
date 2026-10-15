@@ -410,7 +410,7 @@ export function SecureLinkPortal({ token }: { token: string }) {
                   ? "The requested documents are already with your credentialing team."
                   : "Your credentialing team already has every required document on file."
                 : docRequest
-                  ? "Upload the documents your credentialing team requested. " + uploadedCount + " of " + docs.length + " uploaded."
+                  ? "Upload the documents you have — each one is optional. " + uploadedCount + " of " + docs.length + " uploaded."
                   : "Upload each required document. " + uploadedRequired + " of " + requiredDocs.length + " required documents uploaded."}
             </p>
             <div className="space-y-2">
@@ -422,6 +422,13 @@ export function SecureLinkPortal({ token }: { token: string }) {
                   base={base}
                   pin={pin}
                   onUploaded={(u) => setUploaded((m) => ({ ...m, [doc.docType]: u }))}
+                  onRemoved={() =>
+                    setUploaded((m) => {
+                      const n = { ...m };
+                      delete n[doc.docType];
+                      return n;
+                    })
+                  }
                 />
               ))}
             </div>
@@ -572,16 +579,14 @@ function ProfileForm({
           <Field label="NPI" required error={errors.npi}>
             <input value={profile.npi} onChange={(e) => set("npi", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="10 digits" inputMode="numeric" />
           </Field>
-          <div className="sm:col-span-2">
-            <SpecialtyField
-              choice={profile.specialty}
-              other={profile.specialtyOther}
-              onChange={(c, o) => onChange({ ...profile, specialty: c, specialtyOther: o })}
-              error={errors.specialty}
-              otherError={errors.specialtyOther}
-              publicToken={token}
-            />
-          </div>
+          <SpecialtyField
+            choice={profile.specialty}
+            other={profile.specialtyOther}
+            onChange={(c, o) => onChange({ ...profile, specialty: c, specialtyOther: o })}
+            error={errors.specialty}
+            otherError={errors.specialtyOther}
+            publicToken={token}
+          />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Fixed label="Email" value={fixed.email} />
@@ -627,10 +632,10 @@ function ProfileForm({
       </FormSection>
       <FormSection icon="Database" title="CAQH">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field label="CAQH ID" error={errors.caqhId}>
+          <Field label="CAQH Number" error={errors.caqhId}>
             <input value={profile.caqhId} onChange={(e) => set("caqhId", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="8 digits" inputMode="numeric" />
           </Field>
-          <Field label="CAQH Username" error={errors.caqhUsername}>
+          <Field label="CAQH User ID" error={errors.caqhUsername}>
             <input value={profile.caqhUsername} onChange={(e) => set("caqhUsername", e.target.value.replace(/\s/g, ""))} className="input font-mono" maxLength={100} autoComplete="off" />
           </Field>
           <Field label="CAQH Password" error={errors.caqhPassword}>
@@ -675,7 +680,21 @@ function ProfileForm({
 }
 
 /** One requested document: pick a file (+ expiration for expiring documents) and it is uploaded right away. */
-function DocUploadRow({ doc, uploaded, base, pin, onUploaded }: { doc: PublicMissingDoc; uploaded?: Uploaded; base: string; pin: string; onUploaded: (u: Uploaded) => void }) {
+function DocUploadRow({
+  doc,
+  uploaded,
+  base,
+  pin,
+  onUploaded,
+  onRemoved,
+}: {
+  doc: PublicMissingDoc;
+  uploaded?: Uploaded;
+  base: string;
+  pin: string;
+  onUploaded: (u: Uploaded) => void;
+  onRemoved: () => void;
+}) {
   const ref = useRef<HTMLInputElement>(null);
   // the date stays with the uploaded file (also when coming back to this step)
   const [expiresAt, setExpiresAt] = useState(uploaded?.expiresAt || "");
@@ -690,6 +709,22 @@ function DocUploadRow({ doc, uploaded, base, pin, onUploaded }: { doc: PublicMis
     setDateTried(true);
     if (dateProblem) return;
     ref.current?.click();
+  };
+
+  /** Remove: the wrong file goes away and the document is missing again; its expiration date is cleared too. */
+  const remove = async () => {
+    setError("");
+    setBusy(true);
+    try {
+      await api.post(base + "/remove", { pin, docType: doc.docType });
+      setExpiresAt("");
+      setDateTried(false);
+      onRemoved();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
   const upload = async (file: File | undefined) => {
@@ -760,6 +795,11 @@ function DocUploadRow({ doc, uploaded, base, pin, onUploaded }: { doc: PublicMis
         <button className="btn btn-secondary flex-shrink-0" onClick={pick} disabled={busy}>
           {busy ? <span className="loader" /> : <Icon name="Upload" size={11} />} {uploaded ? "Replace" : "Upload"}
         </button>
+        {uploaded && (
+          <button className="btn btn-ghost flex-shrink-0 hover:text-red-600" onClick={remove} disabled={busy} aria-label={"Remove " + doc.label} title="Remove this file">
+            <Icon name="Trash2" size={11} /> Remove
+          </button>
+        )}
         <input
           ref={ref}
           type="file"
