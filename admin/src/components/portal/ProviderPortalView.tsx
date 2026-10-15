@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
 import { DocStatusBadge, StatusPill } from "@/components/Pill";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState, Loading } from "@/components/AsyncState";
@@ -14,7 +13,7 @@ import { fmtDate } from "@/lib/utils";
 import { useAsync } from "@/lib/hooks";
 import { DocumentUploadView } from "@/components/providers/DocumentUploadView";
 import { DownloadButton, MandatoryMark, ViewFileButton } from "@/components/providers/ProviderOverview";
-import { AddMoreDocumentModal, AdditionalDocuments, DocTableCols } from "@/components/providers/AdditionalDocuments";
+import { DocTableCols } from "@/components/providers/AdditionalDocuments";
 import type { MyEnrollment, ProviderDetail } from "@/types/providers";
 
 /** Loads GET /me/provider; a 404 means no provider profile is linked to this account. */
@@ -168,18 +167,11 @@ export function MyDocumentsView() {
 function MyDocuments({ provider }: { provider: ProviderDetail }) {
   const docs = nonNa(provider);
   const approved = docs.filter((d) => d.status === "approved").length;
-  const [adding, setAdding] = useState(false);
-  const [extraKey, setExtraKey] = useState(0);
   return (
     <div>
       <PageHeader
         title="My Documents"
         subtitle={approved + " of " + docs.length + " requirements met"}
-        actions={
-          <button className="btn btn-primary" onClick={() => setAdding(true)}>
-            <Icon name="Plus" size={14} /> Add More Document
-          </button>
-        }
       />
       <div className="-mt-2 mb-4 text-xs rounded-md px-3 py-2 flex items-start gap-2" style={{ background: "var(--info-soft)", color: "#1d4ed8" }}>
         <Icon name="Info" size={13} className="mt-0.5 shrink-0" />
@@ -234,17 +226,6 @@ function MyDocuments({ provider }: { provider: ProviderDetail }) {
           </table>
         </div>
       </div>
-      <AdditionalDocuments providerId={provider.id} reloadKey={extraKey} />
-      {adding && (
-        <AddMoreDocumentModal
-          providerId={provider.id}
-          onClose={() => setAdding(false)}
-          onSaved={() => {
-            setAdding(false);
-            setExtraKey((k) => k + 1);
-          }}
-        />
-      )}
     </div>
   );
 }

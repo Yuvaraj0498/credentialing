@@ -22,6 +22,7 @@ public class ProviderDocumentInitializer {
     public void initialize(Provider provider) {
         List<ProviderDocument> docs = new ArrayList<>();
         for (DocumentType type : documentTypeRepository.findAllByOrderBySortOrderAsc()) {
+            if (!type.visibleFor(provider.getOrgId())) continue;
             if (providerDocumentRepository.findByProviderIdAndDocType(provider.getId(), type.getCode()).isPresent()) {
                 continue;
             }

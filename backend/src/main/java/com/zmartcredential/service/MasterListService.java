@@ -1,5 +1,6 @@
 package com.zmartcredential.service;
 
+import com.zmartcredential.entity.DocumentType;
 import com.zmartcredential.entity.MasterListItem;
 import com.zmartcredential.entity.ProviderInvite;
 import com.zmartcredential.exception.BadRequestException;
@@ -37,9 +38,12 @@ public class MasterListService {
         LISTS.put("payer_category", "Payer Category");
         LISTS.put("location_type", "Location Type");
         LISTS.put("org_type", "Organization Type");
+        LISTS.put("document_type", "Document Type");
     }
-    /** lists an organization admin adds to for everyone */
-    private static final List<String> SHARED_BY_ADMINS = List.of("specialty");
+    /** lists an organization admin adds to for everyone (the others: their organization only) */
+    private static final List<String> SHARED_BY_ADMINS = List.of("specialty", "suffix");
+    /** document types live in their own table (provider documents point at them) */
+    private static final String DOCUMENT_TYPE = "document_type";
     /** lists whose items store a code (existing records keep their codes) */
     private static final List<String> CODED = List.of("org_type");
     /** lists the public pages (sign-up, secure link) may read */
@@ -49,6 +53,9 @@ public class MasterListService {
     private final ProviderInviteRepository inviteRepository;
     private final OrganizationRepository organizationRepository;
     private final AuthContext authContext;
+    private final com.zmartcredential.repository.DocumentTypeRepository documentTypeRepository;
+    private final com.zmartcredential.repository.ProviderRepository providerRepository;
+    private final ProviderDocumentInitializer documentInitializer;
 
     public record ListInfo(String key, String label) {
     }
@@ -57,11 +64,12 @@ public class MasterListService {
     public record Option(String value, String label) {
     }
 
-    public record ItemRow(Long id, String code, String value, int sortOrder, boolean active, boolean everyone,
-                          String addedBy, boolean canEdit) {
+    /** id: the item's id (document types: their code). mandatory / expires: document types only. */
+    public record ItemRow(String id, String code, String value, int sortOrder, boolean active, boolean everyone,
+                          String addedBy, boolean canEdit, Boolean mandatory, Boolean expires, boolean builtIn) {
     }
 
-    public record ItemRequest(String value, Boolean active, Integer sortOrder) {
+    public record ItemRequest(String value, Boolean active, Integer sortOrder, Boolean mandatory, Boolean expires) {
     }
 
     public List<ListInfo> lists() {
@@ -73,6 +81,10 @@ public class MasterListService {
     public List<Option> options(String key) {
         requireKey(key);
         Long orgId = currentOrgOrNull();
+        if (DOCUMENT_TYPE.equals(key)) {
+            return documentTypeRepository.findAllByOrderBySortOrderAsc().stream().filter(t -> t.visibleFor(orgId))
+                    .map(t -> new Option(t.getCode(), t.getLabel())).toList();
+        }
         return visible(key, orgId).stream().filter(i -> Boolean.TRUE.equals(i.getActive())).map(MasterListService::option).toList();
     }
 
@@ -90,6 +102,7 @@ public class MasterListService {
     public List<ItemRow> manage(String key) {
         requireKey(key);
         requireManager();
+        if (DOCUMENT_TYPE.equals(key)) return manageDocumentTypes();
         boolean superAdmin = authContext.hasRole(Role.PLATFORM_ADMIN);
         Long orgId = superAdmin ? null : authContext.orgId();
         List<MasterListItem> items = superAdmin ? sorted(repository.findByListKey(key)) : visible(key, orgId);
@@ -98,8 +111,8 @@ public class MasterListService {
             String by = i.getCreatedByOrgId() == null ? "Super Admin"
                     : orgNames.computeIfAbsent(i.getCreatedByOrgId(), id -> organizationRepository.findById(id)
                             .map(o -> o.getName()).orElse("Organization #" + id));
-            return new ItemRow(i.getId(), i.getCode(), i.getValue(), i.getSortOrder() == null ? 0 : i.getSortOrder(),
-                    Boolean.TRUE.equals(i.getActive()), i.getOrgId() == null, by, canEdit(i));
+            return new ItemRow(String.valueOf(i.getId()), i.getCode(), i.getValue(), i.getSortOrder() == null ? 0 : i.getSortOrder(),
+                    Boolean.TRUE.equals(i.getActive()), i.getOrgId() == null, by, canEdit(i), null, null, false);
         }).toList();
     }
 
@@ -107,6 +120,7 @@ public class MasterListService {
     public ItemRow create(String key, ItemRequest req) {
         requireKey(key);
         requireManager();
+        if (DOCUMENT_TYPE.equals(key)) return createDocumentType(req);
         String value = cleanValue(key, req.value());
         boolean superAdmin = authContext.hasRole(Role.PLATFORM_ADMIN);
         Long myOrg = superAdmin ? null : authContext.orgId();
@@ -127,8 +141,10 @@ public class MasterListService {
     }
 
     @Transactional
-    public ItemRow update(String key, Long id, ItemRequest req) {
-        MasterListItem i = loadEditable(key, id);
+    public ItemRow update(String key, String rawId, ItemRequest req) {
+        if (DOCUMENT_TYPE.equals(key)) return updateDocumentType(rawId, req);
+        MasterListItem i = loadEditable(key, parseId(rawId));
+        Long id = i.getId();
         if (req.value() != null) {
             String value = cleanValue(key, req.value());
             checkDuplicate(key, value, id, authContext.hasRole(Role.PLATFORM_ADMIN) ? null : authContext.orgId());
@@ -140,8 +156,121 @@ public class MasterListService {
     }
 
     @Transactional
-    public void delete(String key, Long id) {
-        repository.delete(loadEditable(key, id));
+    public void delete(String key, String rawId) {
+        if (DOCUMENT_TYPE.equals(key)) {
+            DocumentType t = loadEditableType(rawId);
+            if (Boolean.TRUE.equals(t.getBuiltIn())) throw new BadRequestException("Standard document types can't be deleted — switch it off instead");
+            t.setDeleted(true);
+            documentTypeRepository.save(t);
+            return;
+        }
+        repository.delete(loadEditable(key, parseId(rawId)));
+    }
+
+    // ---------- Document Type (document_type table) ----------
+
+    private List<ItemRow> manageDocumentTypes() {
+        boolean superAdmin = authContext.hasRole(Role.PLATFORM_ADMIN);
+        Long orgId = superAdmin ? null : authContext.orgId();
+        Map<Long, String> orgNames = new java.util.HashMap<>();
+        return documentTypeRepository.findAllByOrderBySortOrderAsc().stream()
+                .filter(t -> !Boolean.TRUE.equals(t.getDeleted()))
+                .filter(t -> superAdmin || t.getOrgId() == null || Objects.equals(t.getOrgId(), orgId))
+                .map(t -> typeRow(t, orgNames)).toList();
+    }
+
+    private ItemRow typeRow(DocumentType t, Map<Long, String> orgNames) {
+        String by = Boolean.TRUE.equals(t.getBuiltIn()) ? "Standard" : t.getCreatedByOrgId() == null ? "Super Admin"
+                : orgNames.computeIfAbsent(t.getCreatedByOrgId(), id -> organizationRepository.findById(id)
+                        .map(o -> o.getName()).orElse("Organization #" + id));
+        return new ItemRow(t.getCode(), t.getCode(), t.getLabel(), t.getSortOrder() == null ? 0 : t.getSortOrder(),
+                !Boolean.FALSE.equals(t.getActive()), t.getOrgId() == null, by, canEditType(t),
+                Boolean.TRUE.equals(t.getCritical()), Boolean.TRUE.equals(t.getExpires()), Boolean.TRUE.equals(t.getBuiltIn()));
+    }
+
+    /** Super admin: any type. Organization admin: the types their organization added. */
+    private boolean canEditType(DocumentType t) {
+        if (authContext.hasRole(Role.PLATFORM_ADMIN)) return true;
+        return !Boolean.TRUE.equals(t.getBuiltIn()) && t.getCreatedByOrgId() != null
+                && Objects.equals(t.getCreatedByOrgId(), authContext.orgId());
+    }
+
+    private DocumentType loadEditableType(String code) {
+        requireManager();
+        DocumentType t = documentTypeRepository.findById(code).filter(x -> !Boolean.TRUE.equals(x.getDeleted()))
+                .orElseThrow(() -> NotFoundException.of("Document type", code));
+        if (!canEditType(t)) throw new ForbiddenException("Only the organization that added this document type (or the super admin) can change it");
+        return t;
+    }
+
+    private ItemRow createDocumentType(ItemRequest req) {
+        String label = cleanValue(DOCUMENT_TYPE, req.value());
+        boolean superAdmin = authContext.hasRole(Role.PLATFORM_ADMIN);
+        Long myOrg = superAdmin ? null : authContext.orgId();
+        checkDuplicateType(label, null, myOrg);
+        DocumentType t = new DocumentType();
+        t.setCode(typeCode(myOrg, label));
+        t.setLabel(label);
+        t.setCritical(Boolean.TRUE.equals(req.mandatory()));
+        t.setExpires(Boolean.TRUE.equals(req.expires()));
+        t.setNaForUs(false);
+        t.setSortOrder(documentTypeRepository.findAll().stream().mapToInt(x -> x.getSortOrder() == null ? 0 : x.getSortOrder()).max().orElse(0) + 1);
+        t.setOrgId(myOrg);
+        t.setCreatedByOrgId(myOrg);
+        t.setActive(req.active() == null || req.active());
+        t.setDeleted(false);
+        t.setBuiltIn(false);
+        t = documentTypeRepository.saveAndFlush(t);
+        // the providers who list it get its row now (Missing)
+        (myOrg == null ? providerRepository.findAll() : providerRepository.findByOrgId(myOrg)).forEach(documentInitializer::initialize);
+        return typeRow(t, new java.util.HashMap<>());
+    }
+
+    private ItemRow updateDocumentType(String code, ItemRequest req) {
+        DocumentType t = loadEditableType(code);
+        if (req.value() != null) {
+            String label = cleanValue(DOCUMENT_TYPE, req.value());
+            checkDuplicateType(label, t.getCode(), authContext.hasRole(Role.PLATFORM_ADMIN) ? null : authContext.orgId());
+            t.setLabel(label);
+        }
+        if (req.mandatory() != null) t.setCritical(req.mandatory());
+        if (req.expires() != null) t.setExpires(req.expires());
+        if (req.active() != null) t.setActive(req.active());
+        if (req.sortOrder() != null) t.setSortOrder(req.sortOrder());
+        t = documentTypeRepository.save(t);
+        if (Boolean.TRUE.equals(t.getActive())) {
+            Long org = t.getOrgId();
+            (org == null ? providerRepository.findAll() : providerRepository.findByOrgId(org)).forEach(documentInitializer::initialize);
+        }
+        return typeRow(t, new java.util.HashMap<>());
+    }
+
+    private void checkDuplicateType(String label, String exceptCode, Long orgId) {
+        boolean dup = documentTypeRepository.findAll().stream()
+                .filter(t -> !Boolean.TRUE.equals(t.getDeleted()) && !Objects.equals(t.getCode(), exceptCode))
+                .filter(t -> orgId == null || t.getOrgId() == null || Objects.equals(t.getOrgId(), orgId))
+                .anyMatch(t -> t.getLabel().equalsIgnoreCase(label));
+        if (dup) throw ConflictException.onField("value", "\"" + label + "\" is already in the list");
+    }
+
+    /** a new code (the key provider documents point at): org3_board_letter, all_board_letter, ... */
+    private String typeCode(Long orgId, String label) {
+        String slug = label.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9]+", "_").replaceAll("^_|_$", "");
+        if (slug.isEmpty()) slug = "doc";
+        String prefix = (orgId == null ? "all" : "org" + orgId) + "_";
+        if (slug.length() > 30 - prefix.length()) slug = slug.substring(0, 30 - prefix.length());
+        String base = prefix + slug, code = base;
+        int n = 2;
+        while (documentTypeRepository.existsById(code)) code = base + "_" + n++;
+        return code;
+    }
+
+    private static Long parseId(String raw) {
+        try {
+            return Long.parseLong(raw);
+        } catch (NumberFormatException e) {
+            throw NotFoundException.of("Item", raw);
+        }
     }
 
     // ---------- helpers ----------
@@ -161,10 +290,10 @@ public class MasterListService {
     }
 
     private ItemRow row(MasterListItem i) {
-        return new ItemRow(i.getId(), i.getCode(), i.getValue(), i.getSortOrder() == null ? 0 : i.getSortOrder(),
+        return new ItemRow(String.valueOf(i.getId()), i.getCode(), i.getValue(), i.getSortOrder() == null ? 0 : i.getSortOrder(),
                 Boolean.TRUE.equals(i.getActive()), i.getOrgId() == null,
                 i.getCreatedByOrgId() == null ? "Super Admin" : organizationRepository.findById(i.getCreatedByOrgId())
-                        .map(o -> o.getName()).orElse("Organization"), canEdit(i));
+                        .map(o -> o.getName()).orElse("Organization"), canEdit(i), null, null, false);
     }
 
     /** Super admin: everything. Organization admin: what their organization added. */
@@ -208,7 +337,7 @@ public class MasterListService {
 
     /** the longest value each list can store (the column of the records that use it) */
     private static final Map<String, Integer> MAX_LENGTH = Map.of("specialty", 120, "suffix", 10, "payer_category", 40,
-            "location_type", 30, "org_type", 100);
+            "location_type", 30, "org_type", 100, "document_type", 100);
 
     private static String cleanValue(String key, String v) {
         String value = v == null ? "" : v.trim().replaceAll("\\s+", " ");

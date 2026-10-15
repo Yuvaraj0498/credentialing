@@ -57,7 +57,8 @@ public class BrReportService {
         Map<Long, List<ProviderDocument>> docs = ids.isEmpty() ? Map.of()
                 : providerDocumentRepository.findByProviderIdIn(ids).stream()
                 .collect(Collectors.groupingBy(ProviderDocument::getProviderId));
-        return new OrgData(providers, docs, documentTypeRepository.findAllByOrderBySortOrderAsc());
+        return new OrgData(providers, docs, documentTypeRepository.findAllByOrderBySortOrderAsc().stream()
+                .filter(t -> t.visibleFor(orgId)).toList());
     }
 
     private static long countStatus(List<ProviderDocument> docs, String status) {

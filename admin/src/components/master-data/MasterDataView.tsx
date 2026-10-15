@@ -19,7 +19,8 @@ import { useAuth } from "@/stores/auth";
 import { useToast } from "@/stores/toast";
 
 interface ItemRow {
-  id: number;
+  /** the item's id (document types: their code) */
+  id: string;
   code: string | null;
   value: string;
   sortOrder: number;
@@ -28,6 +29,10 @@ interface ItemRow {
   everyone: boolean;
   addedBy: string;
   canEdit: boolean;
+  /** document types */
+  mandatory?: boolean | null;
+  expires?: boolean | null;
+  builtIn?: boolean;
 }
 
 const TABS: { id: MasterListKey; label: string; icon: string; singular: string; hint: string }[] = [
@@ -36,7 +41,11 @@ const TABS: { id: MasterListKey; label: string; icon: string; singular: string; 
   { id: "payer_category", label: "Payer Category", icon: "CreditCard", singular: "Payer Category", hint: "Category dropdown when adding or editing a payer." },
   { id: "location_type", label: "Location Type", icon: "MapPin", singular: "Location Type", hint: "Type dropdown when adding or editing a location." },
   { id: "org_type", label: "Organization Type", icon: "Building", singular: "Organization Type", hint: "Organization type dropdown when creating an organization or signing up." },
+  { id: "document_type", label: "Document Type", icon: "FileText", singular: "Document Type", hint: "Documents listed for each provider (My Documents, the provider page, Request Documents)." },
 ];
+
+/** lists where an organization admin's additions are for everyone (the others: their organization only) */
+export const SHARED_LISTS: MasterListKey[] = ["specialty", "suffix"];
 
 /** Master Data: the lists behind the dropdowns, one tab per list (super admin and organization admins). */
 export function MasterDataView() {
@@ -67,11 +76,12 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<ItemRow | "new" | null>(null);
   const [deleting, setDeleting] = useState<ItemRow | null>(null);
-  const [busy, setBusy] = useState<number | "delete" | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
   const all = useMemo(() => items.data || [], [items.data]);
   const list = useMemo(() => (search.trim() ? all.filter((i) => matchesSearch(search, i.value, i.addedBy)) : all), [all, search]);
   // who sees what this user adds
-  const addsForEveryone = superAdmin || listKey === "specialty";
+  const addsForEveryone = superAdmin || SHARED_LISTS.includes(listKey);
+  const isDocs = listKey === "document_type";
 
   const changed = () => {
     invalidateMasterList(listKey);
@@ -81,7 +91,7 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
   const toggleActive = async (i: ItemRow) => {
     setBusy(i.id);
     try {
-      await api.put("/master-lists/" + listKey + "/items/" + i.id, { active: !i.active });
+      await api.put("/master-lists/" + listKey + "/items/" + encodeURIComponent(i.id), { active: !i.active });
       toast(i.value + (i.active ? " switched off" : " switched on"));
       changed();
     } catch (err) {
@@ -93,9 +103,9 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
 
   const remove = async () => {
     if (!deleting) return;
-    setBusy("delete");
+    setBusy("__delete__");
     try {
-      await api.delete("/master-lists/" + listKey + "/items/" + deleting.id);
+      await api.delete("/master-lists/" + listKey + "/items/" + encodeURIComponent(deleting.id));
       toast(deleting.value + " deleted");
       setDeleting(null);
       changed();
@@ -128,6 +138,8 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
                 <thead>
                   <tr>
                     <th>Name</th>
+                    {isDocs && <th>Mandatory</th>}
+                    {isDocs && <th>Expiration Date</th>}
                     <th>Visible To</th>
                     <th>Added By</th>
                     <th>Status</th>
@@ -139,8 +151,10 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
                     <tr key={i.id}>
                       <td className="font-medium">
                         {i.value}
-                        {i.code && <div className="text-[10px] text-ink-faint font-mono font-normal">{i.code}</div>}
+                        {i.code && !isDocs && <div className="text-[10px] text-ink-faint font-mono font-normal">{i.code}</div>}
                       </td>
+                      {isDocs && <td className="text-xs">{i.mandatory ? <span className="font-semibold text-ink">Yes</span> : <span className="text-ink-faint">No</span>}</td>}
+                      {isDocs && <td className="text-xs">{i.expires ? "Asked on upload" : <span className="text-ink-faint">No</span>}</td>}
                       <td className="text-xs">{i.everyone ? "Everyone" : superAdmin ? "One organization" : "Your organization"}</td>
                       <td className="text-xs text-ink-light">{i.addedBy}</td>
                       <td>
@@ -161,9 +175,11 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
                             <button className="btn-ghost p-1" onClick={() => setEditing(i)} title="Edit" aria-label={"Edit " + i.value}>
                               <Icon name="Pencil" size={13} />
                             </button>
-                            <button className="btn-ghost p-1 hover:text-red-600" onClick={() => setDeleting(i)} title="Delete" aria-label={"Delete " + i.value}>
-                              <Icon name="Trash2" size={13} />
-                            </button>
+                            {!i.builtIn && (
+                              <button className="btn-ghost p-1 hover:text-red-600" onClick={() => setDeleting(i)} title="Delete" aria-label={"Delete " + i.value}>
+                                <Icon name="Trash2" size={13} />
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <span className="text-[11px] text-ink-faint inline-flex items-center gap-1" title="Only the one who added it can change it">
@@ -196,8 +212,14 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
       {deleting && (
         <ConfirmDialog
           title={"Delete " + meta.singular.toLowerCase() + "?"}
-          message={<>&quot;{deleting.value}&quot; is removed from the dropdown. Records that already use it keep their value.</>}
-          busy={busy === "delete"}
+          message={
+            isDocs ? (
+              <>&quot;{deleting.value}&quot; is no longer listed for the providers. Files already uploaded for it stay.</>
+            ) : (
+              <>&quot;{deleting.value}&quot; is removed from the dropdown. Records that already use it keep their value.</>
+            )
+          }
+          busy={busy === "__delete__"}
           onConfirm={remove}
           onClose={() => setDeleting(null)}
         />
@@ -206,7 +228,7 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
   );
 }
 
-function ItemModal({
+export function ItemModal({
   listKey,
   singular,
   item,
@@ -222,9 +244,12 @@ function ItemModal({
   onSaved: (name: string, isNew: boolean) => void;
 }) {
   const [value, setValue] = useState(item?.value || "");
+  const isDocs = listKey === "document_type";
+  const [mandatory, setMandatory] = useState(!!item?.mandatory);
+  const [expires, setExpires] = useState(!!item?.expires);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const max = { specialty: 120, suffix: 10, payer_category: 40, location_type: 30, org_type: 100 }[listKey];
+  const max = { specialty: 120, suffix: 10, payer_category: 40, location_type: 30, org_type: 100, document_type: 100 }[listKey];
 
   const save = async () => {
     const v = value.trim().replace(/\s+/g, " ");
@@ -232,8 +257,9 @@ function ItemModal({
     if (listKey === "specialty" && v.toLowerCase() === "other") return setError("\"Other\" is always offered — choose another name");
     setBusy(true);
     try {
-      if (item) await api.put("/master-lists/" + listKey + "/items/" + item.id, { value: v });
-      else await api.post("/master-lists/" + listKey + "/items", { value: v });
+      const body = isDocs ? { value: v, mandatory, expires } : { value: v };
+      if (item) await api.put("/master-lists/" + listKey + "/items/" + encodeURIComponent(item.id), body);
+      else await api.post("/master-lists/" + listKey + "/items", body);
       onSaved(v, !item);
     } catch (err) {
       setError(err instanceof ApiError && err.fieldErrors.value ? err.fieldErrors.value : errorMessage(err));
@@ -259,9 +285,27 @@ function ItemModal({
             aria-label="Name"
           />
         </Field>
+        {isDocs && (
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 text-sm text-ink cursor-pointer">
+              <input type="checkbox" checked={mandatory} onChange={(e) => setMandatory(e.target.checked)} aria-label="Mandatory" />
+              Mandatory <span className="text-xs text-ink-faint">— counts toward the requirements</span>
+            </label>
+            <label className="flex items-center gap-2 text-sm text-ink cursor-pointer">
+              <input type="checkbox" checked={expires} onChange={(e) => setExpires(e.target.checked)} aria-label="Has an expiration date" />
+              Has an expiration date <span className="text-xs text-ink-faint">— asked when the file is uploaded</span>
+            </label>
+          </div>
+        )}
         <div className="text-xs text-ink-light flex items-center gap-1.5">
           <Icon name={forEveryone ? "Globe" : "Building2"} size={12} />
-          {forEveryone ? "Every organization sees this option." : "Only your organization sees this option."}
+          {isDocs
+            ? forEveryone
+              ? "Listed for the providers of every organization."
+              : "Listed for your organization's providers only."
+            : forEveryone
+              ? "Every organization sees this option."
+              : "Only your organization sees this option."}
         </div>
         <div className="flex justify-end gap-2 pt-3 border-t border-line">
           <button className="btn btn-secondary" onClick={onClose} disabled={busy}>

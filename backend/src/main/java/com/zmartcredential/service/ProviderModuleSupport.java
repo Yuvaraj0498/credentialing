@@ -77,7 +77,9 @@ public class ProviderModuleSupport {
     public List<ProviderDocumentRow> documentRows(Provider provider) {
         Map<String, DocumentType> types = docTypes();
         List<ProviderDocument> docs = documentRepository.findByProviderId(provider.getId());
-        if (docs.size() < types.size()) {
+        java.util.Set<String> have = docs.stream().map(ProviderDocument::getDocType).collect(java.util.stream.Collectors.toSet());
+        // a type added since (the organization's own, or a new standard one) gets its row now
+        if (types.values().stream().anyMatch(t -> t.visibleFor(provider.getOrgId()) && !have.contains(t.getCode()))) {
             documentInitializer.initialize(provider);
             docs = documentRepository.findByProviderId(provider.getId());
         }
@@ -86,7 +88,12 @@ public class ProviderModuleSupport {
 
     public List<ProviderDocumentRow> toRows(Collection<ProviderDocument> docs, Map<String, DocumentType> types) {
         List<ProviderDocumentRow> rows = new ArrayList<>();
-        for (ProviderDocument d : docs) rows.add(toRow(d, types.get(d.getDocType())));
+        for (ProviderDocument d : docs) {
+            DocumentType t = types.get(d.getDocType());
+            // a type switched off / deleted / of another organization: listed only while a file is stored
+            if (t != null && !t.visibleFor(d.getOrgId()) && d.getStorageKey() == null) continue;
+            rows.add(toRow(d, t));
+        }
         rows.sort(Comparator.comparing(r -> r.sortOrder() == null ? 999 : r.sortOrder()));
         return rows;
     }

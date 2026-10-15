@@ -45,13 +45,13 @@ public class MasterListController {
     }
 
     @PutMapping("/api/master-lists/{key}/items/{id}")
-    public ItemRow update(@PathVariable String key, @PathVariable Long id, @RequestBody ItemRequest req) {
+    public ItemRow update(@PathVariable String key, @PathVariable String id, @RequestBody ItemRequest req) {
         return service.update(key, id, req);
     }
 
     @DeleteMapping("/api/master-lists/{key}/items/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void delete(@PathVariable String key, @PathVariable Long id) {
+    public void delete(@PathVariable String key, @PathVariable String id) {
         service.delete(key, id);
     }
 

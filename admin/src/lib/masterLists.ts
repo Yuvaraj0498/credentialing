@@ -9,7 +9,7 @@ export interface MasterOption {
   label: string;
 }
 
-export type MasterListKey = "specialty" | "suffix" | "payer_category" | "location_type" | "org_type";
+export type MasterListKey = "specialty" | "suffix" | "payer_category" | "location_type" | "org_type" | "document_type";
 
 const cache = new Map<string, Promise<MasterOption[]>>();
 
