@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Pagination } from "@/components/Pagination";
 import { useFitRows } from "@/lib/useFitRows";
 
@@ -43,7 +43,7 @@ interface ItemRow {
 
 const TABS: { id: MasterListKey; label: string; icon: string; singular: string; hint: string }[] = [
   { id: "specialty", label: "Specialty", icon: "Stethoscope", singular: "Specialty", hint: "Specialty dropdown when adding a provider (manual and secure link). \"Other\" is always offered last." },
-  { id: "suffix", label: "Suffix", icon: "BadgeCheck", singular: "Suffix", hint: "Suffix / credential dropdown when adding a provider (MD, DO, NP…)." },
+  { id: "suffix", label: "Suffix", icon: "BadgeCheck", singular: "Suffix", hint: "Suffix / credential dropdown when adding a provider (MD, DO, NPâ€¦)." },
   { id: "payer_category", label: "Payer Category", icon: "CreditCard", singular: "Payer Category", hint: "Category dropdown when adding or editing a payer." },
   { id: "location_type", label: "Location Type", icon: "MapPin", singular: "Location Type", hint: "Type dropdown when adding or editing a location." },
   { id: "org_type", label: "Organization Type", icon: "Building", singular: "Organization Type", hint: "Organization type dropdown when creating an organization or signing up." },
@@ -87,7 +87,24 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
   const list = useMemo(() => (search.trim() ? all.filter((i) => matchesSearch(search, i.value, i.addedBy)) : all), [all, search]);
   // as many rows as fit the window; the rest on the next pages
   const tableRef = useRef<HTMLDivElement>(null);
-  const size = useFitRows(tableRef, ROW_H);
+  // the real height of a row (it differs per tab, e.g. Document Type rows are taller), measured on the page
+  const [rowH, setRowH] = useState(ROW_H);
+  useEffect(() => {
+    const box = tableRef.current;
+    if (!box) return;
+    const measure = () => {
+      const rows = [...box.querySelectorAll("tbody tr")] as HTMLElement[];
+      if (!rows.length) return;
+      const h = Math.max(...rows.map((r) => r.offsetHeight));
+      setRowH((cur) => (Math.abs(cur - h) > 1 ? h : cur));
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, []);
+  // header + pagination + card borders + the page's bottom padding
+  const size = useFitRows(tableRef, rowH, 128);
   const [pageWanted, setPage] = useState(0);
   const totalPages = Math.max(1, Math.ceil(list.length / size));
   // fewer pages after a search / a bigger window: stay on the last one
@@ -135,7 +152,7 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
       <div className="flex items-center gap-3 mb-1">
         <div className="relative flex-1 min-w-0">
           <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
-          <input value={search} onChange={(e) => { setSearch(cleanSearch(e.target.value)); setPage(0); }} placeholder={"Search " + meta.label.toLowerCase() + "…"} className="input" style={{ paddingLeft: 32 }} aria-label="Search" />
+          <input value={search} onChange={(e) => { setSearch(cleanSearch(e.target.value)); setPage(0); }} placeholder={"Search " + meta.label.toLowerCase() + "â€¦"} className="input" style={{ paddingLeft: 32 }} aria-label="Search" />
         </div>
         <button className="btn btn-primary shrink-0" onClick={() => setEditing("new")}>
           <Icon name="Plus" size={14} /> Add {meta.singular}
@@ -164,7 +181,7 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
                 </thead>
                 <tbody>
                   {pageItems.map((i) => (
-                    <tr key={i.id} style={{ height: ROW_H }}>
+                    <tr key={i.id} style={{ height: rowH }}>
                       <td className="font-medium">
                         {i.value}
                         {i.code && !isDocs && <div className="text-[10px] text-ink-faint font-mono font-normal">{i.code}</div>}
@@ -270,7 +287,7 @@ export function ItemModal({
   const save = async () => {
     const v = value.trim().replace(/\s+/g, " ");
     if (!v) return setError("Required");
-    if (listKey === "specialty" && v.toLowerCase() === "other") return setError("\"Other\" is always offered — choose another name");
+    if (listKey === "specialty" && v.toLowerCase() === "other") return setError("\"Other\" is always offered â€” choose another name");
     setBusy(true);
     try {
       const body = isDocs ? { value: v, mandatory, expires } : { value: v };
@@ -305,11 +322,11 @@ export function ItemModal({
           <div className="space-y-2">
             <label className="flex items-center gap-2 text-sm text-ink cursor-pointer">
               <input type="checkbox" checked={mandatory} onChange={(e) => setMandatory(e.target.checked)} aria-label="Mandatory" />
-              Mandatory <span className="text-xs text-ink-faint">— counts toward the requirements</span>
+              Mandatory <span className="text-xs text-ink-faint">â€” counts toward the requirements</span>
             </label>
             <label className="flex items-center gap-2 text-sm text-ink cursor-pointer">
               <input type="checkbox" checked={expires} onChange={(e) => setExpires(e.target.checked)} aria-label="Has an expiration date" />
-              Has an expiration date <span className="text-xs text-ink-faint">— asked when the file is uploaded</span>
+              Has an expiration date <span className="text-xs text-ink-faint">â€” asked when the file is uploaded</span>
             </label>
           </div>
         )}

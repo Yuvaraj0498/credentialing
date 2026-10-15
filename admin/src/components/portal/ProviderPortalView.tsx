@@ -183,7 +183,7 @@ function ManageProfile({ provider }: { provider: ProviderDetail }) {
           hasStoredPassword={!!current.hasCaqhPassword}
           providerId={current.id}
           selfService
-          submitLabel="Save Profile"
+          submitLabel="Update Profile"
           submitIcon="Save"
           cancelLabel="Discard Changes"
           onCancel={() => setVersion((v) => v + 1)}
@@ -193,7 +193,7 @@ function ManageProfile({ provider }: { provider: ProviderDetail }) {
             const saved = await api.put<ProviderDetail>("/me/provider/profile", body);
             setCurrent(saved);
             setVersion((v) => v + 1);
-            toast("Profile saved");
+            toast("Profile updated");
           }}
         />
       </div>
