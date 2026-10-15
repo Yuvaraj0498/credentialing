@@ -14,10 +14,11 @@ import { DeferredNotice } from "@/components/AlertBox";
 import { Icon } from "@/components/Icon";
 import { api, ApiError, errorMessage } from "@/lib/api";
 import { useAuth } from "@/stores/auth";
-import { useAsync, useDebounced } from "@/lib/hooks";
+import { useDebounced } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
 import type { AuthResponse } from "@/types";
-import { EMAIL_RE, FALLBACK_STATES, loadStates, type StateOption } from "@/types/signup";
+import { EMAIL_RE } from "@/types/signup";
+import { StateSelect } from "@/components/AddressFields";
 
 
 interface ProviderSignupData {
@@ -44,8 +45,6 @@ export function ProviderSignupFlow() {
   const router = useRouter();
   const { completeAuth } = useAuth();
   const toast = useToast();
-  const states = useAsync<StateOption[]>(loadStates, []);
-  const stateOptions = states.data && states.data.length ? states.data : FALLBACK_STATES;
 
   const [step, setStep] = useState(1);
   const [data, setData] = useState<ProviderSignupData>({
@@ -293,13 +292,7 @@ export function ProviderSignupFlow() {
                 </div>
                 <div>
                   <label className="label">Primary License State</label>
-                  <Select value={data.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
-                    {stateOptions.map((s) => (
-                      <option key={s.code} value={s.code}>
-                        {s.code === s.name ? s.code : s.code + " — " + s.name}
-                      </option>
-                    ))}
-                  </Select>
+                  <StateSelect value={data.licenseState} onChange={(v) => set("licenseState", v)} isPublic ariaLabel="Primary License State" />
                   <Err msg={errors.licenseState} />
                 </div>
               </div>

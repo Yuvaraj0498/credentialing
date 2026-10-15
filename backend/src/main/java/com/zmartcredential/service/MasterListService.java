@@ -39,15 +39,20 @@ public class MasterListService {
         LISTS.put("location_type", "Location Type");
         LISTS.put("org_type", "Organization Type");
         LISTS.put("document_type", "Document Type");
+        LISTS.put("state", "State");
+        LISTS.put("city", "City");
     }
+    /** cities live in their own table (with their state) */
+    private static final String CITY = "city";
+    private static final String STATE = "state";
     /** lists an organization admin adds to for everyone (the others: their organization only) */
     private static final List<String> SHARED_BY_ADMINS = List.of("specialty", "suffix");
     /** document types live in their own table (provider documents point at them) */
     private static final String DOCUMENT_TYPE = "document_type";
     /** lists whose items store a code (existing records keep their codes) */
-    private static final List<String> CODED = List.of("org_type");
+    private static final List<String> CODED = List.of("org_type", "state");
     /** lists the public pages (sign-up, secure link) may read */
-    private static final List<String> PUBLIC = List.of("specialty", "suffix", "org_type");
+    private static final List<String> PUBLIC = List.of("specialty", "suffix", "org_type", "state", "city");
 
     private final MasterListItemRepository repository;
     private final ProviderInviteRepository inviteRepository;
@@ -56,6 +61,7 @@ public class MasterListService {
     private final com.zmartcredential.repository.DocumentTypeRepository documentTypeRepository;
     private final com.zmartcredential.repository.ProviderRepository providerRepository;
     private final ProviderDocumentInitializer documentInitializer;
+    private final com.zmartcredential.repository.UsCityRepository cityRepository;
 
     public record ListInfo(String key, String label) {
     }
@@ -68,10 +74,14 @@ public class MasterListService {
     public record ItemRow(String id, String code, String value, int sortOrder, boolean active, boolean everyone,
                           String addedBy, boolean canEdit, Boolean mandatory, Boolean expires, boolean builtIn,
                           /* "Everyone" or the organization that sees it */
-                          String visibleTo) {
+                          String visibleTo,
+                          /* cities: their state code */
+                          String state) {
     }
 
-    public record ItemRequest(String value, Boolean active, Integer sortOrder, Boolean mandatory, Boolean expires) {
+    /** code: a state's 2-letter code; state: a city's state code */
+    public record ItemRequest(String value, Boolean active, Integer sortOrder, Boolean mandatory, Boolean expires,
+                              String code, String state) {
     }
 
     public List<ListInfo> lists() {
@@ -81,8 +91,15 @@ public class MasterListService {
     /** Dropdown options for the signed-in user's organization (active only). */
     @Transactional(readOnly = true)
     public List<Option> options(String key) {
+        return options(key, null);
+    }
+
+    /** state: for cities, the cities of that state (required). */
+    @Transactional(readOnly = true)
+    public List<Option> options(String key, String state) {
         requireKey(key);
         Long orgId = currentOrgOrNull();
+        if (CITY.equals(key)) return cityOptions(state, orgId);
         if (DOCUMENT_TYPE.equals(key)) {
             return documentTypeRepository.findAllByOrderBySortOrderAsc().stream().filter(t -> t.visibleFor(orgId))
                     .map(t -> new Option(t.getCode(), t.getLabel())).toList();
@@ -93,9 +110,15 @@ public class MasterListService {
     /** Public pages: everyone's items, plus the organization's own when the secure link token is given. */
     @Transactional(readOnly = true)
     public List<Option> publicOptions(String key, String token) {
+        return publicOptions(key, token, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<Option> publicOptions(String key, String token, String state) {
         if (!PUBLIC.contains(key)) throw NotFoundException.of("List", key);
         Long orgId = token == null || token.isBlank() ? null
                 : inviteRepository.findByToken(token).map(ProviderInvite::getOrgId).orElse(null);
+        if (CITY.equals(key)) return cityOptions(state, orgId);
         return visible(key, orgId).stream().filter(i -> Boolean.TRUE.equals(i.getActive())).map(MasterListService::option).toList();
     }
 
@@ -105,6 +128,7 @@ public class MasterListService {
         requireKey(key);
         requireManager();
         if (DOCUMENT_TYPE.equals(key)) return manageDocumentTypes();
+        if (CITY.equals(key)) return manageCities();
         boolean superAdmin = authContext.hasRole(Role.PLATFORM_ADMIN);
         Long orgId = superAdmin ? null : authContext.orgId();
         List<MasterListItem> items = superAdmin ? sorted(repository.findByListKey(key)) : visible(key, orgId);
@@ -116,7 +140,7 @@ public class MasterListService {
             String to = i.getOrgId() == null ? "Everyone" : orgNames.computeIfAbsent(i.getOrgId(), id -> organizationRepository.findById(id)
                     .map(o -> o.getName()).orElse("Organization #" + id));
             return new ItemRow(String.valueOf(i.getId()), i.getCode(), i.getValue(), i.getSortOrder() == null ? 0 : i.getSortOrder(),
-                    Boolean.TRUE.equals(i.getActive()), i.getOrgId() == null, by, canEdit(i), null, null, false, to);
+                    Boolean.TRUE.equals(i.getActive()), i.getOrgId() == null, by, canEdit(i), null, null, false, to, null);
         }).toList();
     }
 
@@ -125,6 +149,7 @@ public class MasterListService {
         requireKey(key);
         requireManager();
         if (DOCUMENT_TYPE.equals(key)) return createDocumentType(req);
+        if (CITY.equals(key)) return createCity(req);
         String value = cleanValue(key, req.value());
         boolean superAdmin = authContext.hasRole(Role.PLATFORM_ADMIN);
         Long myOrg = superAdmin ? null : authContext.orgId();
@@ -133,7 +158,15 @@ public class MasterListService {
         MasterListItem i = new MasterListItem();
         i.setListKey(key);
         i.setValue(value);
-        if (CODED.contains(key)) i.setCode(uniqueCode(key, value));
+        if (STATE.equals(key)) {
+            String code = req.code() == null ? "" : req.code().trim().toUpperCase(Locale.ROOT);
+            if (!code.matches("[A-Z]{2}")) throw BadRequestException.onField("code", "Enter the 2-letter state code");
+            if (repository.findByListKey(STATE).stream().anyMatch(x -> code.equals(x.getCode())
+                    && (x.getOrgId() == null || myOrg == null || Objects.equals(x.getOrgId(), myOrg)))) {
+                throw ConflictException.onField("code", code + " is already in the list");
+            }
+            i.setCode(code);
+        } else if (CODED.contains(key)) i.setCode(uniqueCode(key, value));
         i.setSortOrder(req.sortOrder() != null ? req.sortOrder()
                 : repository.findByListKey(key).stream().mapToInt(x -> x.getSortOrder() == null ? 0 : x.getSortOrder()).max().orElse(0) + 1);
         i.setActive(req.active() == null || req.active());
@@ -147,6 +180,7 @@ public class MasterListService {
     @Transactional
     public ItemRow update(String key, String rawId, ItemRequest req) {
         if (DOCUMENT_TYPE.equals(key)) return updateDocumentType(rawId, req);
+        if (CITY.equals(key)) return updateCity(parseId(rawId), req);
         MasterListItem i = loadEditable(key, parseId(rawId));
         Long id = i.getId();
         if (req.value() != null) {
@@ -168,7 +202,94 @@ public class MasterListService {
             documentTypeRepository.save(t);
             return;
         }
+        if (CITY.equals(key)) {
+            cityRepository.delete(loadEditableCity(parseId(rawId)));
+            return;
+        }
         repository.delete(loadEditable(key, parseId(rawId)));
+    }
+
+    // ---------- City (us_city table) ----------
+
+    private List<Option> cityOptions(String state, Long orgId) {
+        if (state == null || state.isBlank()) return List.of();
+        return cityRepository.findByStateCodeOrderByNameAsc(state.trim().toUpperCase(Locale.ROOT)).stream()
+                .filter(c -> Boolean.TRUE.equals(c.getActive()) && (c.getOrgId() == null || Objects.equals(c.getOrgId(), orgId)))
+                .map(c -> new Option(c.getName(), c.getName())).toList();
+    }
+
+    private List<ItemRow> manageCities() {
+        boolean superAdmin = authContext.hasRole(Role.PLATFORM_ADMIN);
+        Long orgId = superAdmin ? null : authContext.orgId();
+        Map<Long, String> orgNames = new java.util.HashMap<>();
+        return cityRepository.findAllByOrderByStateCodeAscNameAsc().stream()
+                .filter(c -> superAdmin || c.getOrgId() == null || Objects.equals(c.getOrgId(), orgId))
+                .map(c -> cityRow(c, orgNames)).toList();
+    }
+
+    private ItemRow cityRow(com.zmartcredential.entity.UsCity c, Map<Long, String> orgNames) {
+        String by = c.getCreatedByOrgId() == null ? "Super Admin" : orgNames.computeIfAbsent(c.getCreatedByOrgId(),
+                id -> organizationRepository.findById(id).map(o -> o.getName()).orElse("Organization #" + id));
+        String to = c.getOrgId() == null ? "Everyone" : orgNames.computeIfAbsent(c.getOrgId(),
+                id -> organizationRepository.findById(id).map(o -> o.getName()).orElse("Organization #" + id));
+        return new ItemRow(String.valueOf(c.getId()), null, c.getName(), 0, Boolean.TRUE.equals(c.getActive()), c.getOrgId() == null,
+                by, canEditCity(c), null, null, false, to, c.getStateCode());
+    }
+
+    private boolean canEditCity(com.zmartcredential.entity.UsCity c) {
+        if (authContext.hasRole(Role.PLATFORM_ADMIN)) return true;
+        return c.getCreatedByOrgId() != null && Objects.equals(c.getCreatedByOrgId(), authContext.orgId());
+    }
+
+    private com.zmartcredential.entity.UsCity loadEditableCity(Long id) {
+        requireManager();
+        com.zmartcredential.entity.UsCity c = cityRepository.findById(id).orElseThrow(() -> NotFoundException.of("City", id));
+        if (!canEditCity(c)) throw new ForbiddenException("Only the organization that added this city (or the super admin) can change it");
+        return c;
+    }
+
+    private String cityState(String state) {
+        String code = state == null ? "" : state.trim().toUpperCase(Locale.ROOT);
+        boolean known = repository.findByListKey(STATE).stream().anyMatch(s -> code.equals(s.getCode()));
+        if (!known) throw BadRequestException.onField("state", "Choose the state");
+        return code;
+    }
+
+    private void checkDuplicateCity(String name, String state, Long exceptId, Long orgId) {
+        boolean dup = cityRepository.findByStateCodeOrderByNameAsc(state).stream()
+                .filter(c -> !Objects.equals(c.getId(), exceptId))
+                .filter(c -> orgId == null || c.getOrgId() == null || Objects.equals(c.getOrgId(), orgId))
+                .anyMatch(c -> c.getName().equalsIgnoreCase(name));
+        if (dup) throw ConflictException.onField("value", "\"" + name + ", " + state + "\" is already in the list");
+    }
+
+    private ItemRow createCity(ItemRequest req) {
+        String name = cleanValue(CITY, req.value());
+        String state = cityState(req.state());
+        boolean superAdmin = authContext.hasRole(Role.PLATFORM_ADMIN);
+        Long myOrg = superAdmin ? null : authContext.orgId();
+        checkDuplicateCity(name, state, null, myOrg);
+        com.zmartcredential.entity.UsCity c = new com.zmartcredential.entity.UsCity();
+        c.setName(name);
+        c.setStateCode(state);
+        c.setActive(req.active() == null || req.active());
+        c.setOrgId(myOrg);
+        c.setCreatedByOrgId(myOrg);
+        c.setCreatedBy(authContext.userId());
+        return cityRow(cityRepository.save(c), new java.util.HashMap<>());
+    }
+
+    private ItemRow updateCity(Long id, ItemRequest req) {
+        com.zmartcredential.entity.UsCity c = loadEditableCity(id);
+        String state = req.state() != null ? cityState(req.state()) : c.getStateCode();
+        String name = req.value() != null ? cleanValue(CITY, req.value()) : c.getName();
+        if (req.value() != null || req.state() != null) {
+            checkDuplicateCity(name, state, c.getId(), authContext.hasRole(Role.PLATFORM_ADMIN) ? null : authContext.orgId());
+        }
+        c.setName(name);
+        c.setStateCode(state);
+        if (req.active() != null) c.setActive(req.active());
+        return cityRow(cityRepository.save(c), new java.util.HashMap<>());
     }
 
     // ---------- Document Type (document_type table) ----------
@@ -191,7 +312,7 @@ public class MasterListService {
                 .map(o -> o.getName()).orElse("Organization #" + id));
         return new ItemRow(t.getCode(), t.getCode(), t.getLabel(), t.getSortOrder() == null ? 0 : t.getSortOrder(),
                 !Boolean.FALSE.equals(t.getActive()), t.getOrgId() == null, by, canEditType(t),
-                Boolean.TRUE.equals(t.getCritical()), Boolean.TRUE.equals(t.getExpires()), Boolean.TRUE.equals(t.getBuiltIn()), to);
+                Boolean.TRUE.equals(t.getCritical()), Boolean.TRUE.equals(t.getExpires()), Boolean.TRUE.equals(t.getBuiltIn()), to, null);
     }
 
     /**
@@ -305,7 +426,7 @@ public class MasterListService {
                 Boolean.TRUE.equals(i.getActive()), i.getOrgId() == null,
                 i.getCreatedByOrgId() == null ? "Super Admin" : organizationRepository.findById(i.getCreatedByOrgId())
                         .map(o -> o.getName()).orElse("Organization"), canEdit(i), null, null, false,
-                i.getOrgId() == null ? "Everyone" : organizationRepository.findById(i.getOrgId()).map(o -> o.getName()).orElse("Organization"));
+                i.getOrgId() == null ? "Everyone" : organizationRepository.findById(i.getOrgId()).map(o -> o.getName()).orElse("Organization"), null);
     }
 
     /** Super admin: everything. Organization admin: what their organization added. */
@@ -349,7 +470,7 @@ public class MasterListService {
 
     /** the longest value each list can store (the column of the records that use it) */
     private static final Map<String, Integer> MAX_LENGTH = Map.of("specialty", 120, "suffix", 10, "payer_category", 40,
-            "location_type", 30, "org_type", 100, "document_type", 100);
+            "location_type", 30, "org_type", 100, "document_type", 100, "state", 40, "city", 100);
 
     private static String cleanValue(String key, String v) {
         String value = v == null ? "" : v.trim().replaceAll("\\s+", " ");

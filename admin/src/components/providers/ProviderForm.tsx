@@ -1,6 +1,7 @@
 "use client";
 
 import { Select } from "@/components/Select";
+import { StateSelect } from "@/components/AddressFields";
 
 import { useState, type ReactNode } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
@@ -12,7 +13,7 @@ import { Icon } from "@/components/Icon";
 import { ApiError, errorMessage } from "@/lib/api";
 import { useToast } from "@/stores/toast";
 import { PHONE_RE, phoneDigits } from "@/lib/validation";
-import { EDIT_LICENSE_STATES, EMAIL_RE, NPI_RE, PROVIDER_STATUS_OPTIONS, type OrgStructure } from "@/components/providers/shared";
+import { EMAIL_RE, NPI_RE, PROVIDER_STATUS_OPTIONS, type OrgStructure } from "@/components/providers/shared";
 import type { ProviderExtraView, ProviderStatus } from "@/types/providers";
 import {
   BillingSection,
@@ -309,7 +310,6 @@ export function ProviderForm({
     }
   };
 
-  const stateOptions = form.licenseState && !EDIT_LICENSE_STATES.includes(form.licenseState) ? [form.licenseState, ...EDIT_LICENSE_STATES] : EDIT_LICENSE_STATES;
   const selectedLoc = form.locationId ? locations.find((l) => String(l.id) === form.locationId) : null;
   const err = (k: string) => errors[k];
 
@@ -367,11 +367,7 @@ export function ProviderForm({
             <input value={form.license} onChange={(e) => set("license", e.target.value)} className="input font-mono" maxLength={40} />
           </Field>
           <Field label="License State *" error={err("licenseState")}>
-            <Select value={form.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
-              {stateOptions.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </Select>
+            <StateSelect value={form.licenseState} onChange={(v) => set("licenseState", v)} ariaLabel="License State" invalid={!!err("licenseState")} />
           </Field>
           <Field label="License Expiration *" error={err("licenseExpires")}>
             <input type="date" min={todayISO()} value={form.licenseExpires} onChange={(e) => set("licenseExpires", e.target.value)} className="input" />

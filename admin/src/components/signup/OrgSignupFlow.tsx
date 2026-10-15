@@ -1,6 +1,7 @@
 "use client";
 
 import { Select } from "@/components/Select";
+import { CitySelect, StateSelect } from "@/components/AddressFields";
 
 import { RequiredMark } from "@/components/Field";
 import { Fragment, useEffect, useState } from "react";
@@ -19,7 +20,7 @@ import { useAsync, useDebounced } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
 import type { AuthResponse } from "@/types";
 import { useMasterList, withCurrent } from "@/lib/masterLists";
-import { calcSubscriptionTotal, detectCardBrand, EMAIL_RE, FALLBACK_STATES, isUnlimited, loadPackages, loadStates, overCap, type Package, type StateOption } from "@/types/signup";
+import { calcSubscriptionTotal, detectCardBrand, EMAIL_RE, isUnlimited, loadPackages, overCap, type Package } from "@/types/signup";
 
 interface OrgSignupData {
   orgName: string; orgType: string; taxId: string; website: string; address: string; city: string; state: string; zip: string;
@@ -61,8 +62,6 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
   const { completeAuth } = useAuth();
   const toast = useToast();
   const packages = useAsync<Package[]>(loadPackages, []);
-  const states = useAsync<StateOption[]>(loadStates, []);
-  const stateOptions = states.data && states.data.length ? states.data : FALLBACK_STATES;
 
   const [step, setStep] = useState(1);
   const [data, setData] = useState<OrgSignupData>({
@@ -281,16 +280,21 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <label className="label">City<RequiredMark /></label>
-                    <input value={data.city} onChange={(e) => set("city", e.target.value)} className={"input" + (errors.city ? " input-error" : "")} />
-                    <Err msg={errors.city} />
+                    <label className="label">State</label>
+                    <StateSelect
+                      value={data.state}
+                      onChange={(v) => {
+                        if (v !== data.state) set("city", "");
+                        set("state", v);
+                      }}
+                      isPublic
+                    />
+                    <Err msg={errors.state} />
                   </div>
                   <div>
-                    <label className="label">State</label>
-                    <Select value={data.state} onChange={(e) => set("state", e.target.value)} className="input">
-                      {stateOptions.map((s) => <option key={s.code} value={s.code}>{s.code}</option>)}
-                    </Select>
-                    <Err msg={errors.state} />
+                    <label className="label">City<RequiredMark /></label>
+                    <CitySelect state={data.state} value={data.city} onChange={(v) => set("city", v)} isPublic invalid={!!errors.city} />
+                    <Err msg={errors.city} />
                   </div>
                   <div>
                     <label className="label">ZIP<RequiredMark /></label>

@@ -7,7 +7,7 @@ import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { PasswordInput } from "@/components/PasswordInput";
 import { PhoneInput } from "@/components/PhoneInput";
-import { US_STATES } from "@/lib/constants";
+import { CitySelect, StateSelect } from "@/components/AddressFields";
 import { useMasterList, withCurrent, type MasterOption } from "@/lib/masterLists";
 import { todayISO } from "@/lib/utils";
 import { EMAIL_RE, PHONE_RE, phoneDigits } from "@/lib/validation";
@@ -151,6 +151,8 @@ interface SectionProps {
   f: ExtraForm;
   set: Set;
   errors: Record<string, string>;
+  /** the secure-link page: State / City lists come from the public endpoint */
+  publicToken?: string | null;
 }
 
 /** A heading between the groups of fields. */
@@ -190,21 +192,26 @@ function Phone({ f, set, errors, k, label }: SectionProps & { k: keyof ExtraForm
   );
 }
 
-/** Street, then City / State / ZIP. */
-function Address({ f, set, errors, prefix }: SectionProps & { prefix: "home" | "practice" | "billing" }) {
+/** Street, then State / City (the cities of the state) / ZIP. */
+function Address({ f, set, errors, prefix, publicToken }: SectionProps & { prefix: "home" | "practice" | "billing" }) {
   const k = (s: string) => (prefix + s) as keyof ExtraForm;
   return (
     <>
       <Text f={f} set={set} errors={errors} k={k("Address")} label="Street Address" max={255} />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Text f={f} set={set} errors={errors} k={k("City")} label="City" />
         <Field label="State" error={errors[k("State")]}>
-          <Select value={f[k("State")]} onChange={(e) => set(k("State"), e.target.value)} className="input">
-            <option value="">— Select —</option>
-            {US_STATES.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </Select>
+          <StateSelect
+            value={f[k("State")]}
+            onChange={(v) => {
+              set(k("State"), v);
+              // another state: its own cities
+              if (v !== f[k("State")]) set(k("City"), "");
+            }}
+            publicToken={publicToken}
+          />
+        </Field>
+        <Field label="City" error={errors[k("City")]}>
+          <CitySelect state={f[k("State")]} value={f[k("City")]} onChange={(v) => set(k("City"), v)} publicToken={publicToken} />
         </Field>
         <Text f={f} set={set} errors={errors} k={k("Zip")} label="ZIP" max={10} mono digits={10} placeholder="5 or 9 digits" />
       </div>

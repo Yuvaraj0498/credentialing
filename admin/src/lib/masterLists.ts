@@ -9,7 +9,7 @@ export interface MasterOption {
   label: string;
 }
 
-export type MasterListKey = "specialty" | "suffix" | "payer_category" | "location_type" | "org_type" | "document_type";
+export type MasterListKey = "specialty" | "suffix" | "payer_category" | "location_type" | "org_type" | "document_type" | "state" | "city";
 
 const cache = new Map<string, Promise<MasterOption[]>>();
 
@@ -37,6 +37,7 @@ export function loadMasterList(key: MasterListKey, opts?: { publicToken?: string
 /** Master Data changed: the next dropdown loads the list again. */
 export function invalidateMasterList(key?: MasterListKey) {
   for (const id of [...cache.keys()]) if (!key || id === key || id.endsWith(":" + key)) cache.delete(id);
+  if (!key || key === "city") cityCache.clear();
 }
 
 /** The options of a list (empty while loading or when the list can't be read). */
@@ -54,6 +55,43 @@ export function useMasterList(key: MasterListKey, opts?: { publicToken?: string 
     };
   }, [key, token, isPublic]);
   return items;
+}
+
+const cityCache = new Map<string, Promise<MasterOption[]>>();
+
+/** The cities of a state (Master Data → City). */
+export function loadCities(state: string, opts?: { publicToken?: string | null; isPublic?: boolean }): Promise<MasterOption[]> {
+  const pub = opts?.isPublic || opts?.publicToken != null;
+  const id = (pub ? "p:" + (opts?.publicToken || "") + ":" : "") + state;
+  let p = cityCache.get(id);
+  if (!p) {
+    const q: Record<string, string> = { state };
+    if (opts?.publicToken) q.token = opts.publicToken;
+    p = (pub ? api.get<MasterOption[]>("/public/master-lists/city", q) : api.get<MasterOption[]>("/master-lists/city", q)).catch((e) => {
+      cityCache.delete(id);
+      throw e;
+    });
+    cityCache.set(id, p);
+  }
+  return p;
+}
+
+/** The cities of the chosen state (empty until a state is chosen). */
+export function useCities(state: string | null | undefined, opts?: { publicToken?: string | null; isPublic?: boolean }): MasterOption[] {
+  const [loaded, setLoaded] = useState<{ state: string; items: MasterOption[] }>({ state: "", items: [] });
+  const token = opts?.publicToken ?? null;
+  const isPublic = !!opts?.isPublic;
+  useEffect(() => {
+    if (!state) return;
+    let alive = true;
+    loadCities(state, { publicToken: token, isPublic })
+      .then((items) => alive && setLoaded({ state, items }))
+      .catch(() => alive && setLoaded({ state, items: [] }));
+    return () => {
+      alive = false;
+    };
+  }, [state, token, isPublic]);
+  return state && loaded.state === state ? loaded.items : [];
 }
 
 /** The option list with a stored value that is no longer in the list kept at the top (so it still shows). */

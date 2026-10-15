@@ -1,6 +1,7 @@
 "use client";
 
 import { Select } from "@/components/Select";
+import { StateSelect } from "@/components/AddressFields";
 
 import { Fragment, useRef, useState } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
@@ -10,7 +11,6 @@ import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { Pill } from "@/components/Pill";
 import { ApiError, api, errorMessage } from "@/lib/api";
-import { US_STATES } from "@/lib/constants";
 import { fmtDate, fmtTs, todayISO } from "@/lib/utils";
 import { ALLOWED_EXT, fileExt, MAX_FILE_BYTES, NPI_RE, PROVIDER_STATUS_OPTIONS } from "@/components/providers/shared";
 import {
@@ -562,7 +562,7 @@ function ProfileForm({
 }) {
   const set = <K extends keyof Profile>(k: K, v: Profile[K]) => onChange({ ...profile, [k]: v });
   const statusLabel = PROVIDER_STATUS_OPTIONS.find((o) => o.id === fixed.status)?.label || fixed.status;
-  const xp = { f: extra, set: onExtra, errors };
+  const xp = { f: extra, set: onExtra, errors, publicToken: token };
   return (
     <div className="space-y-3">
       <FormSection icon="User" title="Provider Details">
@@ -611,12 +611,7 @@ function ProfileForm({
             <input value={profile.licenseNumber} onChange={(e) => set("licenseNumber", e.target.value)} className="input font-mono" maxLength={40} />
           </Field>
           <Field label="License State" required error={errors.licenseState}>
-            <Select value={profile.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
-              <option value="">— Select —</option>
-              {US_STATES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </Select>
+            <StateSelect value={profile.licenseState} onChange={(v) => set("licenseState", v)} publicToken={token} ariaLabel="License State" invalid={!!errors.licenseState} />
           </Field>
           <Field label="License Expiration" required error={errors.licenseExpires}>
             <input type="date" min={todayISO()} value={profile.licenseExpires} onChange={(e) => set("licenseExpires", e.target.value)} className="input" />

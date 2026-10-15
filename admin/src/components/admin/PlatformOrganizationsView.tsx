@@ -1,6 +1,7 @@
 "use client";
 
 import { Select } from "@/components/Select";
+import { CitySelect, StateSelect } from "@/components/AddressFields";
 
 import { useState } from "react";
 import { PHONE_RE } from "@/lib/validation";
@@ -20,7 +21,7 @@ import { useUser } from "@/stores/auth";
 import { useAsync } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
 import { fmtDate, cleanSearch } from "@/lib/utils";
-import { ROLE_LABEL, US_STATES } from "@/lib/constants";
+import { ROLE_LABEL } from "@/lib/constants";
 import { loadPackages, type Package } from "@/types/signup";
 import { orgTypeLabel, type AdminOrg, type AdminOrgCreate } from "@/types/admin";
 import { useMasterList, withCurrent } from "@/lib/masterLists";
@@ -339,14 +340,17 @@ function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
           <input value={form.address} onChange={(e) => set("address", e.target.value)} className="input" />
         </Field>
         <div className="grid grid-cols-3 gap-3">
-          <Field label="City" error={errors.city}>
-            <input value={form.city} onChange={(e) => set("city", e.target.value)} className="input" />
-          </Field>
           <Field label="State" error={errors.state}>
-            <Select value={form.state} onChange={(e) => set("state", e.target.value)} className="input">
-              <option value="">—</option>
-              {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </Select>
+            <StateSelect
+              value={form.state || ""}
+              onChange={(v) => {
+                if (v !== form.state) set("city", "");
+                set("state", v);
+              }}
+            />
+          </Field>
+          <Field label="City" error={errors.city}>
+            <CitySelect state={form.state || ""} value={form.city || ""} onChange={(v) => set("city", v)} />
           </Field>
           <Field label="ZIP" error={errors.zip}>
             <input value={form.zip} onChange={(e) => set("zip", e.target.value.replace(/\D/g, "").slice(0, 5))} className="input font-mono" />

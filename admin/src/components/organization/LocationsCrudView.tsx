@@ -1,6 +1,7 @@
 "use client";
 
 import { Select } from "@/components/Select";
+import { CitySelect, StateSelect } from "@/components/AddressFields";
 
 import { useMasterList, withCurrent } from "@/lib/masterLists";
 import { useState } from "react";
@@ -18,8 +19,8 @@ import { useAuth, useUser } from "@/stores/auth";
 import { useAsync } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
 import { useShell } from "@/stores/shell";
-import { ROLE_LABEL, US_STATES } from "@/lib/constants";
-import { addressChars, addressRule, cityChars, cityRule, digitsOnly, nameRule, npiRule, phoneDigits, phoneRule, validate as runRules, zipRule } from "@/lib/validation";
+import { ROLE_LABEL } from "@/lib/constants";
+import { addressChars, addressRule, cityRule, digitsOnly, nameRule, npiRule, phoneDigits, phoneRule, validate as runRules, zipRule } from "@/lib/validation";
 import { blankToNull, type DeleteResult, type Location, type LocationRequest, type LocationType, type Practice } from "@/types/organization";
 
 export function LocationsCrudView() {
@@ -281,14 +282,11 @@ export function LocationFormModal({ location, practices, onSaved, onClose }: { l
           <input value={form.address} onChange={(e) => setForm({ ...form, address: addressChars(e.target.value) })} className="input" placeholder="e.g. 1200 Main Street, Suite 4" />
         </Field>
         <div className="grid grid-cols-3 gap-3">
-          <Field label="City *" error={errors.city}>
-            <input value={form.city} onChange={(e) => setForm({ ...form, city: cityChars(e.target.value) })} className="input" />
-          </Field>
           <Field label="State" error={errors.state}>
-            <Select value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="input">
-              <option value="">—</option>
-              {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </Select>
+            <StateSelect value={form.state || ""} onChange={(v) => setForm({ ...form, state: v, city: v === form.state ? form.city : "" })} />
+          </Field>
+          <Field label="City *" error={errors.city}>
+            <CitySelect state={form.state || ""} value={form.city || ""} onChange={(v) => setForm({ ...form, city: v })} invalid={!!errors.city} />
           </Field>
           <Field label="ZIP *" error={errors.zip}>
             <input value={form.zip} onChange={(e) => setForm({ ...form, zip: digitsOnly(e.target.value, 5) })} className="input font-mono" inputMode="numeric" placeholder="5 digits" />

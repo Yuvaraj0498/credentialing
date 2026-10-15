@@ -64,10 +64,13 @@ type Props = {
   autoFocus?: boolean;
 };
 
+/** lists longer than this get a search box at the top (states, cities, …) */
+const SEARCH_FROM = 10;
+
 /**
  * The app's dropdown (same props as a <select> with <option> children): a field showing the chosen option and a
- * list exactly as wide as the field, drawn above everything (so cards and popups never cut it off).
- * Keyboard: ↑ ↓ to move, Enter / Space to choose, Esc to close, letters jump to an option.
+ * list exactly as wide as the field, drawn above everything (so cards and popups never cut it off). Long lists
+ * have a search box. Keyboard: ↑ ↓ to move, Enter / Space to choose, Esc to close, letters jump to an option.
  */
 export function Select({ value, defaultValue, onChange, onBlur, className, style, disabled, id, name, title, children, autoFocus, ...aria }: Props) {
   const options = collect(children);
@@ -76,11 +79,17 @@ export function Select({ value, defaultValue, onChange, onBlur, className, style
   const chosen = options.find((o) => o.value === current) ?? (value == null ? undefined : options[0]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  const [query, setQuery] = useState("");
   const [box, setBox] = useState<{ top: number; left: number; width: number; maxHeight: number; up: boolean } | null>(null);
   const btnRef = useRef<HTMLButtonElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const typed = useRef({ text: "", at: 0 });
   const listId = useId();
+  const searchable = options.length > SEARCH_FROM;
+  const q = query.trim().toLowerCase();
+  // the options shown (filtered by the search box)
+  const shown = searchable && q ? options.filter((o) => o.label.toLowerCase().includes(q)) : options;
 
   const tokens = (className ?? "input").split(/\s+/).filter(Boolean);
   const wrapperClass = tokens.filter((t) => LAYOUT.test(t)).join(" ");
@@ -93,15 +102,16 @@ export function Select({ value, defaultValue, onChange, onBlur, className, style
     (to as Record<string, unknown>)[k] = v;
   }
 
+  const optionCount = options.length;
   const place = useCallback(() => {
     const r = btnRef.current?.getBoundingClientRect();
     if (!r) return;
     const below = window.innerHeight - r.bottom - 8;
     const above = r.top - 8;
-    const want = Math.min(280, options.length * 34 + 10);
+    const want = Math.min(300, optionCount * 34 + 10 + (optionCount > SEARCH_FROM ? 44 : 0));
     const up = below < want && above > below;
-    setBox({ top: up ? r.top - 4 : r.bottom + 4, left: r.left, width: r.width, maxHeight: Math.max(120, Math.min(280, up ? above : below)), up });
-  }, [options.length]);
+    setBox({ top: up ? r.top - 4 : r.bottom + 4, left: r.left, width: r.width, maxHeight: Math.max(150, Math.min(300, up ? above : below)), up });
+  }, [optionCount, setBox]);
 
   useLayoutEffect(() => {
     if (open) place();
@@ -111,11 +121,11 @@ export function Select({ value, defaultValue, onChange, onBlur, className, style
     if (!open) return;
     const close = (e: MouseEvent) => {
       const t = e.target as Node;
-      if (btnRef.current?.contains(t) || listRef.current?.contains(t)) return;
+      if (btnRef.current?.contains(t) || panelRef.current?.contains(t)) return;
       setOpen(false);
     };
     const reflow = (e: Event) => {
-      if (listRef.current && e.target instanceof Node && listRef.current.contains(e.target)) return;
+      if (panelRef.current && e.target instanceof Node && panelRef.current.contains(e.target)) return;
       place();
     };
     document.addEventListener("mousedown", close);
@@ -128,15 +138,24 @@ export function Select({ value, defaultValue, onChange, onBlur, className, style
     };
   }, [open, place]);
 
+  // long lists: typing goes to the search box
+  useEffect(() => {
+    if (open && box && searchable) searchRef.current?.focus();
+  }, [open, box, searchable]);
+
   // the highlighted option in view
   useEffect(() => {
-    if (open && active >= 0) listRef.current?.querySelector('[data-i="' + active + '"]')?.scrollIntoView({ block: "nearest" });
+    if (open && active >= 0) panelRef.current?.querySelector('[data-i="' + active + '"]')?.scrollIntoView({ block: "nearest" });
   }, [open, active, box]);
 
-  const choose = (o: Opt) => {
-    if (o.disabled) return;
+  const close = () => {
     setOpen(false);
     btnRef.current?.focus();
+  };
+
+  const choose = (o: Opt | undefined) => {
+    if (!o || o.disabled) return;
+    close();
     if (o.value === current) return;
     if (value == null) setInner(o.value);
     onChange?.({ target: { value: o.value, name }, currentTarget: { value: o.value, name } });
@@ -144,37 +163,56 @@ export function Select({ value, defaultValue, onChange, onBlur, className, style
 
   const openList = () => {
     if (disabled) return;
+    setQuery("");
     setActive(Math.max(0, options.findIndex((o) => o.value === current)));
     setOpen(true);
   };
 
   const move = (step: number) => {
+    if (!shown.length) return;
     let i = active;
-    for (let n = 0; n < options.length; n++) {
-      i = (i + step + options.length) % options.length;
-      if (!options[i].disabled) break;
+    for (let n = 0; n < shown.length; n++) {
+      i = (i + step + shown.length) % shown.length;
+      if (!shown[i].disabled) break;
     }
     setActive(i);
   };
 
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (disabled) return;
+  /** keys shared by the field and the search box */
+  const listKeys = (e: React.KeyboardEvent) => {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
       e.preventDefault();
       if (!open) openList();
       else move(e.key === "ArrowDown" ? 1 : -1);
-    } else if (e.key === "Enter" || e.key === " ") {
+      return true;
+    }
+    if (e.key === "Enter") {
       e.preventDefault();
       if (!open) openList();
-      else if (active >= 0) choose(options[active]);
-    } else if (e.key === "Escape") {
+      else choose(shown[active]);
+      return true;
+    }
+    if (e.key === "Escape") {
       if (open) {
         e.preventDefault();
         e.stopPropagation();
-        setOpen(false);
+        close();
       }
-    } else if (e.key === "Tab") {
+      return true;
+    }
+    if (e.key === "Tab") {
       setOpen(false);
+      return true;
+    }
+    return false;
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled || listKeys(e)) return;
+    if (e.key === " ") {
+      e.preventDefault();
+      if (!open) openList();
+      else choose(shown[active]);
     } else if (e.key.length === 1 && /\S/.test(e.key)) {
       // type to jump to an option
       const now = Date.now();
@@ -206,19 +244,16 @@ export function Select({ value, defaultValue, onChange, onBlur, className, style
         onKeyDown={onKeyDown}
         onBlur={onBlur}
       >
-        <span className="truncate" style={{ minWidth: 0 }}>{chosen?.label ?? " "}</span>
+        <span className="truncate" style={{ minWidth: 0 }}>{chosen?.label ?? "\u00a0"}</span>
         <Icon name="ChevronDown" size={14} className="shrink-0 text-ink-light" style={{ transform: open ? "rotate(180deg)" : undefined, transition: "transform .15s" }} />
       </button>
       {name && <input type="hidden" name={name} value={current} />}
       {open &&
         box &&
         createPortal(
-          <ul
-            ref={listRef}
-            id={listId}
-            role="listbox"
-            aria-label={aria["aria-label"]}
-            className="rounded-lg border border-line py-1 overflow-y-auto select-list"
+          <div
+            ref={panelRef}
+            className="rounded-lg border border-line flex flex-col overflow-hidden select-list"
             style={{
               position: "fixed",
               left: box.left,
@@ -231,35 +266,55 @@ export function Select({ value, defaultValue, onChange, onBlur, className, style
               boxShadow: "0 10px 25px rgba(0,0,0,.12)",
             }}
           >
-            {options.map((o, i) => {
-              const sel = o.value === current;
-              return (
-                <li
-                  key={o.value + "|" + i}
-                  data-i={i}
-                  role="option"
-                  aria-selected={sel}
-                  aria-disabled={o.disabled || undefined}
-                  title={o.label}
-                  className="px-3 py-1.5 text-sm truncate"
-                  style={{
-                    cursor: o.disabled ? "not-allowed" : "pointer",
-                    opacity: o.disabled ? 0.45 : 1,
-                    background: sel ? "var(--accent-soft)" : i === active ? "var(--bg-soft)" : undefined,
-                    color: sel ? "var(--accent-strong)" : undefined,
-                    fontWeight: sel ? 500 : undefined,
+            {searchable && (
+              <div className="p-1.5 border-b border-line shrink-0">
+                <input
+                  ref={searchRef}
+                  value={query}
+                  onChange={(e) => {
+                    setQuery(e.target.value);
+                    setActive(0);
                   }}
-                  onMouseEnter={() => setActive(i)}
-                  onMouseDown={(e) => {
-                    e.preventDefault();
-                    choose(o);
-                  }}
-                >
-                  {o.label || " "}
-                </li>
-              );
-            })}
-          </ul>,
+                  onKeyDown={(e) => listKeys(e)}
+                  className="input input-sm"
+                  placeholder="Search…"
+                  aria-label={"Search " + (aria["aria-label"] || "options")}
+                  autoComplete="off"
+                />
+              </div>
+            )}
+            <ul id={listId} role="listbox" aria-label={aria["aria-label"]} className="py-1 overflow-y-auto">
+              {shown.length === 0 && <li className="px-3 py-2 text-sm text-ink-faint">No matches</li>}
+              {shown.map((o, i) => {
+                const sel = o.value === current;
+                return (
+                  <li
+                    key={o.value + "|" + i}
+                    data-i={i}
+                    role="option"
+                    aria-selected={sel}
+                    aria-disabled={o.disabled || undefined}
+                    title={o.label}
+                    className="px-3 py-1.5 text-sm truncate"
+                    style={{
+                      cursor: o.disabled ? "not-allowed" : "pointer",
+                      opacity: o.disabled ? 0.45 : 1,
+                      background: sel ? "var(--accent-soft)" : i === active ? "var(--bg-soft)" : undefined,
+                      color: sel ? "var(--accent-strong)" : undefined,
+                      fontWeight: sel ? 500 : undefined,
+                    }}
+                    onMouseEnter={() => setActive(i)}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      choose(o);
+                    }}
+                  >
+                    {o.label || "\u00a0"}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>,
           document.body
         )}
     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Select } from "@/components/Select";
+import { CitySelect, StateSelect } from "@/components/AddressFields";
 
 import { useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
@@ -15,7 +16,6 @@ import { useAsync } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
 import { useUser } from "@/stores/auth";
 import { fmtDate } from "@/lib/utils";
-import { US_STATES } from "@/lib/constants";
 import { AppointmentLetterModal } from "@/components/modals/PrivilegingLetterModal";
 import {
   isWriterRole,
@@ -69,14 +69,11 @@ function AddHospitalModal({ onClose, onCreated }: { onClose: () => void; onCreat
           <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Massachusetts General Hospital" autoFocus />
         </Field>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <Field label="City" error={errors.city}>
-            <input className="input" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Boston" />
-          </Field>
           <Field label="State" error={errors.state}>
-            <Select className="input" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })}>
-              <option value="">—</option>
-              {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </Select>
+            <StateSelect value={form.state || ""} onChange={(v) => setForm({ ...form, state: v, city: v === form.state ? form.city : "" })} />
+          </Field>
+          <Field label="City" error={errors.city}>
+            <CitySelect state={form.state || ""} value={form.city || ""} onChange={(v) => setForm({ ...form, city: v })} />
           </Field>
         </div>
         <div className="flex justify-end gap-2 pt-3 border-t border-line">

@@ -28,8 +28,8 @@ public class MasterListController {
 
     @Operation(summary = "Dropdown options of a list (active items for the user's organization)")
     @GetMapping("/api/master-lists/{key}")
-    public List<Option> options(@PathVariable String key) {
-        return service.options(key);
+    public List<Option> options(@PathVariable String key, @RequestParam(required = false) String state) {
+        return service.options(key, state);
     }
 
     @Operation(summary = "Master Data screen: every item of a list (super admin / organization admin)")
@@ -57,7 +57,8 @@ public class MasterListController {
 
     @Operation(summary = "Public pages (sign-up, secure link): options of specialty / suffix / org_type")
     @GetMapping("/api/public/master-lists/{key}")
-    public List<Option> publicOptions(@PathVariable String key, @RequestParam(required = false) String token) {
-        return service.publicOptions(key, token);
+    public List<Option> publicOptions(@PathVariable String key, @RequestParam(required = false) String token,
+                                      @RequestParam(required = false) String state) {
+        return service.publicOptions(key, token, state);
     }
 }
