@@ -56,6 +56,7 @@ export function SendLinkModal({
     if (!form.email.trim()) e.email = "Required";
     else if (!EMAIL_RE.test(form.email.trim())) e.email = "Valid email required";
     else if (emailTaken) e.email = emailTaken;
+    if (!assignment.clientId) e.clientId = "Client is required";
     if (!assignment.practiceId) e.practiceId = "Pick a practice to continue";
     if (!provider) {
       if (!assignment.locationId) e.locationId = "Pick a location to continue";
@@ -114,8 +115,9 @@ export function SendLinkModal({
           value={assignment}
           onChange={(a) => {
             setAssignment(a);
-            setErrors((er) => ({ ...er, practiceId: "", locationId: "" }));
+            setErrors((er) => ({ ...er, clientId: "", practiceId: "", locationId: "" }));
           }}
+          clientError={errors.clientId}
           error={errors.practiceId}
           locationRequired={!provider}
           locationError={errors.locationId}

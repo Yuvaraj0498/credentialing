@@ -33,6 +33,7 @@ export function OrgAssignmentFields({
   error,
   locationRequired = false,
   locationError,
+  clientError,
 }: {
   value: OrgAssignment;
   onChange: (v: OrgAssignment) => void;
@@ -41,6 +42,8 @@ export function OrgAssignmentFields({
   /** adding a provider: the location must be chosen too */
   locationRequired?: boolean;
   locationError?: string;
+  /** the client is required: its message */
+  clientError?: string;
 }) {
   const org = useOrgStructure();
   const { clients = [], practices = [], locations = [] } = org.data || {};
@@ -61,7 +64,7 @@ export function OrgAssignmentFields({
         </AlertBox>
       ) : (
         <div className="grid grid-cols-1 gap-2">
-          <Field label="Client">
+          <Field label="Client *" error={clientError}>
             <Select
               value={value.clientId}
               onChange={(e) => onChange({ clientId: e.target.value, practiceId: "", locationId: "" })}

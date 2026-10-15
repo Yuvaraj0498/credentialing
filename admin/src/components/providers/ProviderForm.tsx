@@ -190,15 +190,14 @@ export function ProviderForm({
     setErrors((er) => (er[k] ? { ...er, [k]: "" } : er));
   };
 
-  // Cascading options
-  const availablePractices = form.clientId ? practices.filter((p) => String(p.clientId) === form.clientId) : practices;
-  const availableLocations = form.practiceId
-    ? locations.filter((l) => String(l.practiceId) === form.practiceId)
-    : form.clientId
-      ? locations.filter((l) => availablePractices.some((p) => p.id === l.practiceId))
-      : locations;
+  // Cascading: the practices of the chosen client, then the locations of the chosen practice
+  const availablePractices = form.clientId ? practices.filter((p) => String(p.clientId) === form.clientId) : [];
+  const availableLocations = form.practiceId ? locations.filter((l) => String(l.practiceId) === form.practiceId) : [];
 
-  const handleClientChange = (clientId: string) => setForm((f) => ({ ...f, clientId, practiceId: "", locationId: "" }));
+  const handleClientChange = (clientId: string) => {
+    setForm((f) => ({ ...f, clientId, practiceId: "", locationId: "" }));
+    setErrors((er) => ({ ...er, clientId: "" }));
+  };
   const handlePracticeChange = (practiceId: string) => {
     const parent = practices.find((p) => String(p.id) === practiceId);
     setForm((f) => ({ ...f, practiceId, clientId: parent ? String(parent.clientId) : f.clientId, locationId: "" }));
@@ -245,6 +244,7 @@ export function ProviderForm({
     if (form.licenseExpires && form.licenseExpires < todayISO() && form.licenseExpires !== (initial.licenseExpires || "")) e.licenseExpires = "Choose today or a later date";
     if (form.deaExpires && form.deaExpires < todayISO() && form.deaExpires !== (initial.deaExpires || "")) e.deaExpires = "Choose today or a later date";
     req("status", form.status);
+    if (!form.clientId) e.clientId = "Client is required";
     if (!form.practiceId) e.practiceId = "Practice is required";
     if (!form.locationId) e.locationId = "Location is required";
     Object.assign(e, extraProblems(extra));
@@ -469,9 +469,9 @@ export function ProviderForm({
           Assign to Organization
         </div>
         <div className="grid grid-cols-1 gap-3">
-          <Field label="Client" error={err("clientId")}>
-            <Select value={form.clientId} onChange={(e) => handleClientChange(e.target.value)} className="input" disabled={lockPlacement}>
-              <option value="">— None —</option>
+          <Field label="Client *" error={err("clientId")}>
+            <Select value={form.clientId} onChange={(e) => handleClientChange(e.target.value)} className={"input" + (errors.clientId ? " input-error" : "")} disabled={lockPlacement} aria-label="Client">
+              <option value="">— Select a client —</option>
               {clients.map((cl) => (
                 <option key={cl.id} value={cl.id}>{cl.name}</option>
               ))}
@@ -489,10 +489,11 @@ export function ProviderForm({
               value={form.practiceId}
               onChange={(e) => handlePracticeChange(e.target.value)}
               className="input"
-              disabled={lockPlacement || availablePractices.length === 0}
+              disabled={lockPlacement || !form.clientId || availablePractices.length === 0}
               style={errors.practiceId ? { borderColor: "var(--danger)" } : {}}
+              aria-label="Practice"
             >
-              <option value="">— Select a practice —</option>
+              <option value="">{form.clientId ? "— Select a practice —" : "Pick a client first"}</option>
               {availablePractices.map((pr) => (
                 <option key={pr.id} value={pr.id}>
                   {pr.name}
@@ -518,10 +519,11 @@ export function ProviderForm({
               value={form.locationId}
               onChange={(e) => handleLocationChange(e.target.value)}
               className="input"
-              disabled={lockPlacement || availableLocations.length === 0}
+              disabled={lockPlacement || !form.practiceId || availableLocations.length === 0}
               style={errors.locationId ? { borderColor: "var(--danger)" } : {}}
+              aria-label="Location"
             >
-              <option value="">— Select a location —</option>
+              <option value="">{form.practiceId ? "— Select a location —" : "Pick a practice first"}</option>
               {availableLocations.map((loc) => (
                 <option key={loc.id} value={loc.id}>
                   {loc.name} — {loc.address ? loc.address.split(",")[0] : ""}
