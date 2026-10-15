@@ -101,14 +101,14 @@ export function SendLinkModal({
     >
       <div className="space-y-3 mt-2">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Field label="First Name" error={errors.firstName}>
+          <Field label="First Name" required error={errors.firstName}>
             <input value={form.firstName} onChange={(e) => set("firstName", e.target.value)} className="input" disabled={!!provider} />
           </Field>
-          <Field label="Last Name" error={errors.lastName}>
+          <Field label="Last Name" required error={errors.lastName}>
             <input value={form.lastName} onChange={(e) => set("lastName", e.target.value)} className="input" disabled={!!provider} />
           </Field>
         </div>
-        <Field label="Email" error={errors.email || emailTaken}>
+        <Field label="Email" required error={errors.email || emailTaken}>
           <input value={form.email} onChange={(e) => set("email", e.target.value)} type="email" className="input" placeholder="provider@example.com" />
         </Field>
         <OrgAssignmentFields
