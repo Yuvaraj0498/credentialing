@@ -235,6 +235,7 @@ public class ProviderService {
         p.setPractitionerType(blankToNull(req.practitionerType()));
         p.setTaxonomyCode(blankToNull(req.taxonomyCode()));
         extraMapper.apply(p, req.extra());
+        if (Boolean.FALSE.equals(p.getPecosAccessGranted())) p.setPecosPasswordEnc(null);
         p.setGender(blankToNull(req.gender()));
         p.setDateOfBirth(req.dateOfBirth());
         p.setDeaNumber(blankToNull(req.deaNumber()));
@@ -315,6 +316,7 @@ public class ProviderService {
         }
         if (req.taxonomyCode() != null) p.setTaxonomyCode(blankToNull(req.taxonomyCode()));
         extraMapper.apply(p, req.extra());
+        if (Boolean.FALSE.equals(p.getPecosAccessGranted())) p.setPecosPasswordEnc(null);
         if (req.deaNumber() != null) p.setDeaNumber(blankToNull(req.deaNumber()));
         if (req.deaExpires() != null) {
             if (!req.deaExpires().equals(p.getDeaExpires()) && req.deaExpires().isBefore(LocalDate.now())) {
@@ -430,6 +432,55 @@ public class ProviderService {
         if (p.getOrgId() != null) {
             notificationService.notifyOrg(p.getOrgId(), "Provider updated profile",
                     fullName(p) + " updated their contact / license details.", "UserCog", NotificationService.INFO);
+        }
+        return detail(p);
+    }
+
+    /**
+     * Provider → Manage Profile: the provider completes / corrects their own details. Email (their sign-in), NPI,
+     * status and the organization placement stay as they are (whatever is sent for them).
+     */
+    @Transactional
+    public ProviderDetail updateMyProfile(ProviderUpdateRequest req) {
+        Provider p = loadMine();
+        p.setFirstName(req.firstName().trim());
+        p.setLastName(req.lastName().trim());
+        p.setSuffix(blankToNull(req.suffix()));
+        p.setCaqhId(blankToNull(req.caqhId()));
+        if (req.caqhUsername() != null) p.setCaqhUsername(blankToNull(req.caqhUsername()));
+        if (req.caqhPassword() != null && !req.caqhPassword().isBlank()) p.setCaqhPasswordEnc(cryptoService.encrypt(req.caqhPassword()));
+        if (req.pecosAccessGranted() != null) {
+            p.setPecosAccessGranted(req.pecosAccessGranted());
+            if (!req.pecosAccessGranted()) p.setPecosUsername(null);
+        }
+        if (req.pecosUsername() != null && !Boolean.FALSE.equals(p.getPecosAccessGranted())) p.setPecosUsername(blankToNull(req.pecosUsername()));
+        if (blankToNull(req.specialty()) == null) throw BadRequestException.onField("specialty", "Specialty is required");
+        p.setSpecialty(req.specialty().trim());
+        if (blankToNull(req.phone()) == null) throw BadRequestException.onField("phone", "Ph.No is required");
+        if (!com.zmartcredential.util.PhoneNumber.isValid(req.phone())) throw BadRequestException.onField("phone", com.zmartcredential.util.PhoneNumber.MESSAGE);
+        p.setPhone(req.phone().trim());
+        if (blankToNull(req.licenseNumber()) == null) throw BadRequestException.onField("licenseNumber", "License Number is required");
+        p.setLicenseNumber(req.licenseNumber().trim());
+        if (blankToNull(req.licenseState()) == null) throw BadRequestException.onField("licenseState", "License State is required");
+        p.setLicenseState(upper(req.licenseState()));
+        if (req.licenseExpires() != null) {
+            if (!req.licenseExpires().equals(p.getLicenseExpires()) && req.licenseExpires().isBefore(LocalDate.now())) {
+                throw BadRequestException.onField("licenseExpires", "License Expiration can't be in the past");
+            }
+            p.setLicenseExpires(req.licenseExpires());
+        }
+        p.setDeaNumber(blankToNull(req.deaNumber()));
+        if (req.deaExpires() != null && !req.deaExpires().equals(p.getDeaExpires()) && req.deaExpires().isBefore(LocalDate.now())) {
+            throw BadRequestException.onField("deaExpires", "DEA Expiration can't be in the past");
+        }
+        p.setDeaExpires(req.deaExpires());
+        p.setDateOfBirth(req.dateOfBirth());
+        extraMapper.apply(p, req.extra());
+        if (Boolean.FALSE.equals(p.getPecosAccessGranted())) p.setPecosPasswordEnc(null);
+        providerRepository.save(p);
+        if (p.getOrgId() != null) {
+            notificationService.notifyOrg(p.getOrgId(), "Provider updated profile",
+                    fullName(p) + " updated their profile.", "UserCog", NotificationService.INFO);
         }
         return detail(p);
     }

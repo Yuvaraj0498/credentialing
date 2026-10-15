@@ -56,7 +56,10 @@ export interface ExtraForm {
   billingContactPerson: string;
 }
 
-const PHONE_KEYS = ["medicarePhone", "practiceManagerContact", "practicePhone", "practiceFax", "billingPhone", "billingFax"] as const;
+const PHONE_KEYS = ["medicarePhone", "practiceManagerContact", "practicePhone", "billingPhone"] as const;
+/** fax numbers: 10 digits, no country code */
+const FAX_KEYS = ["practiceFax", "billingFax"] as const;
+const faxDigits = (v: string | null | undefined) => (v || "").replace(/^\+(1|91)\s?/, "").replace(/\D/g, "").slice(-10);
 
 /** Form values from the stored details (blank when there are none). */
 export function extraFromView(v?: ProviderExtraView | null, taxonomyCode?: string | null): ExtraForm {
@@ -100,6 +103,7 @@ export function extraFromView(v?: ProviderExtraView | null, taxonomyCode?: strin
     billingContactPerson: s(v?.billingContactPerson),
   };
   for (const k of PHONE_KEYS) f[k] = f[k] ? phoneDigits(f[k]) : "";
+  for (const k of FAX_KEYS) f[k] = faxDigits(f[k]);
   return f;
 }
 
@@ -130,6 +134,7 @@ export function extraProblems(f: ExtraForm): Record<string, string> {
   for (const k of ["homeZip", "practiceZip", "billingZip"] as const) if (f[k] && !ZIP.test(f[k])) e[k] = "ZIP must be 5 or 9 digits";
   for (const k of ["practiceEmail", "billingEmail"] as const) if (f[k].trim() && !EMAIL_RE.test(f[k].trim())) e[k] = "Enter a valid email address";
   for (const k of PHONE_KEYS) if (phoneOut(f[k]) && !PHONE_RE.test(f[k])) e[k] = "Must be 10 digits";
+  for (const k of FAX_KEYS) if (f[k] && !/^\d{10}$/.test(f[k])) e[k] = "Fax number must be 10 digits";
   if (f.practiceStartDate && f.practiceStartDate > todayISO()) e.practiceStartDate = "Can't be a future date";
   return e;
 }
@@ -166,7 +171,7 @@ function Text({ f, set, errors, k, label, max = 100, mono, placeholder, digits }
     <Field label={label} error={errors[k]}>
       <input
         value={f[k]}
-        onChange={(e) => set(k, digits ? e.target.value.replace(/[^\d-]/g, "").slice(0, digits) : e.target.value)}
+        onChange={(e) => set(k, digits ? e.target.value.replace((FAX_KEYS as readonly string[]).includes(k) ? /\D/g : /[^\d-]/g, "").slice(0, digits) : e.target.value)}
         className={"input" + (mono ? " font-mono" : "")}
         maxLength={max}
         placeholder={placeholder}
@@ -285,7 +290,7 @@ export function PracticeSection(p: SectionProps) {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Phone {...p} k="practicePhone" label="Practice Ph.No" />
-        <Phone {...p} k="practiceFax" label="Practice Fax Number" />
+        <Text {...p} k="practiceFax" label="Practice Fax Number" max={10} mono digits={10} placeholder="10 digits" />
         <Text {...p} k="practiceEmail" label="Practice Email" max={255} />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -306,7 +311,7 @@ export function BillingSection(p: SectionProps) {
       <Text {...p} k="billingContactPerson" label="Billing Contact Person" max={150} />
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Phone {...p} k="billingPhone" label="Billing Ph.No" />
-        <Phone {...p} k="billingFax" label="Billing Fax Number" />
+        <Text {...p} k="billingFax" label="Billing Fax Number" max={10} mono digits={10} placeholder="10 digits" />
         <Text {...p} k="billingEmail" label="Billing Email" max={255} />
       </div>
       <Address {...p} prefix="billing" />

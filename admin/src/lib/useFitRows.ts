@@ -22,3 +22,15 @@ export function useFitRows(ref: RefObject<HTMLElement | null>, rowHeight: number
   }, [ref, rowHeight, reserve, min]);
   return rows;
 }
+
+/** Columns of a responsive card grid (1 / md 2 / lg 3), following the window width. */
+export function useGridColumns(): number {
+  const [cols, setCols] = useState(3);
+  useLayoutEffect(() => {
+    const on = () => setCols(window.innerWidth >= 1024 ? 3 : window.innerWidth >= 768 ? 2 : 1);
+    on();
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  return cols;
+}

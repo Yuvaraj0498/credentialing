@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { Pagination } from "@/components/Pagination";
+import { useGridColumns } from "@/lib/useFitRows";
+
+/** rows of payer cards on a page */
+const ROWS_PER_PAGE = 4;
 import { AsyncBoundary } from "@/components/AsyncState";
 import { Icon } from "@/components/Icon";
 import { PageHeader } from "@/components/PageHeader";
@@ -22,6 +27,12 @@ export function PayersAdminView() {
 
   const all = payers.data || [];
   const shown = all.filter((p) => matchesSearch(search, p.name, p.fullName, p.category, integrationLabel(p.integration), p.appForm));
+  // 4 rows of cards, then the next page (cards per row follow the window width)
+  const size = ROWS_PER_PAGE * useGridColumns();
+  const [pageWanted, setPage] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(shown.length / size));
+  const page = Math.min(pageWanted, totalPages - 1);
+  const pageItems = shown.slice(page * size, page * size + size);
 
   return (
     <div>
@@ -38,7 +49,10 @@ export function PayersAdminView() {
         <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
         <input
           value={search}
-          onChange={(e) => setSearch(cleanSearch(e.target.value))}
+          onChange={(e) => {
+            setSearch(cleanSearch(e.target.value));
+            setPage(0);
+          }}
           placeholder="Search payer, insurance company, category, integration, form..."
           className="input"
           style={{ paddingLeft: 32 }}
@@ -52,8 +66,9 @@ export function PayersAdminView() {
               {all.length === 0 ? "No payers yet — click “Add Payer”." : "No payers match “" + search.trim() + "”"}
             </div>
           ) : (
+            <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {shown.map((p) => (
+              {pageItems.map((p) => (
                 <div key={p.id} className="card card-pad">
                   <div className="flex items-start justify-between mb-3 gap-2">
                     <PayerLogo name={p.name} color={p.color} logo={p.logo} />
@@ -93,6 +108,10 @@ export function PayersAdminView() {
                 </div>
               ))}
             </div>
+            <div className="card mt-3">
+              <Pagination page={page} totalPages={totalPages} totalElements={shown.length} size={size} onChange={setPage} />
+            </div>
+            </>
           )}
         </AsyncBoundary>
       </div>

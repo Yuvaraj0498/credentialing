@@ -37,6 +37,12 @@ public class ProviderSelfServiceController {
         return providerService.updateMine(req);
     }
 
+    @Operation(summary = "Manage Profile: update own details (email, NPI, status and organization are not changed)")
+    @PutMapping("/provider/profile")
+    public ProviderDetail updateProfile(@Valid @RequestBody com.zmartcredential.dto.provider.ProviderDtos.ProviderUpdateRequest req) {
+        return providerService.updateMyProfile(req);
+    }
+
     @Operation(summary = "Own enrollments")
     @GetMapping("/enrollments")
     public List<MyEnrollment> enrollments() {

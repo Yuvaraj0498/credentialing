@@ -96,6 +96,8 @@ export interface ProviderFormPayload {
   extra: ReturnType<typeof extraPayload>;
 }
 
+const LOCKED_HINT = "Set by your credentialing team";
+
 const idStr = (v: number | null | undefined) => (v == null ? "" : String(v));
 const num = (v: string) => (v ? Number(v) : null);
 
@@ -113,6 +115,7 @@ export function ProviderForm({
   changePassword,
   lockCaqhId = false,
   lockPlacement = false,
+  selfService = false,
   submitLabel,
   submitIcon = "Save",
   onSubmit,
@@ -134,6 +137,8 @@ export function ProviderForm({
   lockCaqhId?: boolean;
   /** Organization screen: the client / practice / location are fixed */
   lockPlacement?: boolean;
+  /** the provider's own Manage Profile: email (their sign-in), NPI, status and the organization are not changed here */
+  selfService?: boolean;
   submitLabel: string;
   submitIcon?: string;
   onSubmit: (payload: ProviderFormPayload) => Promise<void>;
@@ -183,7 +188,7 @@ export function ProviderForm({
     setErrors((er) => (er[k] ? { ...er, [k]: "" } : er));
   };
   const [busy, setBusy] = useState(false);
-  const emailTaken = useEmailCheck(form.email, { kind: "provider", id: providerId });
+  const emailTaken = useEmailCheck(form.email, { kind: "provider", id: providerId }, !selfService);
   // Typing in a field clears its message.
   const set = (k: keyof typeof form, v: string) => {
     setForm((f) => ({ ...f, [k]: v }));
@@ -244,9 +249,11 @@ export function ProviderForm({
     if (form.licenseExpires && form.licenseExpires < todayISO() && form.licenseExpires !== (initial.licenseExpires || "")) e.licenseExpires = "Choose today or a later date";
     if (form.deaExpires && form.deaExpires < todayISO() && form.deaExpires !== (initial.deaExpires || "")) e.deaExpires = "Choose today or a later date";
     req("status", form.status);
-    if (!form.clientId) e.clientId = "Client is required";
-    if (!form.practiceId) e.practiceId = "Practice is required";
-    if (!form.locationId) e.locationId = "Location is required";
+    if (!selfService) {
+      if (!form.clientId) e.clientId = "Client is required";
+      if (!form.practiceId) e.practiceId = "Practice is required";
+      if (!form.locationId) e.locationId = "Location is required";
+    }
     Object.assign(e, extraProblems(extra));
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -323,8 +330,8 @@ export function ProviderForm({
           </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field label="NPI *" error={err("npi")}>
-            <input value={form.npi} onChange={(e) => set("npi", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="10 digits" inputMode="numeric" />
+          <Field label="NPI *" error={err("npi")} hint={selfService ? LOCKED_HINT : undefined}>
+            <input value={form.npi} onChange={(e) => set("npi", e.target.value.replace(/\D/g, "").slice(0, 10))} className="input font-mono" placeholder="10 digits" inputMode="numeric" disabled={selfService} />
           </Field>
           <SpecialtyField
             choice={form.specialty}
@@ -338,8 +345,8 @@ export function ProviderForm({
           />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field label="Email *" error={err("email") || emailTaken}>
-            <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="input" />
+          <Field label="Email *" error={err("email") || emailTaken} hint={selfService ? "Your sign-in — can't be changed here" : undefined}>
+            <input type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className="input" disabled={selfService} />
           </Field>
           <Field label="Ph.No *" error={err("phone")}>
             <PhoneInput value={form.phone} onChange={(v) => set("phone", v)} invalid={!!err("phone")} />
@@ -410,7 +417,18 @@ export function ProviderForm({
       <FormSection icon="ShieldCheck" title="PECOS">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Field label="PECOS Access Granted" error={err("pecosAccess")}>
-            <Select value={form.pecosAccess} onChange={(e) => set("pecosAccess", e.target.value)} className="input">
+            <Select
+              value={form.pecosAccess}
+              onChange={(e) => {
+                set("pecosAccess", e.target.value);
+                if (e.target.value !== "yes") {
+                  setForm((f) => ({ ...f, pecosUsername: "" }));
+                  setX("pecosPassword", "");
+                }
+              }}
+              className="input"
+              aria-label="PECOS Access Granted"
+            >
               <option value="">— Select —</option>
               <option value="yes">Yes</option>
               <option value="no">No</option>
@@ -433,8 +451,8 @@ export function ProviderForm({
       <BillingSection f={extra} set={setX} errors={errors} />
       <FormSection icon="KeyRound" title="Status & Sign-in">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Field label="Status *" error={err("status")}>
-            <Select value={form.status} onChange={(e) => set("status", e.target.value)} className="input">
+          <Field label="Status *" error={err("status")} hint={selfService ? LOCKED_HINT : undefined}>
+            <Select value={form.status} onChange={(e) => set("status", e.target.value)} className="input" disabled={selfService}>
               {PROVIDER_STATUS_OPTIONS.map((o) => (
                 <option key={o.id} value={o.id}>{o.label}</option>
               ))}
@@ -463,6 +481,7 @@ export function ProviderForm({
           )}
         </div>
       </FormSection>
+      {!selfService && (
       <div className="pt-3 mt-3 border-t border-line">
         <div className="text-xs font-semibold text-ink mb-2 flex items-center gap-1.5">
           <Icon name="Building2" size={13} className="text-accent" />
@@ -543,6 +562,7 @@ export function ProviderForm({
           )}
         </div>
       </div>
+      )}
       <div className="flex justify-end gap-2 pt-3 border-t border-line">
         <button onClick={onCancel} className="btn btn-secondary" disabled={busy}>
           {cancelLabel}

@@ -648,7 +648,16 @@ function ProfileForm({
       <FormSection icon="ShieldCheck" title="PECOS">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Field label="PECOS Access Granted" error={errors.pecosAccess || errors.pecosAccessGranted}>
-            <Select value={profile.pecosAccess} onChange={(e) => set("pecosAccess", e.target.value)} className="input">
+            <Select
+              value={profile.pecosAccess}
+              onChange={(e) => {
+                // No (or nothing): the PECOS user name and password are emptied
+                onChange({ ...profile, pecosAccess: e.target.value, ...(e.target.value !== "yes" ? { pecosUsername: "" } : {}) });
+                if (e.target.value !== "yes") onExtra("pecosPassword", "");
+              }}
+              className="input"
+              aria-label="PECOS Access Granted"
+            >
               <option value="">— Select —</option>
               <option value="yes">Yes</option>
               <option value="no">No</option>

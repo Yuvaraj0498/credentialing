@@ -451,6 +451,7 @@ public class ProviderInviteService {
         p.setDeaNumber(dea == null ? null : dea.toUpperCase());
         p.setDeaExpires(req.deaExpires());
         extraMapper.apply(p, req.extra());
+        if (!Boolean.TRUE.equals(req.pecosAccessGranted())) p.setPecosPasswordEnc(null);
         if ("draft".equals(p.getStatus()) || "pending".equals(p.getStatus())) p.setStatus("active");
         // the provider's sign-in: their email + the password they chose (when they have no login yet)
         if (userRepository.findByProviderId(p.getId()).isEmpty()) {

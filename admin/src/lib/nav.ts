@@ -59,11 +59,12 @@ export const PROVIDER_NAV: NavItem[] = [
   { href: "/my-portal", label: "My Portal", icon: "User" },
   { href: "/my-documents", label: "My Documents", icon: "FileText" },
   { href: "/my-enrollments", label: "My Enrollments", icon: "ClipboardList" },
+  { href: "/my-profile", label: "Manage Profile", icon: "UserCog" },
   { href: "/notifications", label: "Notifications", icon: "Bell", badge: "unreadNotifications" },
 ];
 
 /** Routes a provider user may open; everything else redirects to /my-portal. */
-export const PROVIDER_ROUTES = ["/my-portal", "/my-documents", "/my-enrollments", "/notifications"];
+export const PROVIDER_ROUTES = ["/my-portal", "/my-documents", "/my-enrollments", "/my-profile", "/notifications"];
 
 export const isVisible = (item: NavItem, role: Role) => (item.roles ? item.roles.includes(role) : STAFF.includes(role));
 

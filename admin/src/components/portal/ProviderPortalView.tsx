@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { DocStatusBadge, StatusPill } from "@/components/Pill";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState, Loading } from "@/components/AsyncState";
@@ -9,9 +10,11 @@ import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { ApiError, api } from "@/lib/api";
 import { useAuth } from "@/stores/auth";
+import { useToast } from "@/stores/toast";
 import { fmtDate } from "@/lib/utils";
 import { useAsync } from "@/lib/hooks";
 import { DocumentUploadView } from "@/components/providers/DocumentUploadView";
+import { ProviderForm } from "@/components/providers/ProviderForm";
 import { DownloadButton, MandatoryMark, ViewFileButton } from "@/components/providers/ProviderOverview";
 import { DocTableCols } from "@/components/providers/AdditionalDocuments";
 import type { MyEnrollment, ProviderDetail } from "@/types/providers";
@@ -160,6 +163,44 @@ function MyPortal({ provider }: { provider: ProviderDetail }) {
 }
 
 /** Prototype ProviderPortalView "my_documents" (L3719). */
+/** Provider → Manage Profile: the rest of their details (email, NPI, status and organization are fixed). */
+export function ManageProfileView() {
+  return <PortalGate title="Manage Profile">{(p) => <ManageProfile provider={p} />}</PortalGate>;
+}
+
+function ManageProfile({ provider }: { provider: ProviderDetail }) {
+  const toast = useToast();
+  const [version, setVersion] = useState(0);
+  const [current, setCurrent] = useState(provider);
+  return (
+    <div>
+      <PageHeader title="Manage Profile" subtitle="Complete or correct your details. Fields marked as set by your credentialing team can't be changed here." />
+      <div className="card card-pad">
+        <ProviderForm
+          key={version}
+          org={{ clients: [], practices: [], locations: [] }}
+          initial={current}
+          hasStoredPassword={!!current.hasCaqhPassword}
+          providerId={current.id}
+          selfService
+          submitLabel="Save Profile"
+          submitIcon="Save"
+          cancelLabel="Discard Changes"
+          onCancel={() => setVersion((v) => v + 1)}
+          onSubmit={async ({ newPassword: _np, password: _pw, ...body }) => {
+            void _np;
+            void _pw;
+            const saved = await api.put<ProviderDetail>("/me/provider/profile", body);
+            setCurrent(saved);
+            setVersion((v) => v + 1);
+            toast("Profile saved");
+          }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function MyDocumentsView() {
   return <PortalGate title="My Documents">{(p) => <MyDocuments provider={p} />}</PortalGate>;
 }

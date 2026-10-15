@@ -1,6 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { Pagination } from "@/components/Pagination";
+import { useFitRows } from "@/lib/useFitRows";
+
+const ROW_H = 50;
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AsyncBoundary } from "@/components/AsyncState";
 import { BorderTabs } from "@/components/BorderTabs";
@@ -81,6 +85,14 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
   const [busy, setBusy] = useState<string | null>(null);
   const all = useMemo(() => items.data || [], [items.data]);
   const list = useMemo(() => (search.trim() ? all.filter((i) => matchesSearch(search, i.value, i.addedBy)) : all), [all, search]);
+  // as many rows as fit the window; the rest on the next pages
+  const tableRef = useRef<HTMLDivElement>(null);
+  const size = useFitRows(tableRef, ROW_H);
+  const [pageWanted, setPage] = useState(0);
+  const totalPages = Math.max(1, Math.ceil(list.length / size));
+  // fewer pages after a search / a bigger window: stay on the last one
+  const page = Math.min(pageWanted, totalPages - 1);
+  const pageItems = list.slice(page * size, page * size + size);
   // who sees what this user adds
   const addsForEveryone = superAdmin || SHARED_LISTS.includes(listKey);
   const isDocs = listKey === "document_type";
@@ -120,16 +132,18 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
 
   return (
     <div>
-      <div className="flex items-center gap-3 mb-4 flex-wrap">
-        <div className="relative flex-1 max-w-xs">
+      <div className="flex items-center gap-3 mb-1">
+        <div className="relative flex-1 min-w-0">
           <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
-          <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder={"Search " + meta.label.toLowerCase() + "…"} className="input" style={{ paddingLeft: 32 }} aria-label="Search" />
+          <input value={search} onChange={(e) => { setSearch(cleanSearch(e.target.value)); setPage(0); }} placeholder={"Search " + meta.label.toLowerCase() + "…"} className="input" style={{ paddingLeft: 32 }} aria-label="Search" />
         </div>
-        <div className="text-xs text-ink-faint flex-1 min-w-[200px]">{meta.hint}</div>
-        <button className="btn btn-primary ml-auto" onClick={() => setEditing("new")}>
+        <button className="btn btn-primary shrink-0" onClick={() => setEditing("new")}>
           <Icon name="Plus" size={14} /> Add {meta.singular}
         </button>
       </div>
+      <div className="text-xs text-ink-faint mb-3">{meta.hint}</div>
+      {/* measured from here (always on the page): how many rows fit the window */}
+      <div ref={tableRef}>
       <AsyncBoundary loading={items.loading && !items.data} error={items.error} onRetry={items.reload}>
         <div className="card overflow-hidden">
           {list.length === 0 ? (
@@ -149,8 +163,8 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {list.map((i) => (
-                    <tr key={i.id}>
+                  {pageItems.map((i) => (
+                    <tr key={i.id} style={{ height: ROW_H }}>
                       <td className="font-medium">
                         {i.value}
                         {i.code && !isDocs && <div className="text-[10px] text-ink-faint font-mono font-normal">{i.code}</div>}
@@ -193,8 +207,10 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
               </table>
             </div>
           )}
+          {list.length > 0 && <div className="border-t border-line"><Pagination page={page} totalPages={totalPages} totalElements={list.length} size={size} onChange={setPage} /></div>}
         </div>
       </AsyncBoundary>
+      </div>
       {editing && (
         <ItemModal
           listKey={listKey}
