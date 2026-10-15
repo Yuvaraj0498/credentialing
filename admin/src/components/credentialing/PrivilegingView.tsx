@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState, Loading } from "@/components/AsyncState";
@@ -71,10 +73,10 @@ function AddHospitalModal({ onClose, onCreated }: { onClose: () => void; onCreat
             <input className="input" value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="Boston" />
           </Field>
           <Field label="State" error={errors.state}>
-            <select className="input" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })}>
+            <Select className="input" value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })}>
               <option value="">—</option>
               {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            </Select>
           </Field>
         </div>
         <div className="flex justify-end gap-2 pt-3 border-t border-line">
@@ -178,9 +180,9 @@ export function PrivilegingView() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="label">Provider</label>
-                <select value={selectedProviderId ?? ""} onChange={(e) => setProviderChoice(Number(e.target.value))} className="input">
+                <Select value={selectedProviderId ?? ""} onChange={(e) => setProviderChoice(Number(e.target.value))} className="input">
                   {providers.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.specialty || "—"}</option>)}
-                </select>
+                </Select>
               </div>
               <div>
                 <div className="flex items-center justify-between">
@@ -191,9 +193,9 @@ export function PrivilegingView() {
                     </button>
                   )}
                 </div>
-                <select value={selectedHospital ?? ""} onChange={(e) => setHospitalChoice(Number(e.target.value))} className="input">
+                <Select value={selectedHospital ?? ""} onChange={(e) => setHospitalChoice(Number(e.target.value))} className="input">
                   {hospitals.map((h) => <option key={h.id} value={h.id}>{h.name}{hospitalCity(h) ? " — " + hospitalCity(h) : ""}</option>)}
-                </select>
+                </Select>
               </div>
             </div>
           </div>
@@ -230,14 +232,14 @@ export function PrivilegingView() {
                           </td>
                           <td className="text-xs text-ink-light">{fmtDate(p.requestedAt)}</td>
                           <td className="text-right">
-                            <select value={p.status} disabled={!canWrite || savingItem === p.privilegeItemId}
+                            <Select value={p.status} disabled={!canWrite || savingItem === p.privilegeItemId}
                                     onChange={(e) => setStatus(p, e.target.value as PrivilegeStatus)} className="input" style={{ width: 140, fontSize: 12 }}>
                               <option value="none">Not Requested</option>
                               <option value="requested">Requested</option>
                               <option value="pending">Pending Review</option>
                               <option value="granted">Granted</option>
                               <option value="denied">Denied</option>
-                            </select>
+                            </Select>
                           </td>
                         </tr>
                       );

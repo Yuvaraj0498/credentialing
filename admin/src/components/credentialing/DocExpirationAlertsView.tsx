@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
@@ -208,11 +210,11 @@ export function DocExpirationAlertsView() {
                 </div>
               </div>
               <Field label="Check cadence" error={errors.cadence}>
-                <select value={config.cadence} disabled={!canWrite} onChange={(e) => update({ cadence: e.target.value as AlertCadence })} className="input">
+                <Select value={config.cadence} disabled={!canWrite} onChange={(e) => update({ cadence: e.target.value as AlertCadence })} className="input">
                   <option value="daily">Daily at 8:00 AM</option>
                   <option value="weekly">Weekly (Mondays)</option>
                   <option value="hourly">Hourly (recommended)</option>
-                </select>
+                </Select>
               </Field>
             </div>
             <div className="p-5 pt-0">

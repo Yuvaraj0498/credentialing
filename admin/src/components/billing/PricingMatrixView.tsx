@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState, Loading } from "@/components/AsyncState";
@@ -73,9 +75,9 @@ export function PricingMatrixView() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <label className="text-xs font-medium text-ink-light">State:</label>
-            <select value={currentState?.code || ""} onChange={(e) => setSelectedState(e.target.value)} className="input" style={{ width: 200 }}>
+            <Select value={currentState?.code || ""} onChange={(e) => setSelectedState(e.target.value)} className="input" style={{ width: 200 }}>
               {states.map((s) => <option key={s.code} value={s.code}>{s.code} — {s.name}</option>)}
-            </select>
+            </Select>
             <div className="flex border border-line rounded-md p-0.5 ml-2">
               <button onClick={() => setServiceType("new")} className={"px-3 py-1 rounded text-xs font-medium " + (serviceType === "new" ? "bg-accent text-white" : "text-ink-light")}>New Cred</button>
               <button onClick={() => setServiceType("recred")} className={"px-3 py-1 rounded text-xs font-medium " + (serviceType === "recred" ? "bg-accent text-white" : "text-ink-light")}>Recred</button>
@@ -144,13 +146,13 @@ export function PricingMatrixView() {
               <Icon name="Search" size={13} className="absolute" style={{ left: 10, top: 9, color: "var(--ink-faint)" }} />
               <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder="Search state..." className="input" style={{ paddingLeft: 30, width: 180, fontSize: 12 }} />
             </div>
-            <select value={region} onChange={(e) => setRegion(e.target.value as RegionFilter)} className="input" style={{ width: 130, fontSize: 12 }}>
+            <Select value={region} onChange={(e) => setRegion(e.target.value as RegionFilter)} className="input" style={{ width: 130, fontSize: 12 }}>
               <option value="all">All Regions</option>
               <option value="northeast">Northeast</option>
               <option value="south">South</option>
               <option value="midwest">Midwest</option>
               <option value="west">West</option>
-            </select>
+            </Select>
             <button onClick={handleExport} disabled={exporting} className="btn btn-secondary">
               {exporting ? <span className="loader" /> : <Icon name="Download" size={12} />} Export CSV
             </button>

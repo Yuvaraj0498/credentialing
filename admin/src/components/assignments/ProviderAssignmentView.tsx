@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { cleanSearch } from "@/lib/utils";
 import { AccessDenied } from "@/components/AlertBox";
@@ -146,7 +148,7 @@ function AssignmentScreen() {
             style={{ paddingLeft: 32 }}
           />
         </div>
-        <select
+        <Select
           value={filterLocation}
           onChange={(e) => {
             setFilterLocation(e.target.value);
@@ -162,7 +164,7 @@ function AssignmentScreen() {
               {l.locationName} ({l.count})
             </option>
           ))}
-        </select>
+        </Select>
       </div>
 
       {/* Bulk action bar */}
@@ -171,7 +173,7 @@ function AssignmentScreen() {
           <div className="flex items-center gap-3 flex-wrap">
             <Icon name="CheckSquare" size={16} className="text-accent" />
             <span className="text-sm font-semibold">{selected.size} selected</span>
-            <select value={bulkTargetLocation} onChange={(e) => setBulkTargetLocation(e.target.value)} className="input" style={{ minWidth: 240, flex: "0 1 auto", width: "auto" }}>
+            <Select value={bulkTargetLocation} onChange={(e) => setBulkTargetLocation(e.target.value)} className="input" style={{ minWidth: 240, flex: "0 1 auto", width: "auto" }}>
               <option value="">— Assign to location —</option>
               <option value="__unassign">(Unassign)</option>
               {locs.map((l) => (
@@ -179,7 +181,7 @@ function AssignmentScreen() {
                   {l.name} — {l.legalName || ""}
                 </option>
               ))}
-            </select>
+            </Select>
             <button onClick={applyBulk} disabled={!bulkTargetLocation || bulkBusy} className="btn btn-primary">
               <Icon name="Check" size={13} /> Apply to {selected.size}
             </button>

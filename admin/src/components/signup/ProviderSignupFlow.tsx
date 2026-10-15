@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { RequiredMark } from "@/components/Field";
 import { useMasterList, withCurrent } from "@/lib/masterLists";
 import { Fragment, useEffect, useState } from "react";
@@ -210,9 +212,9 @@ export function ProviderSignupFlow() {
                 <div className="grid grid-cols-3 gap-3">
                   <div className="col-span-1">
                     <label className="label">Title</label>
-                    <select value={data.suffix} onChange={(e) => set("suffix", e.target.value)} className="input">
+                    <Select value={data.suffix} onChange={(e) => set("suffix", e.target.value)} className="input">
                       {withCurrent(suffixOptions, data.suffix).map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-                    </select>
+                    </Select>
                     <Err msg={errors.suffix} />
                   </div>
                   <div>
@@ -279,11 +281,11 @@ export function ProviderSignupFlow() {
                 </div>
                 <div>
                   <label className="label">Primary Specialty<RequiredMark /></label>
-                  <select value={data.specialty} onChange={(e) => set("specialty", e.target.value)} className={"input" + (errors.specialty ? " input-error" : "")}>
+                  <Select value={data.specialty} onChange={(e) => set("specialty", e.target.value)} className={"input" + (errors.specialty ? " input-error" : "")}>
                     <option value="">— Select —</option>
                     {specialtyOptions.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
                     <option value="__other__">Other</option>
-                  </select>
+                  </Select>
                   {data.specialty === "__other__" && (
                     <input value={otherSpecialty} onChange={(e) => setOtherSpecialty(e.target.value)} className="input mt-2" maxLength={120} placeholder="Type your specialty" aria-label="Other Specialty" />
                   )}
@@ -291,13 +293,13 @@ export function ProviderSignupFlow() {
                 </div>
                 <div>
                   <label className="label">Primary License State</label>
-                  <select value={data.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
+                  <Select value={data.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
                     {stateOptions.map((s) => (
                       <option key={s.code} value={s.code}>
                         {s.code === s.name ? s.code : s.code + " — " + s.name}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                   <Err msg={errors.licenseState} />
                 </div>
               </div>

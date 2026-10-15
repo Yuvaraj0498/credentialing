@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useMemo, useState } from "react";
 import { PayerLogo } from "./PayerLogo";
 import { matchesSearch } from "@/lib/search";
@@ -130,14 +132,14 @@ export function PayersView() {
                 </div>
               )}
             </div>
-            <select value={selectedProviderId} onChange={(e) => setSelectedProviderId(e.target.value)} className="input" style={{ minWidth: 280, maxWidth: "100%" }} disabled={providers.loading}>
+            <Select value={selectedProviderId} onChange={(e) => setSelectedProviderId(e.target.value)} className="input" style={{ minWidth: 280, maxWidth: "100%" }} disabled={providers.loading}>
               <option value="">{providers.loading ? "Loading providers…" : "— Choose provider —"}</option>
               {(providers.data || []).map((p) => (
                 <option key={p.id} value={p.id}>
                   {providerName(p)} {p.suffix ? "," + p.suffix : ""} — NPI {p.npi || "—"}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           {(providers.error || matrix.error) && <div className="text-xs mt-2" style={{ color: "var(--danger)" }}>{providers.error || matrix.error}</div>}
         </div>

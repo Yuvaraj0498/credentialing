@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { AccessDenied } from "@/components/AlertBox";
 import { Avatar } from "@/components/Avatar";
@@ -103,7 +105,7 @@ export function EnrollmentsView() {
             style={{ paddingLeft: 32 }}
           />
         </div>
-        <select
+        <Select
           value={statusFilter}
           onChange={(e) => {
             setStatusFilter(e.target.value);
@@ -120,7 +122,7 @@ export function EnrollmentsView() {
           <option value="needs_attention">Needs Attention</option>
           <option value="on_hold">On Hold</option>
           <option value="terminated">Terminated</option>
-        </select>
+        </Select>
       </div>
 
       {list.error ? (

@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { DEFAULT_PHONE_CODE, PHONE_CODES, digitsOnly, joinPhone, splitPhone } from "@/lib/validation";
 
@@ -28,7 +30,7 @@ export function PhoneInput({
   const shownCode = value ? parts.code : code;
   return (
     <div className="flex gap-1.5">
-      <select
+      <Select
         value={shownCode}
         onChange={(e) => {
           setCode(e.target.value);
@@ -42,7 +44,7 @@ export function PhoneInput({
         {PHONE_CODES.map((c) => (
           <option key={c} value={c}>{c}</option>
         ))}
-      </select>
+      </Select>
       <input
         id={id}
         value={parts.digits}

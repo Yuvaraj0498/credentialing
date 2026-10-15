@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { AlertBox } from "@/components/AlertBox";
 import { Icon } from "@/components/Icon";
@@ -147,7 +149,7 @@ export function AppointmentLetterModal({ provider, onClose }: { provider: Provid
               <button className="underline" onClick={hospitals.reload}>Retry</button>
             </AlertBox>
           ) : (
-            <select value={selectedHospitalId} onChange={(e) => setHospitalId(e.target.value)} className="input" disabled={hospitals.loading}>
+            <Select value={selectedHospitalId} onChange={(e) => setHospitalId(e.target.value)} className="input" disabled={hospitals.loading}>
               {hospitals.loading && <option value="">Loading hospitals…</option>}
               {!hospitals.loading && activeHospitals.length === 0 && <option value="">— No hospitals configured (organization name is used) —</option>}
               {activeHospitals.map((h) => (
@@ -155,7 +157,7 @@ export function AppointmentLetterModal({ provider, onClose }: { provider: Provid
                   {h.name} — {h.city || "—"}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
         </div>
 

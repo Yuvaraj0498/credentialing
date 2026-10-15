@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Select } from "@/components/Select";
+
+import type { ReactNode } from "react";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
 import { PasswordInput } from "@/components/PasswordInput";
@@ -192,12 +194,12 @@ function Address({ f, set, errors, prefix }: SectionProps & { prefix: "home" | "
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Text f={f} set={set} errors={errors} k={k("City")} label="City" />
         <Field label="State" error={errors[k("State")]}>
-          <select value={f[k("State")]} onChange={(e) => set(k("State"), e.target.value)} className="input">
+          <Select value={f[k("State")]} onChange={(e) => set(k("State"), e.target.value)} className="input">
             <option value="">— Select —</option>
             {US_STATES.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Text f={f} set={set} errors={errors} k={k("Zip")} label="ZIP" max={10} mono digits={10} placeholder="5 or 9 digits" />
       </div>
@@ -345,66 +347,13 @@ export function OptionSelect({
   ariaLabel: string;
   invalid?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const listRef = useRef<HTMLUListElement>(null);
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    // the chosen option in view
-    listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
-    return () => document.removeEventListener("mousedown", close);
-  }, [open]);
-  const current = options.find((o) => o.value === value);
-  const all = [{ value: "", label: placeholder }, ...options];
   return (
-    <div ref={ref} className="relative" onKeyDown={(e) => e.key === "Escape" && setOpen(false)}>
-      <button
-        type="button"
-        className={"input text-left flex items-center justify-between gap-2" + (invalid ? " input-error" : "")}
-        aria-label={ariaLabel}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((o) => !o)}
-        title={current?.label}
-      >
-        <span className={"truncate " + (current ? "text-ink" : "text-ink-light")}>{current?.label || placeholder}</span>
-        <Icon name="ChevronDown" size={14} className="shrink-0 text-ink-light" />
-      </button>
-      {open && (
-        <ul
-          ref={listRef}
-          role="listbox"
-          aria-label={ariaLabel}
-          className="absolute left-0 right-0 mt-1 rounded-lg border border-line py-1 overflow-y-auto"
-          style={{ zIndex: 60, maxHeight: 260, background: "var(--paper, #fff)", boxShadow: "0 10px 25px rgba(0,0,0,.12)" }}
-        >
-          {all.map((o) => {
-            const sel = o.value === value;
-            return (
-              <li
-                key={o.value || "__empty__"}
-                role="option"
-                aria-selected={sel}
-                title={o.label}
-                className="px-3 py-1.5 text-sm cursor-pointer truncate hover:bg-soft"
-                style={sel ? { background: "var(--accent-soft)", color: "var(--accent-strong, var(--accent))", fontWeight: 500 } : undefined}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  onChange(o.value);
-                  setOpen(false);
-                }}
-              >
-                {o.label}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-    </div>
+    <Select value={value} onChange={(e) => onChange(e.target.value)} className={"input" + (invalid ? " input-error" : "")} aria-label={ariaLabel}>
+      <option value="">{placeholder}</option>
+      {options.map((o) => (
+        <option key={o.value} value={o.value}>{o.label}</option>
+      ))}
+    </Select>
   );
 }
 
@@ -446,11 +395,11 @@ export function SuffixSelect({ value, onChange, publicToken, withEmpty }: { valu
   const options = useMasterList("suffix", publicToken !== undefined ? { publicToken } : undefined);
   const list = withCurrent(options, value);
   return (
-    <select value={value} onChange={(e) => onChange(e.target.value)} className="input" aria-label="Suffix">
+    <Select value={value} onChange={(e) => onChange(e.target.value)} className="input" aria-label="Suffix">
       {withEmpty && <option value="">— Select —</option>}
       {list.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>
       ))}
-    </select>
+    </Select>
   );
 }

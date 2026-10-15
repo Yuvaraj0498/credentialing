@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { DeferredNotice } from "@/components/AlertBox";
 import { ErrorState, Loading } from "@/components/AsyncState";
@@ -49,23 +51,23 @@ export function EmailPreviewModal({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
         <div>
           <label className="label">Template</label>
-          <select className="input" value={templateId ?? ""} onChange={(e) => setTemplateId(e.target.value ? Number(e.target.value) : null)} disabled={templates.loading}>
+          <Select className="input" value={templateId ?? ""} onChange={(e) => setTemplateId(e.target.value ? Number(e.target.value) : null)} disabled={templates.loading}>
             {templates.loading && <option value="">Loading…</option>}
             {(templates.data ?? []).map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name} · {REMINDER_TYPE_LABEL[t.type]}{t.system ? " (system)" : ""}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div>
           <label className="label">Preview as provider</label>
-          <select className="input" value={providerId} onChange={(e) => setProviderId(e.target.value)}>
+          <Select className="input" value={providerId} onChange={(e) => setProviderId(e.target.value)}>
             <option value="">Sample provider (Jane)</option>
             {(providers.data ?? []).map((p) => (
               <option key={p.id} value={p.id}>{p.name}</option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
 

@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useEffect, useRef, useState } from "react";
 import { AlertBox, DeferredNotice } from "@/components/AlertBox";
 import { Icon } from "@/components/Icon";
@@ -247,11 +249,11 @@ export function DocumentFolderPicker() {
           <div>
             <label className="label">Target Provider</label>
             {isProvider ? (
-              <select value={selectedProvider} className="input" disabled>
+              <Select value={selectedProvider} className="input" disabled>
                 <option value={selectedProvider}>{user?.displayName}</option>
-              </select>
+              </Select>
             ) : (
-              <select value={selectedProvider} onChange={(e) => redetect(e.target.value)} className="input" disabled={providers.loading || uploading}>
+              <Select value={selectedProvider} onChange={(e) => redetect(e.target.value)} className="input" disabled={providers.loading || uploading}>
                 {providers.loading && <option value="">Loading providers…</option>}
                 {!providers.loading && (providers.data || []).length === 0 && <option value="">No providers</option>}
                 {(providers.data || []).map((p) => (
@@ -260,14 +262,14 @@ export function DocumentFolderPicker() {
                     {p.npi ? " · " + p.npi : ""}
                   </option>
                 ))}
-              </select>
+              </Select>
             )}
             {providers.error && <div className="field-error">{providers.error}</div>}
             {isProvider && !user?.providerId && <div className="field-error">Your account is not linked to a provider profile yet.</div>}
           </div>
           <div>
             <label className="label">Target Payer Portal</label>
-            <select value={selectedPayer} onChange={(e) => setSelectedPayer(e.target.value)} className="input" disabled={payersQ.loading || uploading}>
+            <Select value={selectedPayer} onChange={(e) => setSelectedPayer(e.target.value)} className="input" disabled={payersQ.loading || uploading}>
               {payersQ.loading && <option value="">Loading payers…</option>}
               {privatePayers.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -275,7 +277,7 @@ export function DocumentFolderPicker() {
                 </option>
               ))}
               <option value="">No payer — provider file only</option>
-            </select>
+            </Select>
             <div className="text-[10px] text-ink-faint mt-1">
               Files are saved to the provider&apos;s document checklist{payerName ? " for the " + payerName + " submission" : ""}. Payer portals have no upload API — attach them in the portal after
               signing in from Payer Submissions.
@@ -395,7 +397,7 @@ export function DocumentFolderPicker() {
                         {result?.status === "uploaded" ? (
                           <Pill type="info">{result.label || labelOf(f.docType)}</Pill>
                         ) : (
-                          <select
+                          <Select
                             value={f.docType}
                             onChange={(e) => {
                               const v = e.target.value;
@@ -412,7 +414,7 @@ export function DocumentFolderPicker() {
                                 {d.label}
                               </option>
                             ))}
-                          </select>
+                          </Select>
                         )}
                       </td>
                       <td className="text-xs text-ink-light">{fmtDate(new Date(f.lastModified))}</td>

@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useEffect, useState } from "react";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
@@ -61,26 +63,26 @@ export function CreateTaskModal({ onClose, onCreated, defaultProviderId }: { onC
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Priority">
-            <select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} className="input">
+            <Select value={form.priority} onChange={(e) => setForm({ ...form, priority: e.target.value })} className="input">
               <option value="low">Low</option>
               <option value="medium">Medium</option>
               <option value="high">High</option>
               <option value="urgent">Urgent</option>
-            </select>
+            </Select>
           </Field>
           <Field label="Due Date" error={errors.dueDate}>
             <input type="date" value={form.dueDate} onChange={(e) => setForm({ ...form, dueDate: e.target.value })} className="input" />
           </Field>
         </div>
         <Field label="Related Provider (optional)">
-          <select value={form.providerId} onChange={(e) => setForm({ ...form, providerId: e.target.value })} className="input">
+          <Select value={form.providerId} onChange={(e) => setForm({ ...form, providerId: e.target.value })} className="input">
             <option value="">— None —</option>
             {providers.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name || `${p.firstName ?? ""} ${p.lastName ?? ""}`.trim()}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <div className="flex justify-end gap-2 pt-3 border-t border-line">
           <button onClick={onClose} className="btn btn-secondary" disabled={busy}>Cancel</button>

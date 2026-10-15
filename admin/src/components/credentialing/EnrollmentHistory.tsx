@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { AsyncBoundary } from "@/components/AsyncState";
 import { Avatar } from "@/components/Avatar";
@@ -178,10 +180,10 @@ function EventModal({ mode, enrollmentId, onClose, onSaved }: { mode: "note" | "
       <div className="space-y-3">
         {mode === "note" && (
           <Field label="Type">
-            <select value={type} onChange={(e) => setType(e.target.value as "note" | "follow_up")} className="input">
+            <Select value={type} onChange={(e) => setType(e.target.value as "note" | "follow_up")} className="input">
               <option value="note">Note</option>
               <option value="follow_up">Follow-up</option>
-            </select>
+            </Select>
           </Field>
         )}
         <Field label={mode === "note" ? "Note" : "Note (optional)"} error={error} required={mode === "note"}>

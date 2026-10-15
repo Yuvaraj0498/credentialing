@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -76,7 +78,7 @@ export function FormMappingView({
           {providers.error ? (
             <ErrorState message={providers.error} onRetry={providers.reload} />
           ) : (
-            <select
+            <Select
               className="input"
               defaultValue=""
               disabled={providers.loading}
@@ -88,7 +90,7 @@ export function FormMappingView({
                   {providerName(p)} — NPI {p.npi || "—"}
                 </option>
               ))}
-            </select>
+            </Select>
           )}
         </div>
       </div>

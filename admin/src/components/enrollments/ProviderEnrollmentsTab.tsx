@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { Fragment, useMemo, useRef, useState } from "react";
 import { matchesSearch } from "@/lib/search";
 import { useRouter } from "next/navigation";
@@ -410,7 +412,7 @@ function InlineAssignee({ enrollment, editable, onSave }: { enrollment: Enrollme
   if (editing) {
     if (staff.loading) return <span className="loader" />;
     return (
-      <select
+      <Select
         className="input input-sm"
         style={{ width: 170 }}
         autoFocus
@@ -432,7 +434,7 @@ function InlineAssignee({ enrollment, editable, onSave }: { enrollment: Enrollme
               {u.displayName}
             </option>
           ))}
-      </select>
+      </Select>
     );
   }
   if (enrollment.assignedUserName) {
@@ -557,13 +559,13 @@ function EnrollmentExpansion({ enrollmentId, canUpdate, onChanged }: { enrollmen
         ))}
         {canUpdate && (
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            <select className="input input-sm" style={{ width: 160 }} value={fileType} onChange={(e) => setFileType(e.target.value as EnrollmentFileType)}>
+            <Select className="input input-sm" style={{ width: 160 }} value={fileType} onChange={(e) => setFileType(e.target.value as EnrollmentFileType)}>
               {(Object.keys(FILE_TYPE_LABEL) as EnrollmentFileType[]).map((t) => (
                 <option key={t} value={t}>
                   {FILE_TYPE_LABEL[t]}
                 </option>
               ))}
-            </select>
+            </Select>
             <input
               ref={fileRef}
               type="file"

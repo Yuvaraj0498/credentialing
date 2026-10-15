@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { Icon } from "@/components/Icon";
 import { api } from "@/lib/api";
 import { useAsync } from "@/lib/hooks";
@@ -25,7 +27,7 @@ export function ImportTarget({ value, onChange, disabled }: { value: ImportTarge
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div>
           <label className="label">Practice</label>
-          <select
+          <Select
             className="input"
             disabled={disabled || practices.loading}
             value={value.practiceId ?? ""}
@@ -38,7 +40,7 @@ export function ImportTarget({ value, onChange, disabled }: { value: ImportTarge
                 {p.clientName && p.clientName !== p.name ? " (" + p.clientName + ")" : ""}
               </option>
             ))}
-          </select>
+          </Select>
           {practices.error && (
             <div className="field-error">
               {practices.error}{" "}
@@ -48,7 +50,7 @@ export function ImportTarget({ value, onChange, disabled }: { value: ImportTarge
         </div>
         <div>
           <label className="label">Location</label>
-          <select
+          <Select
             className="input"
             disabled={disabled || locations.loading}
             value={value.locationId ?? ""}
@@ -61,7 +63,7 @@ export function ImportTarget({ value, onChange, disabled }: { value: ImportTarge
                 {!value.practiceId && l.practiceName ? " (" + l.practiceName + ")" : ""}
               </option>
             ))}
-          </select>
+          </Select>
           {locations.error && (
             <div className="field-error">
               {locations.error}{" "}

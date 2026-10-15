@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
 import { PasswordInput } from "@/components/PasswordInput";
@@ -99,10 +101,10 @@ export function UsersView() {
           <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
           <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder="Search name, email, username..." className="input" style={{ paddingLeft: 32 }} />
         </div>
-        <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="input" style={{ width: 200 }}>
+        <Select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="input" style={{ width: 200 }}>
           <option value="all">All Roles</option>
           {(roleList.data || []).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-        </select>
+        </Select>
       </div>
 
       {users.error ? (
@@ -312,12 +314,12 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
   // Every role the super admin created is offered except the built-in Administrator role (admins are created by
   // the super admin) and Provider role (providers are added in the Providers module).
   const roleSelect = (
-    <select value={form.userRoleId} onChange={(e) => { setForm({ ...form, userRoleId: e.target.value }); setErrors((er) => ({ ...er, userRoleId: "" })); }} className="input" disabled={userRoles.loading || isSelf} title={isSelf ? "You cannot change your own role" : undefined}>
+    <Select value={form.userRoleId} onChange={(e) => { setForm({ ...form, userRoleId: e.target.value }); setErrors((er) => ({ ...er, userRoleId: "" })); }} className="input" disabled={userRoles.loading || isSelf} title={isSelf ? "You cannot change your own role" : undefined}>
       <option value="">{userRoles.loading ? "Loading roles…" : "— Select role —"}</option>
       {(userRoles.data || [])
         .filter((r) => r.id === user?.userRoleId || (r.active !== false && !r.builtIn))
         .map((r) => <option key={r.id} value={r.id}>{r.name}{r.active === false ? " (disabled)" : ""}</option>)}
-    </select>
+    </Select>
   );
   if (newProvider) {
     return (
@@ -375,7 +377,7 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
         </Field>
         {access === "provider" && (
           <Field label="Linked Provider *" error={errors.providerId}>
-            <select value={form.providerId} onChange={(e) => setForm({ ...form, providerId: e.target.value })} className="input" disabled={providers.loading}>
+            <Select value={form.providerId} onChange={(e) => setForm({ ...form, providerId: e.target.value })} className="input" disabled={providers.loading}>
               <option value="">{providers.loading ? "Loading providers…" : "— Select provider —"}</option>
               {(providers.data || []).map((p) => (
                 <option key={p.id} value={p.id}>
@@ -383,7 +385,7 @@ export function UserFormModal({ user, isSelf, onSaved, onClose }: { user: User |
                   {p.npi ? " · NPI " + p.npi : ""}
                 </option>
               ))}
-            </select>
+            </Select>
             {providers.error && <div className="field-error">{providers.error}</div>}
           </Field>
         )}

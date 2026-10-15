@@ -15,8 +15,6 @@ import { useAuth } from "@/stores/auth";
 import { daysFromNow, fmtDate, fmtDateShort, fmtTs } from "@/lib/utils";
 import { useAsync } from "@/lib/hooks";
 import { useToast } from "@/stores/toast";
-import { ItemModal } from "@/components/master-data/MasterDataView";
-import { invalidateMasterList } from "@/lib/masterLists";
 import type { DeferredResponse } from "@/types";
 import { ValField } from "./shared";
 import type { AdditionalDocument, DocStatus, DocType, DocumentRow, ProviderDetail, Verification, VerificationSource } from "@/types/providers";
@@ -56,12 +54,8 @@ const PSV_CHECKS: { source: VerificationSource; icon: string; iconColor: string;
 
 /** Prototype ProviderOverview (L1871): documents, document details, PSV and credentials. */
 export function ProviderOverview({ provider, onChanged }: { provider: ProviderDetail; onChanged: () => void }) {
-  const { can, user } = useAuth();
+  const { can } = useAuth();
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
-  // a document type for the organization's providers (Master Data → Document Type)
-  const canAddType = user?.role === "org_admin" || user?.role === "platform_admin";
-  const [addingType, setAddingType] = useState(false);
-  const toast = useToast();
   const extras = useAsync(() => api.get<AdditionalDocument[]>("/providers/" + provider.id + "/additional-documents"), [provider.id]);
   const extraDocs = (extras.data || []).map(extraRow);
   const docs = [...provider.documents, ...extraDocs];
@@ -82,18 +76,11 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
             <h3 className="font-display font-semibold text-ink">Provider Documents</h3>
             <Icon name="ChevronsUpDown" size={12} className="text-ink-faint" />
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {canAddType && (
-              <button className="btn btn-secondary" onClick={() => setAddingType(true)}>
-                <Icon name="Plus" size={14} /> Add More Document
-              </button>
-            )}
-            {can("create", "document") && (
-              <Link href={"/providers/" + provider.id + "/upload"} className="btn btn-primary">
-                <Icon name="Sparkles" size={14} /> AI Upload Documents
-              </Link>
-            )}
-          </div>
+          {can("create", "document") && (
+            <Link href={"/providers/" + provider.id + "/upload"} className="btn btn-primary">
+              <Icon name="Sparkles" size={14} /> AI Upload Documents
+            </Link>
+          )}
         </div>
         <div className="table-scroll">
           <table>
@@ -180,21 +167,6 @@ export function ProviderOverview({ provider, onChanged }: { provider: ProviderDe
         </div>
 
         <PrimarySourceVerification provider={provider} />
-        {addingType && (
-          <ItemModal
-            listKey="document_type"
-            singular="Document"
-            item={null}
-            forEveryone={user?.role === "platform_admin"}
-            onClose={() => setAddingType(false)}
-            onSaved={(name) => {
-              setAddingType(false);
-              invalidateMasterList("document_type");
-              toast(name + " added to the documents list");
-              onChanged();
-            }}
-          />
-        )}
 
         {/* Credentials (CAQH, PECOS) */}
         <div className="card">

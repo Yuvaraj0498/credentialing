@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -86,7 +88,7 @@ export function EnrollmentStatusView() {
           <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
           <input value={search} onChange={(e) => { setSearch(cleanSearch(e.target.value)); setPage(0); }} placeholder="Search provider, payer..." className="input" style={{ paddingLeft: 32 }} />
         </div>
-        <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }} className="input" style={{ width: 180 }}>
+        <Select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(0); }} className="input" style={{ width: 180 }}>
           <option value="all">All statuses</option>
           <option value="draft">Pending</option>
           <option value="in_progress">In Progress</option>
@@ -95,7 +97,7 @@ export function EnrollmentStatusView() {
           <option value="needs_attention">Needs Attention</option>
           <option value="on_hold">On Hold</option>
           <option value="terminated">Terminated</option>
-        </select>
+        </Select>
       </div>
 
       <div className="card overflow-hidden">

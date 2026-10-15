@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useMasterList, withCurrent } from "@/lib/masterLists";
 import { useRef, useState } from "react";
 import { Field } from "@/components/Field";
@@ -206,12 +208,12 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
             <input value={form.name} onChange={(e) => set("name", e.target.value.replace(/^\s+/, ""))} className={"input" + (errors.name ? " input-error" : "")} maxLength={120} placeholder="e.g. BCBS TX" />
           </Field>
           <Field label="Payer Category" required error={errors.category}>
-            <select value={form.category} onChange={(e) => set("category", e.target.value)} className={"input" + (errors.category ? " input-error" : "")}>
+            <Select value={form.category} onChange={(e) => set("category", e.target.value)} className={"input" + (errors.category ? " input-error" : "")}>
               <option value="">— Select category —</option>
               {categories.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
-            </select>
+            </Select>
           </Field>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -227,12 +229,12 @@ export function PayerFormModal({ payer, mode = "platform", onClose, onSaved }: {
             <input value={form.avgTatDays} onChange={(e) => set("avgTatDays", e.target.value.replace(/\D/g, "").slice(0, 3))} className={"input font-mono" + (errors.avgTatDays ? " input-error" : "")} inputMode="numeric" placeholder="e.g. 49" />
           </Field>
           <Field label="Integration" error={errors.integration}>
-            <select value={form.integration} onChange={(e) => set("integration", e.target.value)} className={"input" + (errors.integration ? " input-error" : "")}>
+            <Select value={form.integration} onChange={(e) => set("integration", e.target.value)} className={"input" + (errors.integration ? " input-error" : "")}>
               <option value="">— Select integration —</option>
               {INTEGRATIONS.map((i) => (
                 <option key={i.value} value={i.value}>{i.label}</option>
               ))}
-            </select>
+            </Select>
           </Field>
         </div>
         <Field label="Form" error={errors.appForm}>

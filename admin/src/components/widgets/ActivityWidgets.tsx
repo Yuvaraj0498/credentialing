@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useEffect, useState } from "react";
 import { ConfirmDialog, Modal } from "@/components/Modal";
 import { EmptyState } from "@/components/EmptyState";
@@ -332,12 +334,12 @@ export function FollowUpWidget({ providerId, providerName }: { providerId: numbe
         <Modal title="Log Follow-up" subtitle={"For " + providerName} onClose={() => setShow(false)} maxWidth={520}>
           <div className="space-y-3">
             <Field label="Type">
-              <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as FollowUpType })} className="input">
+              <Select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value as FollowUpType })} className="input">
                 <option value="phone_call">Phone Call</option>
                 <option value="email">Email</option>
                 <option value="meeting">Meeting</option>
                 <option value="note">Note</option>
-              </select>
+              </Select>
             </Field>
             <Field label="Subject" error={errors.subject}>
               <input value={form.subject} onChange={(e) => setForm({ ...form, subject: e.target.value })} className="input" placeholder="e.g. Discussed DEA renewal timeline" maxLength={255} />

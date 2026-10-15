@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { Icon } from "@/components/Icon";
 import { Modal } from "@/components/Modal";
@@ -134,33 +136,33 @@ export function EnrollmentFormModal({
         <div className="space-y-3">
           {(providers.error || payers.error) && <AlertBox>{providers.error || payers.error}</AlertBox>}
           <Field label="Provider *" error={errors.providerId}>
-            <select value={form.providerId} onChange={(e) => setForm({ ...form, providerId: e.target.value })} className="input" disabled={!!defaultProviderId && !enrollment}>
+            <Select value={form.providerId} onChange={(e) => setForm({ ...form, providerId: e.target.value })} className="input" disabled={!!defaultProviderId && !enrollment}>
               <option value="">— Select —</option>
               {(providers.data || []).map((p) => (
                 <option key={p.id} value={p.id}>
                   {providerName(p)} — NPI {p.npi || "—"}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label="Payer *" error={errors.payerId}>
-            <select value={form.payerId} onChange={(e) => setForm({ ...form, payerId: e.target.value })} className="input">
+            <Select value={form.payerId} onChange={(e) => setForm({ ...form, payerId: e.target.value })} className="input">
               <option value="">— Select —</option>
               {payerOptions.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label="Status *" error={errors.status}>
-            <select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as EnrollmentStatus })} className="input">
+            <Select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as EnrollmentStatus })} className="input">
               {STATUS_OPTIONS.map((s) => (
                 <option key={s.value} value={s.value}>
                   {s.label}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Submitted Date" error={errors.submittedDate}>

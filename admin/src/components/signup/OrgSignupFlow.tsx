@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { RequiredMark } from "@/components/Field";
 import { Fragment, useEffect, useState } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
@@ -256,9 +258,9 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="label">Organization Type</label>
-                    <select value={data.orgType} onChange={(e) => set("orgType", e.target.value)} className="input">
+                    <Select value={data.orgType} onChange={(e) => set("orgType", e.target.value)} className="input">
                       {withCurrent(orgTypes, data.orgType).map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-                    </select>
+                    </Select>
                     <Err msg={errors.orgType} />
                   </div>
                   <div>
@@ -285,9 +287,9 @@ export function OrgSignupFlow({ embedded }: { embedded?: EmbeddedSignup } = {}) 
                   </div>
                   <div>
                     <label className="label">State</label>
-                    <select value={data.state} onChange={(e) => set("state", e.target.value)} className="input">
+                    <Select value={data.state} onChange={(e) => set("state", e.target.value)} className="input">
                       {stateOptions.map((s) => <option key={s.code} value={s.code}>{s.code}</option>)}
-                    </select>
+                    </Select>
                     <Err msg={errors.state} />
                   </div>
                   <div>

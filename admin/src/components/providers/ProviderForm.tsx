@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState, type ReactNode } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
 import { useEmailCheck } from "@/lib/useEmailCheck";
@@ -358,11 +360,11 @@ export function ProviderForm({
             <input value={form.license} onChange={(e) => set("license", e.target.value)} className="input font-mono" maxLength={40} />
           </Field>
           <Field label="License State *" error={err("licenseState")}>
-            <select value={form.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
+            <Select value={form.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
               {stateOptions.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label="License Expiration *" error={err("licenseExpires")}>
             <input type="date" min={todayISO()} value={form.licenseExpires} onChange={(e) => set("licenseExpires", e.target.value)} className="input" />
@@ -408,11 +410,11 @@ export function ProviderForm({
       <FormSection icon="ShieldCheck" title="PECOS">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Field label="PECOS Access Granted" error={err("pecosAccess")}>
-            <select value={form.pecosAccess} onChange={(e) => set("pecosAccess", e.target.value)} className="input">
+            <Select value={form.pecosAccess} onChange={(e) => set("pecosAccess", e.target.value)} className="input">
               <option value="">— Select —</option>
               <option value="yes">Yes</option>
               <option value="no">No</option>
-            </select>
+            </Select>
           </Field>
           <Field label="PECOS User Name" error={err("pecosUsername")}>
             <input
@@ -432,11 +434,11 @@ export function ProviderForm({
       <FormSection icon="KeyRound" title="Status & Sign-in">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Field label="Status *" error={err("status")}>
-            <select value={form.status} onChange={(e) => set("status", e.target.value)} className="input">
+            <Select value={form.status} onChange={(e) => set("status", e.target.value)} className="input">
               {PROVIDER_STATUS_OPTIONS.map((o) => (
                 <option key={o.id} value={o.id}>{o.label}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           {withLogin && (
             <>
@@ -468,12 +470,12 @@ export function ProviderForm({
         </div>
         <div className="grid grid-cols-1 gap-3">
           <Field label="Client" error={err("clientId")}>
-            <select value={form.clientId} onChange={(e) => handleClientChange(e.target.value)} className="input" disabled={lockPlacement}>
+            <Select value={form.clientId} onChange={(e) => handleClientChange(e.target.value)} className="input" disabled={lockPlacement}>
               <option value="">— None —</option>
               {clients.map((cl) => (
                 <option key={cl.id} value={cl.id}>{cl.name}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field
             label={
@@ -483,7 +485,7 @@ export function ProviderForm({
             }
             error={err("practiceId")}
           >
-            <select
+            <Select
               value={form.practiceId}
               onChange={(e) => handlePracticeChange(e.target.value)}
               className="input"
@@ -497,7 +499,7 @@ export function ProviderForm({
                   {pr.taxId ? " (TIN " + pr.taxId + ")" : ""}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field
             label={
@@ -512,7 +514,7 @@ export function ProviderForm({
             }
             error={err("locationId")}
           >
-            <select
+            <Select
               value={form.locationId}
               onChange={(e) => handleLocationChange(e.target.value)}
               className="input"
@@ -525,7 +527,7 @@ export function ProviderForm({
                   {loc.name} — {loc.address ? loc.address.split(",")[0] : ""}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           {selectedLoc && (
             <div className="p-2 rounded text-[11px]" style={{ background: "var(--bg-soft)" }}>

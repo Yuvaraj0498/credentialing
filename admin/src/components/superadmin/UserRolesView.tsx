@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { matchesSearch } from "@/lib/search";
 import { cleanSearch } from "@/lib/utils";
@@ -229,7 +231,7 @@ export function UserRolesView() {
                 </div>
                 <div>
                   <label className="label" htmlFor="move-to">Move the user(s) to<RequiredMark /></label>
-                  <select
+                  <Select
                     id="move-to"
                     value={moveTo}
                     onChange={(e) => {
@@ -242,7 +244,7 @@ export function UserRolesView() {
                     {list.filter((x) => x.id !== deleting.id && !x.builtIn).map((x) => (
                       <option key={x.id} value={x.id}>{x.name}{x.active ? "" : " (disabled)"}</option>
                     ))}
-                  </select>
+                  </Select>
                   {moveError && <div className="field-error">{moveError}</div>}
                 </div>
               </div>

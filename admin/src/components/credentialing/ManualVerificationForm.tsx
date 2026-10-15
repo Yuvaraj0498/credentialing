@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
@@ -63,11 +65,11 @@ export function ManualVerificationForm({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {sources.length > 1 && (
           <Field label="Source" error={errors.source}>
-            <select value={source} onChange={(e) => setSource(e.target.value as VerificationSource)} className="input">
+            <Select value={source} onChange={(e) => setSource(e.target.value as VerificationSource)} className="input">
               {sources.map((s) => (
                 <option key={s} value={s}>{SOURCE_LABEL[s]}</option>
               ))}
-            </select>
+            </Select>
           </Field>
         )}
         <Field label="Result" error={errors.status}>

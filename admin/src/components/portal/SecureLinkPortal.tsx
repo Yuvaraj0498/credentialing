@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { Fragment, useRef, useState } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
 import { PasswordInput } from "@/components/PasswordInput";
@@ -609,12 +611,12 @@ function ProfileForm({
             <input value={profile.licenseNumber} onChange={(e) => set("licenseNumber", e.target.value)} className="input font-mono" maxLength={40} />
           </Field>
           <Field label="License State" required error={errors.licenseState}>
-            <select value={profile.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
+            <Select value={profile.licenseState} onChange={(e) => set("licenseState", e.target.value)} className="input">
               <option value="">— Select —</option>
               {US_STATES.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label="License Expiration" required error={errors.licenseExpires}>
             <input type="date" min={todayISO()} value={profile.licenseExpires} onChange={(e) => set("licenseExpires", e.target.value)} className="input" />
@@ -646,11 +648,11 @@ function ProfileForm({
       <FormSection icon="ShieldCheck" title="PECOS">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <Field label="PECOS Access Granted" error={errors.pecosAccess || errors.pecosAccessGranted}>
-            <select value={profile.pecosAccess} onChange={(e) => set("pecosAccess", e.target.value)} className="input">
+            <Select value={profile.pecosAccess} onChange={(e) => set("pecosAccess", e.target.value)} className="input">
               <option value="">— Select —</option>
               <option value="yes">Yes</option>
               <option value="no">No</option>
-            </select>
+            </Select>
           </Field>
           <Field label="PECOS User Name" error={errors.pecosUsername}>
             <input value={profile.pecosUsername} onChange={(e) => set("pecosUsername", e.target.value.replace(/\s/g, ""))} className="input font-mono" maxLength={100} disabled={profile.pecosAccess !== "yes"} autoComplete="off" />

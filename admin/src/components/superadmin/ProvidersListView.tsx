@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AsyncBoundary } from "@/components/AsyncState";
@@ -52,22 +54,22 @@ export function ProvidersListView() {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <div>
           <label className="label" htmlFor="sa-p-admin">Org Admin</label>
-          <select id="sa-p-admin" value={adminId} onChange={(e) => setQuery(e.target.value, "")} className="input" disabled={admins.loading}>
+          <Select id="sa-p-admin" value={adminId} onChange={(e) => setQuery(e.target.value, "")} className="input" disabled={admins.loading}>
             <option value="">{admins.loading ? "Loading admins…" : "— Select an org admin —"}</option>
             {adminList.map((a) => (
               <option key={a.userId} value={a.userId}>{adminLabel(a)}</option>
             ))}
-          </select>
+          </Select>
           {admins.error && <div className="field-error">{admins.error}</div>}
         </div>
         <div>
           <label className="label" htmlFor="sa-p-client">Organization</label>
-          <select id="sa-p-client" value={clientId} onChange={(e) => setQuery(adminId, e.target.value)} className="input" disabled={!admin || clients.loading}>
+          <Select id="sa-p-client" value={clientId} onChange={(e) => setQuery(adminId, e.target.value)} className="input" disabled={!admin || clients.loading}>
             <option value="">{!admin ? "Choose an org admin first" : clients.loading ? "Loading organizations…" : clientList.length ? "— Select an organization —" : "No organizations under this admin"}</option>
             {clientList.map((c) => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
-          </select>
+          </Select>
           {clients.error && <div className="field-error">{clients.error}</div>}
         </div>
       </div>

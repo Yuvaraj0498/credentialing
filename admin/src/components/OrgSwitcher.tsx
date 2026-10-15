@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useEffect, useState } from "react";
 import { api, getSelectedOrgId, setSelectedOrgId } from "@/lib/api";
 
@@ -32,7 +34,7 @@ export function OrgSwitcher() {
   return (
     <div className="px-4 pb-2">
       <label className="label">Organization</label>
-      <select
+      <Select
         className="input input-sm"
         value={selected}
         onChange={(e) => {
@@ -46,7 +48,7 @@ export function OrgSwitcher() {
             {o.name}
           </option>
         ))}
-      </select>
+      </Select>
     </div>
   );
 }

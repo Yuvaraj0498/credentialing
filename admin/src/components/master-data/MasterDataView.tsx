@@ -33,6 +33,8 @@ interface ItemRow {
   mandatory?: boolean | null;
   expires?: boolean | null;
   builtIn?: boolean;
+  /** "Everyone" or the organization that sees it */
+  visibleTo?: string;
 }
 
 const TABS: { id: MasterListKey; label: string; icon: string; singular: string; hint: string }[] = [
@@ -155,7 +157,7 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
                       </td>
                       {isDocs && <td className="text-xs">{i.mandatory ? <span className="font-semibold text-ink">Yes</span> : <span className="text-ink-faint">No</span>}</td>}
                       {isDocs && <td className="text-xs">{i.expires ? "Asked on upload" : <span className="text-ink-faint">No</span>}</td>}
-                      <td className="text-xs">{i.everyone ? "Everyone" : superAdmin ? "One organization" : "Your organization"}</td>
+                      <td className="text-xs">{i.everyone ? "Everyone" : superAdmin ? i.visibleTo || "One organization" : "Your organization"}</td>
                       <td className="text-xs text-ink-light">{i.addedBy}</td>
                       <td>
                         <Pill type={i.active ? "success" : "neutral"}>{i.active ? "Active" : "Inactive"}</Pill>
@@ -175,11 +177,9 @@ function MasterList({ listKey }: { listKey: MasterListKey }) {
                             <button className="btn-ghost p-1" onClick={() => setEditing(i)} title="Edit" aria-label={"Edit " + i.value}>
                               <Icon name="Pencil" size={13} />
                             </button>
-                            {!i.builtIn && (
-                              <button className="btn-ghost p-1 hover:text-red-600" onClick={() => setDeleting(i)} title="Delete" aria-label={"Delete " + i.value}>
-                                <Icon name="Trash2" size={13} />
-                              </button>
-                            )}
+                            <button className="btn-ghost p-1 hover:text-red-600" onClick={() => setDeleting(i)} title="Delete" aria-label={"Delete " + i.value}>
+                              <Icon name="Trash2" size={13} />
+                            </button>
                           </div>
                         ) : (
                           <span className="text-[11px] text-ink-faint inline-flex items-center gap-1" title="Only the one who added it can change it">

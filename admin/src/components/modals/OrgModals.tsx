@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
 import { Field } from "@/components/Field";
@@ -499,10 +501,10 @@ export function AddOrganizationModal({
               <input value={form.taxId} onChange={(e) => setForm({ ...form, taxId: taxIdChars(e.target.value) })} className="input font-mono" placeholder="e.g. 12-3456789 or TX12AB345" />
             </Field>
             <Field label="Parent Client" required error={errors.parentId || errors.clientId}>
-              <select value={form.parentId} onChange={(e) => setForm({ ...form, parentId: e.target.value })} className="input">
+              <Select value={form.parentId} onChange={(e) => setForm({ ...form, parentId: e.target.value })} className="input">
                 <option value="">— Select client —</option>
                 {clients.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              </Select>
             </Field>
             <PracticeContactFields
               address={form.address}
@@ -516,7 +518,7 @@ export function AddOrganizationModal({
         {type === "location" && (
           <>
             <Field label="Parent Practice" error={errors.practiceId}>
-              <select value={form.parentId} onChange={(e) => setForm({ ...form, parentId: e.target.value })} className="input">
+              <Select value={form.parentId} onChange={(e) => setForm({ ...form, parentId: e.target.value })} className="input">
                 <option value="">— Select practice —</option>
                 {practices.map((p) => (
                   <option key={p.id} value={p.id}>
@@ -524,7 +526,7 @@ export function AddOrganizationModal({
                     {p.clientName ? " (" + p.clientName + ")" : ""}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
             <Field label="Legal Name" error={errors.legalName}>
               <input value={form.legalName} onChange={(e) => setForm({ ...form, legalName: e.target.value })} className="input" maxLength={200} placeholder="LLC / INC name" />

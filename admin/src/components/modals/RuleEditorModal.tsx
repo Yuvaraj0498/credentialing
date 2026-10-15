@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { Field } from "@/components/Field";
 import { Modal } from "@/components/Modal";
@@ -54,22 +56,22 @@ export function RuleEditorModal({ rule, onClose, onSaved }: { rule: RuleDraft; o
             <input type="number" min={-90} max={365} value={daysText} onChange={(e) => setDaysText(e.target.value)} className="input font-mono" />
           </Field>
           <Field label="Channel" error={errors.channel}>
-            <select value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value as RuleChannel })} className="input">
+            <Select value={form.channel} onChange={(e) => setForm({ ...form, channel: e.target.value as RuleChannel })} className="input">
               <option value="email">Email only</option>
               <option value="email+sms">Email + SMS</option>
               <option value="email+sms+call">Email + SMS + Phone call</option>
               <option value="email+manager">Email + escalate to manager</option>
-            </select>
+            </Select>
           </Field>
         </div>
         <Field label="Email template" error={errors.template}>
-          <select value={form.template} onChange={(e) => setForm({ ...form, template: e.target.value as RuleTemplate })} className="input">
+          <Select value={form.template} onChange={(e) => setForm({ ...form, template: e.target.value as RuleTemplate })} className="input">
             <option value="friendly">Friendly heads-up (warm, no pressure)</option>
             <option value="standard">Standard reminder (neutral, informative)</option>
             <option value="urgent">Urgent (emphasizes consequences)</option>
             <option value="final">Final notice (last call before expiry)</option>
             <option value="escalation">Escalation (post-expiry, manager CCed)</option>
-          </select>
+          </Select>
         </Field>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={form.enabled} onChange={(e) => setForm({ ...form, enabled: e.target.checked })} />

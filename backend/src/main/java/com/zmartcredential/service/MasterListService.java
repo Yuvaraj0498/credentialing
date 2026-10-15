@@ -66,7 +66,9 @@ public class MasterListService {
 
     /** id: the item's id (document types: their code). mandatory / expires: document types only. */
     public record ItemRow(String id, String code, String value, int sortOrder, boolean active, boolean everyone,
-                          String addedBy, boolean canEdit, Boolean mandatory, Boolean expires, boolean builtIn) {
+                          String addedBy, boolean canEdit, Boolean mandatory, Boolean expires, boolean builtIn,
+                          /* "Everyone" or the organization that sees it */
+                          String visibleTo) {
     }
 
     public record ItemRequest(String value, Boolean active, Integer sortOrder, Boolean mandatory, Boolean expires) {
@@ -111,8 +113,10 @@ public class MasterListService {
             String by = i.getCreatedByOrgId() == null ? "Super Admin"
                     : orgNames.computeIfAbsent(i.getCreatedByOrgId(), id -> organizationRepository.findById(id)
                             .map(o -> o.getName()).orElse("Organization #" + id));
+            String to = i.getOrgId() == null ? "Everyone" : orgNames.computeIfAbsent(i.getOrgId(), id -> organizationRepository.findById(id)
+                    .map(o -> o.getName()).orElse("Organization #" + id));
             return new ItemRow(String.valueOf(i.getId()), i.getCode(), i.getValue(), i.getSortOrder() == null ? 0 : i.getSortOrder(),
-                    Boolean.TRUE.equals(i.getActive()), i.getOrgId() == null, by, canEdit(i), null, null, false);
+                    Boolean.TRUE.equals(i.getActive()), i.getOrgId() == null, by, canEdit(i), null, null, false, to);
         }).toList();
     }
 
@@ -159,7 +163,7 @@ public class MasterListService {
     public void delete(String key, String rawId) {
         if (DOCUMENT_TYPE.equals(key)) {
             DocumentType t = loadEditableType(rawId);
-            if (Boolean.TRUE.equals(t.getBuiltIn())) throw new BadRequestException("Standard document types can't be deleted — switch it off instead");
+            // the super admin may delete a standard type; an organization admin only reaches their own types here
             t.setDeleted(true);
             documentTypeRepository.save(t);
             return;
@@ -183,14 +187,19 @@ public class MasterListService {
         String by = Boolean.TRUE.equals(t.getBuiltIn()) ? "Standard" : t.getCreatedByOrgId() == null ? "Super Admin"
                 : orgNames.computeIfAbsent(t.getCreatedByOrgId(), id -> organizationRepository.findById(id)
                         .map(o -> o.getName()).orElse("Organization #" + id));
+        String to = t.getOrgId() == null ? "Everyone" : orgNames.computeIfAbsent(t.getOrgId(), id -> organizationRepository.findById(id)
+                .map(o -> o.getName()).orElse("Organization #" + id));
         return new ItemRow(t.getCode(), t.getCode(), t.getLabel(), t.getSortOrder() == null ? 0 : t.getSortOrder(),
                 !Boolean.FALSE.equals(t.getActive()), t.getOrgId() == null, by, canEditType(t),
-                Boolean.TRUE.equals(t.getCritical()), Boolean.TRUE.equals(t.getExpires()), Boolean.TRUE.equals(t.getBuiltIn()));
+                Boolean.TRUE.equals(t.getCritical()), Boolean.TRUE.equals(t.getExpires()), Boolean.TRUE.equals(t.getBuiltIn()), to);
     }
 
-    /** Super admin: any type. Organization admin: the types their organization added. */
+    /**
+     * Super admin: the types for everyone (standard ones included). An organization's own types: only that
+     * organization (the super admin sees them, read only).
+     */
     private boolean canEditType(DocumentType t) {
-        if (authContext.hasRole(Role.PLATFORM_ADMIN)) return true;
+        if (authContext.hasRole(Role.PLATFORM_ADMIN)) return t.getOrgId() == null;
         return !Boolean.TRUE.equals(t.getBuiltIn()) && t.getCreatedByOrgId() != null
                 && Objects.equals(t.getCreatedByOrgId(), authContext.orgId());
     }
@@ -199,7 +208,9 @@ public class MasterListService {
         requireManager();
         DocumentType t = documentTypeRepository.findById(code).filter(x -> !Boolean.TRUE.equals(x.getDeleted()))
                 .orElseThrow(() -> NotFoundException.of("Document type", code));
-        if (!canEditType(t)) throw new ForbiddenException("Only the organization that added this document type (or the super admin) can change it");
+        if (!canEditType(t)) throw new ForbiddenException(t.getOrgId() != null
+                ? "Only the organization that added this document type can change it"
+                : "Only the super admin can change this document type");
         return t;
     }
 
@@ -293,7 +304,8 @@ public class MasterListService {
         return new ItemRow(String.valueOf(i.getId()), i.getCode(), i.getValue(), i.getSortOrder() == null ? 0 : i.getSortOrder(),
                 Boolean.TRUE.equals(i.getActive()), i.getOrgId() == null,
                 i.getCreatedByOrgId() == null ? "Super Admin" : organizationRepository.findById(i.getCreatedByOrgId())
-                        .map(o -> o.getName()).orElse("Organization"), canEdit(i), null, null, false);
+                        .map(o -> o.getName()).orElse("Organization"), canEdit(i), null, null, false,
+                i.getOrgId() == null ? "Everyone" : organizationRepository.findById(i.getOrgId()).map(o -> o.getName()).orElse("Organization"));
     }
 
     /** Super admin: everything. Organization admin: what their organization added. */

@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ErrorState, Loading } from "@/components/AsyncState";
@@ -72,7 +74,7 @@ export function ProvidersView() {
               placeholder="Search providers..."
               width={280}
             />
-            <select
+            <Select
               value={statusFilter}
               onChange={(e) => {
                 setStatusFilter(e.target.value);
@@ -87,7 +89,7 @@ export function ProvidersView() {
               <option value="in_progress">In Progress</option>
               <option value="on_hold">On Hold</option>
               <option value="terminated">Terminated</option>
-            </select>
+            </Select>
             {can("create", "provider") && (
               <button onClick={() => setShowAdd(true)} className="btn btn-primary">
                 <Icon name="Plus" size={14} /> Add Provider

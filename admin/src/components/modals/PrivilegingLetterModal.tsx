@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
@@ -153,11 +155,11 @@ export function AppointmentLetterModal({
           </div>
         </div>
         <Field label="Hospital" error={errors.hospitalId || (hospitalsQ.error ? hospitalsQ.error : undefined)}>
-          <select value={hospitalId ?? ""} onChange={(e) => setHospitalChoice(e.target.value ? Number(e.target.value) : null)} className="input" disabled={hospitalsQ.loading}>
+          <Select value={hospitalId ?? ""} onChange={(e) => setHospitalChoice(e.target.value ? Number(e.target.value) : null)} className="input" disabled={hospitalsQ.loading}>
             {hospitalsQ.loading && <option value="">Loading hospitals…</option>}
             {!hospitalsQ.loading && hospitals.length === 0 && <option value="">No hospitals configured — uses organization name</option>}
             {hospitals.map((h) => <option key={h.id} value={h.id}>{h.name}{h.city || h.state ? " — " + cityLine(h.city, h.state) : ""}</option>)}
-          </select>
+          </Select>
         </Field>
         <Field label="Appointment Effective Date" error={errors.effectiveDate}>
           <input type="date" value={effectiveDate} onChange={(e) => { setEffectiveDate(e.target.value); setErrors({ ...errors, effectiveDate: "" }); }} className="input" />

@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { AlertBox } from "./AlertBox";
 import { Field, RequiredMark } from "./Field";
 import { Icon } from "./Icon";
@@ -60,7 +62,7 @@ export function OrgAssignmentFields({
       ) : (
         <div className="grid grid-cols-1 gap-2">
           <Field label="Client">
-            <select
+            <Select
               value={value.clientId}
               onChange={(e) => onChange({ clientId: e.target.value, practiceId: "", locationId: "" })}
               className="input"
@@ -70,10 +72,10 @@ export function OrgAssignmentFields({
               {clients.map((cl) => (
                 <option key={cl.id} value={cl.id}>{cl.name}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label="Practice *" error={error}>
-            <select
+            <Select
               value={value.practiceId}
               onChange={(e) => {
                 const pid = e.target.value;
@@ -88,10 +90,10 @@ export function OrgAssignmentFields({
               {clientPractices.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           <Field label={locationRequired ? "Location *" : "Location (optional)"} error={locationError}>
-            <select
+            <Select
               value={value.locationId}
               onChange={(e) => onChange({ ...value, locationId: e.target.value })}
               className="input"
@@ -102,7 +104,7 @@ export function OrgAssignmentFields({
               {practiceLocations.map((l) => (
                 <option key={l.id} value={l.id}>{l.name}</option>
               ))}
-            </select>
+            </Select>
           </Field>
           {org.data && clients.length === 0 && (
             <div className="text-[11px]" style={{ color: "#a16207" }}>

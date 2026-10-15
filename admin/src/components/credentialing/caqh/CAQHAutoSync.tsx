@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { DeferredNotice } from "@/components/AlertBox";
@@ -139,31 +141,31 @@ function AutoSyncInner({ config: saved, onSaved }: { config: CaqhConfig; onSaved
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <div>
               <label className="label">Cadence</label>
-              <select value={config.cadence} onChange={(e) => setConfig({ ...config, cadence: e.target.value as SyncCadence })} className="input" disabled={!config.enabled || !isAdmin}>
+              <Select value={config.cadence} onChange={(e) => setConfig({ ...config, cadence: e.target.value as SyncCadence })} className="input" disabled={!config.enabled || !isAdmin}>
                 <option value="hourly">Hourly</option>
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
                 <option value="monthly">Monthly (1st of month)</option>
-              </select>
+              </Select>
             </div>
             {config.cadence === "weekly" && (
               <div>
                 <label className="label">Day of week</label>
-                <select value={config.dayOfWeek} onChange={(e) => setConfig({ ...config, dayOfWeek: e.target.value as DayOfWeek })} className="input" disabled={!config.enabled || !isAdmin}>
+                <Select value={config.dayOfWeek} onChange={(e) => setConfig({ ...config, dayOfWeek: e.target.value as DayOfWeek })} className="input" disabled={!config.enabled || !isAdmin}>
                   <option value="sunday">Sunday</option><option value="monday">Monday</option><option value="tuesday">Tuesday</option>
                   <option value="wednesday">Wednesday</option><option value="thursday">Thursday</option><option value="friday">Friday</option>
                   <option value="saturday">Saturday</option>
-                </select>
+                </Select>
               </div>
             )}
             {config.cadence !== "hourly" && (
               <div>
                 <label className="label">Time of day</label>
-                <select value={config.hourOfDay} onChange={(e) => setConfig({ ...config, hourOfDay: Number(e.target.value) })} className="input" disabled={!config.enabled || !isAdmin}>
+                <Select value={config.hourOfDay} onChange={(e) => setConfig({ ...config, hourOfDay: Number(e.target.value) })} className="input" disabled={!config.enabled || !isAdmin}>
                   {Array.from({ length: 24 }, (_, h) => (
                     <option key={h} value={h}>{hourLabel(h)}</option>
                   ))}
-                </select>
+                </Select>
               </div>
             )}
             <div>

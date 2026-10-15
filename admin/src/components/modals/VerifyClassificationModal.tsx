@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useEffect, useMemo, useState } from "react";
 import { Field } from "@/components/Field";
 import { Icon } from "@/components/Icon";
@@ -171,7 +173,7 @@ export function VerifyClassificationModal({
             </Field>
           ) : (
           <Field label="Document Type" required error={curProblems.docType}>
-            <select
+            <Select
               value={cur.docType}
               onChange={(e) => {
                 const next = typeOf(e.target.value);
@@ -187,7 +189,7 @@ export function VerifyClassificationModal({
                   {d.label}
                 </option>
               ))}
-            </select>
+            </Select>
             {!curProblems.docType && (
               <div className="text-[10px] text-ink-faint mt-1">{cur.detected ? "Auto-detected from filename — change it if it's wrong." : "Pick the checklist item this file belongs to."}</div>
             )}
@@ -207,11 +209,11 @@ export function VerifyClassificationModal({
           )}
           <div>
             <label className="label">Document Status</label>
-            <select value={statusValue} onChange={(e) => updateCur({ status: e.target.value as DocStatusChoice })} className="input" disabled={busy || !staffUpload}>
+            <Select value={statusValue} onChange={(e) => updateCur({ status: e.target.value as DocStatusChoice })} className="input" disabled={busy || !staffUpload}>
               <option value="approved">Approved</option>
               <option value="expired">Expired</option>
               <option value="pending_review">Pending Review</option>
-            </select>
+            </Select>
             <div className="text-[10px] text-ink-faint mt-1">
               {staffUpload ? "Set the status this document is saved with." : "Your organization reviews uploads before approving them."}
             </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { AlertBox } from "@/components/AlertBox";
 import { Field } from "@/components/Field";
@@ -45,12 +47,12 @@ export function SubmissionOutcomeModal({ submission, onSaved, onClose }: { submi
     <Modal title="Record Outcome" subtitle={submission.providerName + " → " + submission.payerName} onClose={onClose} maxWidth={460}>
       <div className="space-y-3">
         <Field label="Status" error={errors.status}>
-          <select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as SubmissionOutcome["status"] })}>
+          <Select className="input" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as SubmissionOutcome["status"] })}>
             <option value="submitted">Submitted</option>
             <option value="accepted">Accepted</option>
             <option value="rejected">Rejected</option>
             <option value="failed">Failed</option>
-          </select>
+          </Select>
         </Field>
         <Field label="Confirmation Number" error={errors.confirmationNumber}>
           <input className="input font-mono" value={form.confirmationNumber || ""} onChange={(e) => setForm({ ...form, confirmationNumber: e.target.value })} placeholder="e.g. CONF-1234567" />

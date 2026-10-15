@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { ErrorState, Loading } from "@/components/AsyncState";
 import { Field } from "@/components/Field";
@@ -163,10 +165,10 @@ function ConnectionForm({ config, onSaved, onGoToCsv }: { config: CaqhConfig; on
             </Field>
             <div>
               <label className="label">API Environment</label>
-              <select value={form.direct.environment} onChange={(e) => setForm({ ...form, direct: { ...form.direct, environment: e.target.value as CaqhEnvironment } })} className="input font-mono text-xs">
+              <Select value={form.direct.environment} onChange={(e) => setForm({ ...form, direct: { ...form.direct, environment: e.target.value as CaqhEnvironment } })} className="input font-mono text-xs">
                 <option value="production">Production — https://api.caqh.org/v2</option>
                 <option value="sandbox">Sandbox — https://sandbox.caqh.org/v2</option>
-              </select>
+              </Select>
               <div className="text-[10px] text-ink-faint mt-1">Production: <span className="font-mono">https://api.caqh.org/v2</span> · Sandbox: <span className="font-mono">https://sandbox.caqh.org/v2</span></div>
               {errors.directEnvironment && <div className="field-error">{errors.directEnvironment}</div>}
             </div>
@@ -191,7 +193,7 @@ function ConnectionForm({ config, onSaved, onGoToCsv }: { config: CaqhConfig; on
           </div>
           <div className="p-5 space-y-3">
             <Field label="Vendor" error={errors.aggregatorVendor}>
-              <select
+              <Select
                 value={form.aggregator.vendor}
                 onChange={(e) => {
                   const vendor = e.target.value as AggregatorVendor;
@@ -203,7 +205,7 @@ function ConnectionForm({ config, onSaved, onGoToCsv }: { config: CaqhConfig; on
                 <option value="andros">Andros</option>
                 <option value="verifiable">Verifiable</option>
                 <option value="medallion">Medallion</option>
-              </select>
+              </Select>
             </Field>
             <Field label="API Key" error={errors.aggregatorApiKey}>
               <input

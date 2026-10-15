@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useEffect, useState } from "react";
 import { DeferredNotice } from "@/components/AlertBox";
 import { Icon } from "@/components/Icon";
@@ -91,14 +93,14 @@ export function NPILookupModal({ initialNpi, onClose }: { initialNpi?: string; o
             </div>
             <div className="mb-3">
               <label className="label">Provider</label>
-              <select value={providerId} onChange={(e) => setProviderId(e.target.value)} className="input">
+              <Select value={providerId} onChange={(e) => setProviderId(e.target.value)} className="input">
                 <option value="">— Select provider —</option>
                 {providers.map((p) => (
                   <option key={p.id} value={p.id}>
                     {p.name}{p.npi ? " · NPI " + p.npi : ""}
                   </option>
                 ))}
-              </select>
+              </Select>
               {selected && selected.npi && selected.npi !== npi && (
                 <div className="text-[11px] mt-1" style={{ color: "#a16207" }}>
                   <Icon name="AlertTriangle" size={10} className="inline" /> This provider&apos;s NPI on file is {selected.npi}.

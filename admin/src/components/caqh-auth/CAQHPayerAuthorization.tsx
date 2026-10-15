@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { ConfirmDialog } from "@/components/Modal";
 import { DeferredNotice } from "@/components/AlertBox";
@@ -108,7 +110,7 @@ export function CAQHPayerAuthorization() {
                     {data?.providerName || user.displayName}
                   </div>
                 ) : (
-                  <select value={selectedProvider ?? ""} onChange={(e) => setSelectedProvider(e.target.value ? Number(e.target.value) : null)} className="input" disabled={providers.loading}>
+                  <Select value={selectedProvider ?? ""} onChange={(e) => setSelectedProvider(e.target.value ? Number(e.target.value) : null)} className="input" disabled={providers.loading}>
                     {providers.loading && <option value="">Loading providers…</option>}
                     {!providers.loading && !(providers.data || []).length && <option value="">No providers</option>}
                     {(providers.data || []).map((p) => (
@@ -116,7 +118,7 @@ export function CAQHPayerAuthorization() {
                         {providerName(p)} — NPI {p.npi || "—"}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 )}
                 {providers.error && <div className="field-error">{providers.error}</div>}
               </div>

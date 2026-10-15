@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import Link from "next/link";
 import { AsyncBoundary } from "@/components/AsyncState";
@@ -104,13 +106,13 @@ export function TasksView() {
           <Icon name="Search" size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-faint" />
           <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder="Search tasks or providers..." className="input input-sm" style={{ paddingLeft: 32 }} />
         </div>
-        <select value={priority} onChange={(e) => setPriority(e.target.value)} className="input input-sm" style={{ width: 150 }}>
+        <Select value={priority} onChange={(e) => setPriority(e.target.value)} className="input input-sm" style={{ width: 150 }}>
           <option value="">All priorities</option>
           <option value="urgent">Urgent</option>
           <option value="high">High</option>
           <option value="medium">Medium</option>
           <option value="low">Low</option>
-        </select>
+        </Select>
         {counts.overdue > 0 && <span className="text-xs text-danger font-semibold"><Icon name="AlertCircle" size={11} className="inline" /> {counts.overdue} overdue</span>}
       </div>
 
@@ -145,11 +147,11 @@ export function TasksView() {
                   </div>
                   <div className="flex items-center gap-1 flex-shrink-0">
                     {t.status !== "done" && canUpdate && (
-                      <select value={t.status} disabled={busy} onChange={(e) => setStatus(t, e.target.value as TaskStatus)} className="input" style={{ width: 130 }}>
+                      <Select value={t.status} disabled={busy} onChange={(e) => setStatus(t, e.target.value as TaskStatus)} className="input" style={{ width: 130 }}>
                         <option value="open">Open</option>
                         <option value="in_progress">In Progress</option>
                         <option value="done">Done</option>
-                      </select>
+                      </Select>
                     )}
                     {canUpdate && (
                       <button onClick={() => setEditing(t)} className="btn btn-ghost" style={{ padding: 6 }} title="Edit task" aria-label="Edit task">

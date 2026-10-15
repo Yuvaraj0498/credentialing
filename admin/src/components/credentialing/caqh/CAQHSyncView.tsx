@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { Avatar } from "@/components/Avatar";
 import { EmptyState } from "@/components/EmptyState";
@@ -192,13 +194,13 @@ function AttestationModal({ item, onClose, onSaved }: { item: CaqhProviderStatus
             <input type="date" max={today} value={form.lastAttested} onChange={(e) => setForm({ ...form, lastAttested: e.target.value })} className="input" />
           </Field>
           <Field label="Attestation status" error={errors.attestationStatus}>
-            <select value={form.attestationStatus} onChange={(e) => setForm({ ...form, attestationStatus: e.target.value })} className="input">
+            <Select value={form.attestationStatus} onChange={(e) => setForm({ ...form, attestationStatus: e.target.value })} className="input">
               <option value="">{form.lastAttested ? "Auto (Attested)" : "—"}</option>
               {form.attestationStatus && !ATTESTATION_STATUSES.includes(form.attestationStatus) && <option value={form.attestationStatus}>{form.attestationStatus}</option>}
               {ATTESTATION_STATUSES.map((s) => (
                 <option key={s} value={s}>{s}</option>
               ))}
-            </select>
+            </Select>
           </Field>
         </div>
         <div className="flex justify-end gap-2 pt-3 border-t border-line">

@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { PHONE_RE } from "@/lib/validation";
 import { PhoneInput } from "@/components/PhoneInput";
@@ -90,11 +92,11 @@ export function PlatformOrganizationsView() {
           <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
           <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder="Search name, city, email, invite code..." className="input" style={{ paddingLeft: 32 }} />
         </div>
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "suspended")} className="input" style={{ width: 180 }}>
+        <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | "active" | "suspended")} className="input" style={{ width: 180 }}>
           <option value="all">All Statuses</option>
           <option value="active">Active</option>
           <option value="suspended">Suspended</option>
-        </select>
+        </Select>
       </div>
 
       {orgs.error ? (
@@ -314,9 +316,9 @@ function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
         </Field>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <Field label="Organization Type" error={errors.orgType}>
-            <select value={form.orgType} onChange={(e) => set("orgType", e.target.value)} className="input">
+            <Select value={form.orgType} onChange={(e) => set("orgType", e.target.value)} className="input">
               {withCurrent(orgTypes, form.orgType).map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label="Tax ID (EIN)" error={errors.taxId}>
             <input value={form.taxId} onChange={(e) => set("taxId", e.target.value.replace(/\D/g, "").slice(0, 9))} className="input font-mono" placeholder="9 digits" />
@@ -341,10 +343,10 @@ function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
             <input value={form.city} onChange={(e) => set("city", e.target.value)} className="input" />
           </Field>
           <Field label="State" error={errors.state}>
-            <select value={form.state} onChange={(e) => set("state", e.target.value)} className="input">
+            <Select value={form.state} onChange={(e) => set("state", e.target.value)} className="input">
               <option value="">—</option>
               {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label="ZIP" error={errors.zip}>
             <input value={form.zip} onChange={(e) => set("zip", e.target.value.replace(/\D/g, "").slice(0, 5))} className="input font-mono" />
@@ -355,10 +357,10 @@ function NewOrganizationModal({ onClose, onCreated }: { onClose: () => void; onC
           <div className="text-[10px] font-semibold text-ink-faint uppercase tracking-wider mb-2">Subscription</div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <Field label="Plan" error={errors.packageCode}>
-              <select value={form.packageCode} onChange={(e) => set("packageCode", e.target.value)} className="input" disabled={packages.loading}>
+              <Select value={form.packageCode} onChange={(e) => set("packageCode", e.target.value)} className="input" disabled={packages.loading}>
                 <option value="">{packages.loading ? "Loading plans…" : "No subscription"}</option>
                 {(packages.data || []).map((p) => <option key={p.code} value={p.code}>{p.name}</option>)}
-              </select>
+              </Select>
               {packages.error && <div className="field-error">{packages.error}</div>}
             </Field>
             {form.packageCode && (

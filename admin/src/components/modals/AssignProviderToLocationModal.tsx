@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { AlertBox } from "@/components/AlertBox";
 import { Icon } from "@/components/Icon";
@@ -68,14 +70,14 @@ export function AssignProviderToLocationModal({
           )}
           <div>
             <label className="label">Assign to Location</label>
-            <select value={locationId} onChange={(e) => setLocationId(e.target.value)} className="input">
+            <Select value={locationId} onChange={(e) => setLocationId(e.target.value)} className="input">
               <option value="">— Unassigned —</option>
               {locations.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name} — {l.legalName || "No legal name"} ({l.address ? l.address.split(",")[0] : ""})
                 </option>
               ))}
-            </select>
+            </Select>
             {locations.length === 0 && <div className="text-[11px] text-ink-faint mt-1">No locations exist yet. Add one under Locations.</div>}
           </div>
           {loc && (

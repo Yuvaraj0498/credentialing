@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/Avatar";
@@ -195,9 +197,9 @@ export function RosterReconciliationView() {
             <div className="flex items-end justify-between flex-wrap gap-3">
               <div className="flex-1" style={{ minWidth: 220 }}>
                 <label className="label">Payer</label>
-                <select value={selectedPayer ?? ""} onChange={(e) => setPayerChoice(Number(e.target.value))} className="input" style={{ maxWidth: 320 }}>
+                <Select value={selectedPayer ?? ""} onChange={(e) => setPayerChoice(Number(e.target.value))} className="input" style={{ maxWidth: 320 }}>
                   {payers.map((p) => <option key={p.id} value={p.id}>{p.name} — {p.fullName || p.name}</option>)}
-                </select>
+                </Select>
               </div>
               {hasUpload && recon && (
                 <div className="text-xs text-ink-light text-right">

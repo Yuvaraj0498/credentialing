@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useState } from "react";
 import { useToast } from "@/stores/toast";
 import { EmptyState } from "@/components/EmptyState";
@@ -129,7 +131,7 @@ export function PayerSubmissionCenter() {
       {/* Provider picker */}
       <div className="card card-pad mb-4">
         <label className="label">Provider to submit for</label>
-        <select
+        <Select
           value={selectedProvider ?? ""}
           onChange={(e) => setSelectedProvider(e.target.value ? Number(e.target.value) : null)}
           className="input w-full"
@@ -143,7 +145,7 @@ export function PayerSubmissionCenter() {
               {providerName(p)} — NPI {p.npi || "—"}
             </option>
           ))}
-        </select>
+        </Select>
         {providers.error && <div className="text-xs mt-2" style={{ color: "var(--danger)" }}>{providers.error}</div>}
         {matrix.error && <div className="text-xs mt-2" style={{ color: "var(--danger)" }}>Could not load portal logins: {matrix.error}</div>}
       </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useMemo, useState } from "react";
 import { matchesSearch } from "@/lib/search";
 import Link from "next/link";
@@ -117,14 +119,14 @@ export function SecureLinksView() {
             <Icon name="Search" size={14} className="absolute" style={{ left: 10, top: 10, color: "var(--ink-faint)" }} />
             <input value={search} onChange={(e) => setSearch(cleanSearch(e.target.value))} placeholder="Search by name, email, or link #..." className="input" style={{ paddingLeft: 32 }} />
           </div>
-          <select value={filter} onChange={(e) => setFilter(e.target.value as Filter)} className="input" style={{ width: 190 }}>
+          <Select value={filter} onChange={(e) => setFilter(e.target.value as Filter)} className="input" style={{ width: 190 }}>
             <option value="all">All ({counts.all})</option>
             <option value="pending">Pending ({counts.pending})</option>
             <option value="accessed">Accessed ({counts.accessed})</option>
             <option value="submitted">Submitted ({counts.submitted})</option>
             <option value="expired">Expired ({counts.expired})</option>
             <option value="locked">Locked ({counts.locked})</option>
-          </select>
+          </Select>
         </div>
 
         <div className="card overflow-hidden">

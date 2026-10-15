@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { useMasterList, withCurrent } from "@/lib/masterLists";
 import { useState } from "react";
 import { PhoneInput } from "@/components/PhoneInput";
@@ -244,9 +246,9 @@ export function LocationFormModal({ location, practices, onSaved, onClose }: { l
             <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="input" placeholder="e.g. Downtown Clinic" maxLength={150} />
           </Field>
           <Field label="Type" error={errors.locationType}>
-            <select value={form.locationType} onChange={(e) => setForm({ ...form, locationType: e.target.value as LocationType })} className="input">
+            <Select value={form.locationType} onChange={(e) => setForm({ ...form, locationType: e.target.value as LocationType })} className="input">
               {withCurrent(locationTypes, form.locationType).map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
+            </Select>
           </Field>
         </div>
         <Field
@@ -257,7 +259,7 @@ export function LocationFormModal({ location, practices, onSaved, onClose }: { l
           }
           error={errors.practiceId}
         >
-          <select value={form.practiceId} onChange={(e) => setForm({ ...form, practiceId: e.target.value })} className="input">
+          <Select value={form.practiceId} onChange={(e) => setForm({ ...form, practiceId: e.target.value })} className="input">
             <option value="">— No practice (unlinked) —</option>
             {practices.map((p) => (
               <option key={p.id} value={p.id}>
@@ -265,7 +267,7 @@ export function LocationFormModal({ location, practices, onSaved, onClose }: { l
                 {p.name}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Legal Name" error={errors.legalName}>
@@ -283,10 +285,10 @@ export function LocationFormModal({ location, practices, onSaved, onClose }: { l
             <input value={form.city} onChange={(e) => setForm({ ...form, city: cityChars(e.target.value) })} className="input" />
           </Field>
           <Field label="State" error={errors.state}>
-            <select value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="input">
+            <Select value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value })} className="input">
               <option value="">—</option>
               {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
+            </Select>
           </Field>
           <Field label="ZIP *" error={errors.zip}>
             <input value={form.zip} onChange={(e) => setForm({ ...form, zip: digitsOnly(e.target.value, 5) })} className="input font-mono" inputMode="numeric" placeholder="5 digits" />

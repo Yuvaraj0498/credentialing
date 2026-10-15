@@ -1,5 +1,7 @@
 "use client";
 
+import { Select } from "@/components/Select";
+
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { BorderTabs } from "@/components/BorderTabs";
 import { PageHeader } from "@/components/PageHeader";
@@ -32,12 +34,12 @@ export function OrganizationsView() {
       <PageHeader title="Organizations" subtitle="Choose an org admin to see their clients, practices and locations, and the payers they can use." />
       <div className="mb-4">
         <label className="label" htmlFor="sa-admin">Org Admin</label>
-        <select id="sa-admin" value={adminId} onChange={(e) => choose(e.target.value)} className="input w-full" style={{ width: "100%" }} disabled={admins.loading}>
+        <Select id="sa-admin" value={adminId} onChange={(e) => choose(e.target.value)} className="input w-full" style={{ width: "100%" }} disabled={admins.loading}>
           <option value="">{admins.loading ? "Loading admins…" : "— Select an org admin —"}</option>
           {list.map((a) => (
             <option key={a.userId} value={a.userId}>{adminLabel(a)}</option>
           ))}
-        </select>
+        </Select>
         {admins.error && <div className="field-error">{admins.error}</div>}
       </div>
       {admin ? (
